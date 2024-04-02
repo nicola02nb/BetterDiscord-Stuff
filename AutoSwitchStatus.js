@@ -242,6 +242,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         onStop() {
             window.removeEventListener("click", this.SetUserStatus);
         }
+        
         setUserStatus(){
             let muteButtons = document.querySelectorAll('[aria-label="Silenzia"]');
             if (muteButtons.length < 1) {
