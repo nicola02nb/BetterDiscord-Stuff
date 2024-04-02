@@ -7,6 +7,7 @@ For Bugs or Feature Requests open an issue on my Github
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/AutoSwitchStatus
+ * @updateUrl https://raw.githubusercontent.com/nicola02nb/AutoSwitchStatus/main/AutoSwitchStatus.js
  */
 /*@cc_on
 @if (@_jscript)
