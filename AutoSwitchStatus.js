@@ -3,11 +3,11 @@
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.
 
 For Bugs or Feature Requests open an issue on my Github
- * @version 0.1.0
+ * @version 0.1.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
- * @website https://github.com/nicola02nb/etterDiscordPlugin-AutoSwitchStatus
- * @source https://raw.githubusercontent.com/nicola02nb/BetterDiscordPlugin-AutoSwitchStatus/main/release/AutoIdleOnAFK.plugin.js
+ * @website https://github.com/nicola02nb/AutoSwitchStatus
+ * @source https://raw.githubusercontent.com/nicola02nb/AutoSwitchStatus/main/AutoSwitchStatus.js
  */
 /*@cc_on
 @if (@_jscript)
