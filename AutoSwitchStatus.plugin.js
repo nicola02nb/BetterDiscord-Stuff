@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.1.2
+ * @version 0.2.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/AutoSwitchStatus
@@ -40,7 +40,7 @@ const config = {
                 link: "https://github.com/AutoSwitchStatus"
             }
         ],
-        version: "0.1.2",
+        version: "0.2.0",
         description: "Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.",
         github: "https://github.com/nicola02nb/AutoSwitchStatus",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/AutoSwitchStatus/main/AutoSwitchStatus.plugin.js"
