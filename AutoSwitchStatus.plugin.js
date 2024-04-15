@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
- * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github
- * @version 0.1.1
+ * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
+ * @version 0.1.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/AutoSwitchStatus
@@ -40,105 +40,91 @@ const config = {
                 link: "https://github.com/AutoSwitchStatus"
             }
         ],
-        version: "0.1.1",
+        version: "0.1.2",
         description: "Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.",
         github: "https://github.com/nicola02nb/AutoSwitchStatus",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/AutoSwitchStatus/main/AutoSwitchStatus.plugin.js"
     },
-    changelog: [
-        {
-            type: "Created",
-            title: "Created base plugin",
-            items: [
-                "Created an early working version of the plugin."
-            ]
-        }
-    ],
+    changelog: [],
     main: "index.js",
     DEBUG: false,
     DEBUG_ActuallyChangeStatus: false,
     defaultConfig: [
         {
-            type: "dropdown",
-            name: "Startup status:",
-            note: "The status setted when discord starts up. default: Online",
-            id: "startupStatus",
-            value: "online",
-            options: [
+            type: "category",
+            id: "statuses",
+            name: "Setting for various statuses",
+            collapsible: true,
+            shown: false,
+            settings: [
                 {
-                    label: "Online",
-                    value: "online"
+                    type: "dropdown",
+                    name: "Startup status:",
+                    note: "The status setted when discord starts up. default: Online",
+                    id: "startupStatus",
+                    value: "online",
+                    options: [
+                        {label: "Online", value: "online"},
+                        {label: "Idle", value: "idle"},
+                        {label: "Invisible", value: "invisible"},
+                        {label: "Do Not Disturb", value: "dnd"}
+                    ]
                 },
                 {
-                    label: "Idle",
-                    value: "idle"
+                    type: "dropdown",
+                    name: "Status for muted:",
+                    note: "the status selected will be switched to when MUTED. default: Idle",
+                    id: "mutedStatus",
+                    value: "idle",
+                    options: [
+                        {label: "Online", value: "online"},
+                        {label: "Idle", value: "idle"},
+                        {label: "Invisible", value: "invisible"},
+                        {label: "Do Not Disturb", value: "dnd"}
+                    ]
                 },
                 {
-                    label: "Invisible",
-                    value: "invisible"
+                    type: "dropdown",
+                    name: "Status for connected:",
+                    note: "the status selected will be switched to when CONNECTED to a server. default: Online",
+                    id: "connectedStatus",
+                    value: "online",
+                    options: [
+                        {label: "Online", value: "online"},
+                        {label: "Idle", value: "idle"},
+                        {label: "Invisible", value: "invisible"},
+                        {label: "Do Not Disturb", value: "dnd"}
+                    ]
                 },
                 {
-                    label: "Do Not Disturb",
-                    value: "dnd"
+                    type: "dropdown",
+                    name: "Status for disconnected:",
+                    note: "the status selected will be switched to when DISCONNECTED from a server. default: Invisible",
+                    id: "disconnectedStatus",
+                    value: "invisible",
+                    options: [
+                        {label: "Online", value: "online"},
+                        {label: "Idle", value: "idle"},
+                        {label: "Invisible", value: "invisible"},
+                        {label: "Do Not Disturb", value: "dnd"}
+                    ]
                 }
             ]
         },
         {
-            type: "dropdown",
-            name: "Status for muted:",
-            note: "the status selected will be switched to when MUTED. default: Idle",
-            id: "mutedStatus",
-            value: "idle",
-            options: [
-                {
-                    label: "Online",
-                    value: "online"
-                },
-                {
-                    label: "Idle",
-                    value: "idle"
-                },
-                {
-                    label: "Invisible",
-                    value: "invisible"
-                },
-                {
-                    label: "Do Not Disturb",
-                    value: "dnd"
-                }
-            ]
-        },
-        {
-            type: "dropdown",
-            name: "Status for disconnected:",
-            note: "the status selected will be switched to when DISCONNECTED from a server. default: Invisible",
-            id: "disconnectedStatus",
-            value: "invisible",
-            options: [
-                {
-                    label: "Online",
-                    value: "online"
-                },
-                {
-                    label: "Idle",
-                    value: "idle"
-                },
-                {
-                    label: "Invisible",
-                    value: "invisible"
-                },
-                {
-                    label: "Do Not Disturb",
-                    value: "dnd"
-                }
-            ]
+            type: "textbox",
+            name: "Update status time (ms)",
+            note: "Interval time between each check if your current status needs to be updated",
+            id: "updateTime",
+            placeholder: "Default: 1000 (ms)",
+            defaultValue: 1000,
+            value: 1000
         },
         {
             type: "switch",
             name: "Show toast messages?",
             note: "toggles the visibility of \"Changing status\" toast message",
             id: "showToasts",
-            defaultValue: true,
             value: true
         }
     ]
@@ -231,14 +217,16 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
                     "onlineStatusAndNotInVC: " + this.onlineStatusAndNotInVC()
                 );
             }
-            this.status=this.settings.startupStatus
+            this.status=this.settings.statuses.startupStatus
             this.updateStatus(this.status);
             
-            window.addEventListener("click", this.SetUserStatus);
+            //window.addEventListener("click", this.SetUserStatus);
+            this.interval = setInterval(this.SetUserStatus, this.settings.updateTime);
         }
 
         onStop() {
-            window.removeEventListener("click", this.SetUserStatus);
+            //window.removeEventListener("click", this.SetUserStatus);
+            clearInterval(this.interval);
         }
         
         setUserStatus(){
@@ -252,16 +240,17 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             const areWeMuted = muteButton.getAttribute("aria-checked") === 'true';
 
             var muted=areWeMuted, connected = getVoiceChannelId() !== null;
-            log_debug("test: "+connected);
+            log_debug("Muted: "+muted);
+            log_debug("Connected: "+connected);
             var toSet;
             if(!connected){
-                toSet=this.settings.disconnectedStatus;
+                toSet=this.settings.statuses.disconnectedStatus;
             }
             else if(muted){
-                toSet=this.settings.mutedStatus;
+                toSet=this.settings.statuses.mutedStatus;
             }
             else{
-                toSet="online";
+                toSet=this.settings.statuses.connectedStatus;
             }  
             if(this.status!=toSet){
                 this.updateStatus(toSet);
