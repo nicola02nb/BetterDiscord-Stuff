@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.1.2
+ * @version 0.3.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/AutoSwitchStatus
@@ -40,12 +40,34 @@ const config = {
                 link: "https://github.com/AutoSwitchStatus"
             }
         ],
-        version: "0.1.2",
+        version: "0.3.0",
         description: "Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.",
         github: "https://github.com/nicola02nb/AutoSwitchStatus",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/AutoSwitchStatus/main/AutoSwitchStatus.plugin.js"
     },
-    changelog: [],
+    changelog: [{
+            title: "0.3.0",
+            items: [
+                "Fixed plugin not working with some discord languages",
+                "Added customizable statuses for Microphone or Sound muted"
+            ]
+        },{
+            title: "0.2.0",
+            items: [
+                "Changed update system from mouse click to updare every 5000ms (delay time customizable through plugin settings",
+                "Added toast when changed status (can be disabled through plugin settings",
+                "Optimized by not switching when status hasn't changed"
+            ]
+        },
+        {
+            title: "0.1.0",
+            items: [
+                "Created a basic working plugin",
+                "Updates the status on each mouse click on the window",
+                "Customizable states through plugin settings"
+            ]
+        }
+    ],
     main: "index.js",
     DEBUG: false,
     DEBUG_ActuallyChangeStatus: false,
@@ -72,10 +94,23 @@ const config = {
                 },
                 {
                     type: "dropdown",
-                    name: "Status for muted:",
+                    name: "Status for muted Sound:",
                     note: "the status selected will be switched to when MUTED. default: Idle",
-                    id: "mutedStatus",
+                    id: "mutedSoundStatus",
                     value: "idle",
+                    options: [
+                        {label: "Online", value: "online"},
+                        {label: "Idle", value: "idle"},
+                        {label: "Invisible", value: "invisible"},
+                        {label: "Do Not Disturb", value: "dnd"}
+                    ]
+                },
+                {
+                    type: "dropdown",
+                    name: "Status for muted Microphone:",
+                    note: "the status selected will be switched to when MUTED MICROPHONE. default: Online",
+                    id: "mutedMicrophoneStatus",
+                    value: "online",
                     options: [
                         {label: "Online", value: "online"},
                         {label: "Idle", value: "idle"},
@@ -230,24 +265,28 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         }
         
         setUserStatus(){
-            let muteButtons = document.querySelectorAll('[aria-label="Silenzia"]');
+            let muteButtons=document.querySelector(".container_debb33").querySelectorAll("button");
             if (muteButtons.length < 1) {
                 throw "Failed to load. Couldn't find the mute button.";
             }
-            const muteButton = muteButtons[0];
+            
+            const muteMicrophone = muteButtons[0];
+            const muteSound = muteButtons[1];
 
             // return true/false based on mute button state
-            const areWeMuted = muteButton.getAttribute("aria-checked") === 'true';
+            const isMicrophoneMuted = muteMicrophone.getAttribute("aria-checked") === 'true';
+            const isSoundMuted= muteSound.getAttribute("aria-checked") === 'true';
 
-            var muted=areWeMuted, connected = getVoiceChannelId() !== null;
-            log_debug("Muted: "+muted);
-            log_debug("Connected: "+connected);
+            var connected = getVoiceChannelId() !== null;
             var toSet;
             if(!connected){
                 toSet=this.settings.statuses.disconnectedStatus;
             }
-            else if(muted){
-                toSet=this.settings.statuses.mutedStatus;
+            else if(isSoundMuted){
+                toSet=this.settings.statuses.mutedSoundStatus;
+            }
+            else if(isMicrophoneMuted){
+                toSet=this.settings.statuses.mutedMicrophoneStatus;
             }
             else{
                 toSet=this.settings.statuses.connectedStatus;
