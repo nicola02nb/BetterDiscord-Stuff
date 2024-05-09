@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.4.0
+ * @version 0.5.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/AutoSwitchStatus
@@ -40,12 +40,18 @@ const config = {
                 link: "https://github.com/AutoSwitchStatus"
             }
         ],
-        version: "0.4.0",
+        version: "0.5.0",
         description: "Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.",
         github: "https://github.com/nicola02nb/AutoSwitchStatus",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/AutoSwitchStatus/main/AutoSwitchStatus.plugin.js"
     },
     changelog: [{
+        title: "0.5.0",
+            items: [
+                "Removed startupStatus setting and functionality",
+                "Refactoring code"
+            ]
+        },{
             title: "0.4.0",
             items: [
                 "Fixed startupStatus instantly overridden by disconnectedStatus on plugin startup",
@@ -88,21 +94,8 @@ const config = {
             settings: [
                 {
                     type: "dropdown",
-                    name: "Startup status:",
-                    note: "The status setted when discord starts up. default: Online",
-                    id: "startupStatus",
-                    value: "online",
-                    options: [
-                        {label: "Online", value: "online"},
-                        {label: "Idle", value: "idle"},
-                        {label: "Invisible", value: "invisible"},
-                        {label: "Do Not Disturb", value: "dnd"}
-                    ]
-                },
-                {
-                    type: "dropdown",
                     name: "Status for muted Sound:",
-                    note: "the status selected will be switched to when MUTED. default: Idle",
+                    note: "the status selected will be switched to when MUTED SOUND. default: Idle",
                     id: "mutedSoundStatus",
                     value: "idle",
                     options: [
@@ -227,7 +220,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         { first: true, searchExports: true }
     );
 
-    var DEBUG = false;
+    var DEBUG = true;
     var DEBUG_ActuallyChangeStatus = false
     function log_debug(module, ...message) {
         if (DEBUG) {
@@ -248,12 +241,11 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         }
 
         onStart() {
-            log_debug("VoiceChannelId: " + getVoiceChannelId());
             log_debug("<<PluginSettings>>\n"+JSON.stringify(this.settings, null, 4));
-
-            this.status = null;
-            this.updateTime = this.settings.updateTime;
-            this.updateStatus(this.settings.statuses.startupStatus);
+            
+            this.status=this.settings.statuses.disconnectedStatus;
+            this.updateTime=this.settings.updateTime;
+            this.updateStatus(this.status);
             
             //window.addEventListener("click", this.SetUserStatus);
             this.interval = setInterval(this.SetUserStatus, this.updateTime);
@@ -264,23 +256,41 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             clearInterval(this.interval);
         }
         
+        /**
+         * Functions used by the interval that checks for new user status
+         *  or for changed update interval 
+         */
         setUserStatus(){
+            var toSet=this.getUserCurrentStatus();
+
+            log_debug("<<Variables Status>>" +
+                        "\nChannelId: " + this.channelId +
+                        "\nUpdateTime: " + this.updateTime + "ms" +
+                        "\nStatus: " + this.status +
+                        "\nMicMuted: " + this.isMicrophoneMuted +
+                        "\nSoundMuted: " + this.isSoundMuted +
+                        "\nConnected: " + this.connected +
+                        "\ntoSet: " + toSet);
+
             // checking for changed status update time setting
             if(this.updateTime != this.settings.updateTime){
-                log_debug("Changing interval time to "+this.updateTime+"ms");
-                // checking if the update time is too low
-                if(this.settings.updateTime < 1000){
-                    log_debug("Update Interval Time("+this.settings.updateTime+"ms) too low.... resetting to 1000ms");
-                    this.settings.updateTime = 1000;
-                }
-                this.updateTime = this.settings.updateTime;
-                clearInterval(this.interval);
-                this.interval = setInterval(this.SetUserStatus, this.updateTime);
+                this.updateIntervalTime();
             }
-            if(this.status === null){
-                this.status = this.settings.statuses.disconnectedStatus;
+
+            // checking if the status has changed since last time
+            if(this.status != toSet){
+                this.updateStatus(toSet);
+                this.status = toSet;
             }
-            
+
+        }
+
+        /**
+         * Funtion that returns the current user status
+         * @returns {('online'|'idle'|'invisible'|'dnd')} toStatus
+         * @throws when the mute buttons aren't found
+         */
+        getUserCurrentStatus(){
             // gettimg DOM array containing the Mute Buttons
             let muteButtons = document.querySelector(".container_debb33").querySelectorAll("button");
             if (muteButtons.length < 1) {
@@ -292,41 +302,43 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             const muteSound = muteButtons[1];
 
             //getting Mic and Sound button statuses
-            const isMicrophoneMuted = muteMicrophone.getAttribute("aria-checked") === 'true';
-            const isSoundMuted = muteSound.getAttribute("aria-checked") === 'true';
+            this.isMicrophoneMuted = muteMicrophone.getAttribute("aria-checked") === 'true';
+            this.isSoundMuted = muteSound.getAttribute("aria-checked") === 'true';
 
             // checking channelId to detect if player is Connected to a voice chat
-            var channelId = getVoiceChannelId()
-            var connected = channelId !== null;
+            this.channelId = getVoiceChannelId();
+            this.connected = this.channelId !== null;
             
-            var toSet;
-            if(!connected){
-                toSet=this.settings.statuses.disconnectedStatus;
+            var currStatus;
+            if(!this.connected){
+                currStatus=this.settings.statuses.disconnectedStatus;
             }
-            else if(isSoundMuted){
-                toSet=this.settings.statuses.mutedSoundStatus;
+            else if(this.isSoundMuted){
+                currStatus=this.settings.statuses.mutedSoundStatus;
             }
-            else if(isMicrophoneMuted){
-                toSet=this.settings.statuses.mutedMicrophoneStatus;
+            else if(this.isMicrophoneMuted){
+                currStatus=this.settings.statuses.mutedMicrophoneStatus;
             }
             else{
-                toSet=this.settings.statuses.connectedStatus;
+                currStatus=this.settings.statuses.connectedStatus;
             }
 
-            log_debug("<<Variables Status>>" +
-                        "\nChannelId: " + channelId +
-                        "\nUpdateTime: " + this.updateTime + "ms" +
-                        "\nStatus: " + this.status +
-                        "\nMicMuted: " + isMicrophoneMuted +
-                        "\nSoundMuted: " + isSoundMuted +
-                        "\nConnected: " + connected +
-                        "\ntoSet: " + toSet);
-            
-            if(this.status != toSet){
-                this.updateStatus(toSet);
-                this.status = toSet;
-            }
+            return currStatus;
+        }
 
+        /**
+         * Function that recreates the interval with the new updateTime
+         */
+        updateIntervalTime(){
+            log_debug("Changing interval time to "+this.updateTime+"ms");
+            // checking if the update time is too low
+            if(this.settings.updateTime < 1000){
+                log_debug("Update Interval Time("+this.settings.updateTime+"ms) too low.... resetting to 1000ms");
+                this.settings.updateTime = 1000;
+            }
+            this.updateTime = this.settings.updateTime;
+            clearInterval(this.interval);
+            this.interval = setInterval(this.SetUserStatus, this.updateTime);
         }
 
         /**
