@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.3.0
+ * @version 0.4.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/AutoSwitchStatus
@@ -40,12 +40,21 @@ const config = {
                 link: "https://github.com/AutoSwitchStatus"
             }
         ],
-        version: "0.3.0",
+        version: "0.4.0",
         description: "Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.",
         github: "https://github.com/nicola02nb/AutoSwitchStatus",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/AutoSwitchStatus/main/AutoSwitchStatus.plugin.js"
     },
     changelog: [{
+            title: "0.4.0",
+            items: [
+                "Fixed startupStatus instantly overridden by disconnectedStatus on plugin startup",
+                "Fixed statusUpdateTime setting not applying until plugin reboot",
+                "Added check on a minimum statusUpdateTime to prevent API-spam",
+                "Added more debug lines",
+                "Added Comments"
+            ]
+        },{
             title: "0.3.0",
             items: [
                 "Fixed plugin not working with some discord languages",
@@ -69,8 +78,6 @@ const config = {
         }
     ],
     main: "index.js",
-    DEBUG: false,
-    DEBUG_ActuallyChangeStatus: false,
     defaultConfig: [
         {
             type: "category",
@@ -164,6 +171,7 @@ const config = {
         }
     ]
 };
+
 class Dummy {
     constructor() {this._config = config;}
     start() {}
@@ -198,8 +206,6 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         SelectedChannelStore: { getVoiceChannelId },
     } = DiscordModules;
 
-    // Logger.info("VC: " + getVoiceChannelId());
-
     const {
         Webpack,
         Webpack: { Filters },
@@ -222,10 +228,9 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
     );
 
     var DEBUG = false;
+    var DEBUG_ActuallyChangeStatus = false
     function log_debug(module, ...message) {
-        if (DEBUG !== true) {
-            return;
-        } else {
+        if (DEBUG) {
             Logger.debug(module, ...message);
         }
     }
@@ -243,20 +248,15 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         }
 
         onStart() {
-            if (this._config.DEBUG === true) {
-                DEBUG = true;
-                log_debug(this);
-                log_debug("Current status: " + this.currentStatus());
-                log_debug("In Voice Channel: " + this.inVoiceChannel());
-                log_debug(
-                    "onlineStatusAndNotInVC: " + this.onlineStatusAndNotInVC()
-                );
-            }
-            this.status=this.settings.statuses.startupStatus
-            this.updateStatus(this.status);
+            log_debug("VoiceChannelId: " + getVoiceChannelId());
+            log_debug("<<PluginSettings>>\n"+JSON.stringify(this.settings, null, 4));
+
+            this.status = null;
+            this.updateTime = this.settings.updateTime;
+            this.updateStatus(this.settings.statuses.startupStatus);
             
             //window.addEventListener("click", this.SetUserStatus);
-            this.interval = setInterval(this.SetUserStatus, this.settings.updateTime);
+            this.interval = setInterval(this.SetUserStatus, this.updateTime);
         }
 
         onStop() {
@@ -265,19 +265,40 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         }
         
         setUserStatus(){
-            let muteButtons=document.querySelector(".container_debb33").querySelectorAll("button");
+            // checking for changed status update time setting
+            if(this.updateTime != this.settings.updateTime){
+                log_debug("Changing interval time to "+this.updateTime+"ms");
+                // checking if the update time is too low
+                if(this.settings.updateTime < 1000){
+                    log_debug("Update Interval Time("+this.settings.updateTime+"ms) too low.... resetting to 1000ms");
+                    this.settings.updateTime = 1000;
+                }
+                this.updateTime = this.settings.updateTime;
+                clearInterval(this.interval);
+                this.interval = setInterval(this.SetUserStatus, this.updateTime);
+            }
+            if(this.status === null){
+                this.status = this.settings.statuses.disconnectedStatus;
+            }
+            
+            // gettimg DOM array containing the Mute Buttons
+            let muteButtons = document.querySelector(".container_debb33").querySelectorAll("button");
             if (muteButtons.length < 1) {
                 throw "Failed to load. Couldn't find the mute button.";
             }
             
+            // DOM variables for Mic and Soud
             const muteMicrophone = muteButtons[0];
             const muteSound = muteButtons[1];
 
-            // return true/false based on mute button state
+            //getting Mic and Sound button statuses
             const isMicrophoneMuted = muteMicrophone.getAttribute("aria-checked") === 'true';
-            const isSoundMuted= muteSound.getAttribute("aria-checked") === 'true';
+            const isSoundMuted = muteSound.getAttribute("aria-checked") === 'true';
 
-            var connected = getVoiceChannelId() !== null;
+            // checking channelId to detect if player is Connected to a voice chat
+            var channelId = getVoiceChannelId()
+            var connected = channelId !== null;
+            
             var toSet;
             if(!connected){
                 toSet=this.settings.statuses.disconnectedStatus;
@@ -290,11 +311,22 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             }
             else{
                 toSet=this.settings.statuses.connectedStatus;
-            }  
-            if(this.status!=toSet){
+            }
+
+            log_debug("<<Variables Status>>" +
+                        "\nChannelId: " + channelId +
+                        "\nUpdateTime: " + this.updateTime + "ms" +
+                        "\nStatus: " + this.status +
+                        "\nMicMuted: " + isMicrophoneMuted +
+                        "\nSoundMuted: " + isSoundMuted +
+                        "\nConnected: " + connected +
+                        "\ntoSet: " + toSet);
+            
+            if(this.status != toSet){
                 this.updateStatus(toSet);
-                this.status=toSet;
-            } 
+                this.status = toSet;
+            }
+
         }
 
         /**
@@ -303,10 +335,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
          */
         updateStatus(toStatus) {
             console.log(toStatus);
-            if (
-                this._config.DEBUG === true &&
-                this._config.DEBUG_ActuallyChangeStatus === false
-            ) {
+            if (DEBUG_ActuallyChangeStatus) {
                 log_debug("Changing (but not changing) status to: " + toStatus);
                 return;
             }
@@ -314,7 +343,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             UserSettingsProtoUtils.updateAsync(
                 "status",
                 (statusSetting) => {
-                    log_debug(statusSetting);
+                    //log_debug(statusSetting);
                     statusSetting.status.value = toStatus;
                     this.showToast(toStatus);
                 },
