@@ -36,7 +36,7 @@ const config = {
         authors: [
             {
                 name: "nicola02nb",
-                github_username: "AutoSwitchStatus",
+                github_username: "nicola02nb",
                 link: "https://github.com/AutoSwitchStatus"
             }
         ],
