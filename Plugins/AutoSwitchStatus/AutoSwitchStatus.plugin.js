@@ -4,8 +4,8 @@
  * @version 0.5.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
- * @source https://github.com/nicola02nb/AutoSwitchStatus
- * @updateUrl https://raw.githubusercontent.com/nicola02nb/AutoSwitchStatus/main/AutoSwitchStatus.plugin.js
+ * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
+ * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/AutoSwitchStatus/AutoSwitchStatus.plugin.js
  */
 /*@cc_on
 @if (@_jscript)
@@ -37,13 +37,13 @@ const config = {
             {
                 name: "nicola02nb",
                 github_username: "nicola02nb",
-                link: "https://github.com/AutoSwitchStatus"
+                link: "https://github.com/nicola02nb"
             }
         ],
         version: "0.5.1",
         description: "Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.",
-        github: "https://github.com/nicola02nb/AutoSwitchStatus",
-        github_raw: "https://raw.githubusercontent.com/nicola02nb/AutoSwitchStatus/main/AutoSwitchStatus.plugin.js"
+        github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus",
+        github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/AutoSwitchStatus/AutoSwitchStatus.plugin.js"
     },
     changelog: [{
         title: "0.5.1",
