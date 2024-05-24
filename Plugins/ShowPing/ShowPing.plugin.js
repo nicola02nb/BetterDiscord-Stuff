@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your last ping 
- * @version 0.1.0
+ * @version 0.1.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -40,19 +40,25 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.1.0",
+        version: "0.1.1",
         description: "Displays your updated last ping",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js"
     },
     changelog: [{
+        title: "0.1.1",
+        items: [
+            "Fixed not working when switching channel"
+        ]
+    },
+    {
         title: "0.1.0",
         items: [
             "Created a basic working plugin",
             "Added customizable interval time"
         ]
     }],
-    main: "index.js"
+    main: "index.js",
 };
 
 class Dummy {
@@ -179,7 +185,11 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
 
         updatePing() {
             // checking if user is connected to a channel
-            if (getVoiceChannelId()) {
+            var currChannel=getVoiceChannelId();
+            if(!this.lastChannel && this.lastChannel!=currChannel){
+                this.removePingDisplay();
+            }
+            if (currChannel) {
                 if(this.hidden || !this.pingElement){
                     this.addPingDisplay();
                 }
