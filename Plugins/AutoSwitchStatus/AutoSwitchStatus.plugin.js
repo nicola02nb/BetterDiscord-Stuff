@@ -369,7 +369,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             UserSettingsProtoUtils.updateAsync(
                 "status",
                 (statusSetting) => {
-                    statusSetting.status.value = toStatus;
+                    statusSetting.status.value = toStatus; //TODO Fix instruction not working on new account uless status chenged once manually
                 },
                 0
             );
