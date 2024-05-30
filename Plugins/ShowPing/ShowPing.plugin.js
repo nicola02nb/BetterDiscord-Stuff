@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
- * @description Displays your last ping 
- * @version 0.1.1
+ * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
+ * @version 0.1.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -40,12 +40,18 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.1.1",
+        version: "0.1.2",
         description: "Displays your updated last ping",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js"
     },
     changelog: [{
+        title: "0.1.2",
+        items: [
+            "FIxed CSS layout",
+            "Refactored some stuff"
+        ]
+    },{
         title: "0.1.1",
         items: [
             "Fixed not working when switching channel"
@@ -59,6 +65,15 @@ const config = {
         ]
     }],
     main: "index.js",
+    defaultConfig: [
+        {
+            type: "switch",
+            name: "Hide Krisp button?",
+            note: "If enabled it hides the krisp button from bottom-left status menu(Needs to reload the plugin)",
+            id: "hideKrisp",
+            value: true
+        }
+    ]
 };
 
 class Dummy {
@@ -90,7 +105,7 @@ if (!global.ZeresPluginLibrary) {
 
 module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
     const plugin = (Plugin, Library) => {
-        const { Logger, DiscordModules } = Library;
+        const { DiscordModules } = Library;
         const {
             SelectedChannelStore: { getVoiceChannelId },
         } = DiscordModules;
@@ -100,17 +115,12 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             Webpack: { Filters },
         } = BdApi;
 
-        var DEBUG = false;
-        var DEBUG_ActuallyChangeStatus = false
-        function log_debug(module, ...message) {
-            if (DEBUG) {
-                Logger.debug(module, ...message);
-            }
-        }
-
         return class PingDisplay extends Plugin {
         constructor() {
             super();
+            this.getSettingsPanel = () => {
+                return this.buildSettingsPanel().getElement();
+            };
             this.pingElement = null;
             this.updateInterval = null;
         }
@@ -138,7 +148,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         start() {
             // Called when the plugin is started
             this.hidden=true;
-            this.intervalTime=1000;
+            this.intervalTime=5000;
             this.updatePing();
             this.updateInterval = setInterval(() => this.updatePing(), this.intervalTime); // Update every 5 seconds
         }
@@ -152,6 +162,39 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             this.removePingDisplay();
         }
 
+        addPingDisplay() {
+            this.statusBar = document.querySelector('.labelWrapper__51637').firstChild;
+            if (this.statusBar) {
+                this.displayKrispButton(!this.settings.hideKrisp);
+                this.statusBar.style.width="100%";
+
+                this.pingElement=document.createElement('div');
+                this.pingElement.id='ping-display';
+                this.pingElement.style='font-size: 14px;';
+            
+                this.statusBar.firstChild.style.cssText="text-overflow: ellipsis; overflow: hidden;";
+
+                this.statusBar.appendChild(this.pingElement);
+                
+                this.hidden=false;
+            }
+        }
+
+        removePingDisplay() {
+            if (this.pingElement) {
+                this.displayKrispButton(true);
+                this.statusBar.style.width="";
+
+                this.statusBar.firstChild.style.cssText="";
+                this.statusBar=null;
+
+                this.pingElement.remove();
+                this.pingElement=null;
+                
+                this.hidden=true;
+            }
+        }
+
         getPing(){
             var ping=document.querySelector('.ping__838d2');
             if(ping){
@@ -163,23 +206,15 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             return null; 
         }
 
-        addPingDisplay() {
-            const statusBar = document.querySelector('.labelWrapper__51637').firstChild;
-            if (statusBar) {
-                document.querySelector('.inner_ab95dc').firstChild.firstChild.style.width="fit-content";
-                this.pingElement=document.createElement('div');
-                this.pingElement.id='ping-display';
-                this.pingElement.style='font-size: 14px;';
-                statusBar.appendChild(this.pingElement);
-                this.hidden=false;
-            }
-        }
-
-        removePingDisplay() {
-            if (this.pingElement) {
-                this.pingElement.remove();
-                this.hidden=true;
-                this.pingElement=null;
+        displayKrispButton(show){
+            var krispContainer=document.querySelector(".inner_ab95dc")
+            if(krispContainer){
+                if(show){
+                    krispContainer.nextElementSibling.firstChild.style.display="";
+                }
+                else{
+                    krispContainer.nextElementSibling.firstChild.style.display="none";
+                }
             }
         }
 
@@ -188,6 +223,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             var currChannel=getVoiceChannelId();
             if(!this.lastChannel && this.lastChannel!=currChannel){
                 this.removePingDisplay();
+                //this.lastChannel=currChannel;
             }
             if (currChannel) {
                 if(this.hidden || !this.pingElement){
@@ -195,7 +231,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
                 }
                 var ping=this.getPing();
                 if(ping){
-                    this.pingElement.textContent=","+this.getPing();
+                    this.pingElement.textContent="\u00A0"+this.getPing();
                 }
                 else{
                     this.pingElement.textContent="";
