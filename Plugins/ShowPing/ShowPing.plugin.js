@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.1.2
+ * @version 0.1.3
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -40,15 +40,21 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.1.2",
+        version: "0.1.3",
         description: "Displays your updated last ping",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js"
     },
     changelog: [{
+        title: "0.1.3",
+        items: [
+            "Discord update fix"
+        ]
+    },
+    {
         title: "0.1.2",
         items: [
-            "FIxed CSS layout",
+            "Fixed CSS layout",
             "Refactored some stuff"
         ]
     },{
@@ -147,7 +153,6 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
 
         start() {
             // Called when the plugin is started
-            this.hidden=true;
             this.intervalTime=5000;
             this.updatePing();
             this.updateInterval = setInterval(() => this.updatePing(), this.intervalTime); // Update every 5 seconds
@@ -163,7 +168,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         }
 
         addPingDisplay() {
-            this.statusBar = document.querySelector('.labelWrapper__51637').firstChild;
+            this.statusBar = document.querySelector('.labelWrapper_c0cb95').firstChild;
             if (this.statusBar) {
                 this.displayKrispButton(!this.settings.hideKrisp);
                 this.statusBar.style.width="100%";
@@ -175,8 +180,6 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
                 this.statusBar.firstChild.style.cssText="text-overflow: ellipsis; overflow: hidden;";
 
                 this.statusBar.appendChild(this.pingElement);
-                
-                this.hidden=false;
             }
         }
 
@@ -190,13 +193,11 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
 
                 this.pingElement.remove();
                 this.pingElement=null;
-                
-                this.hidden=true;
             }
         }
 
         getPing(){
-            var ping=document.querySelector('.ping__838d2');
+            var ping=document.querySelectorAll('[class^="ping_"]')[0];
             if(ping){
                 var attr=ping.getAttributeNode("aria-label");
                 if(attr){
@@ -207,7 +208,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         }
 
         displayKrispButton(show){
-            var krispContainer=document.querySelector(".inner_ab95dc")
+            var krispContainer=document.querySelector(".inner_adcaac")
             if(krispContainer){
                 if(show){
                     krispContainer.nextElementSibling.firstChild.style.display="";
@@ -221,12 +222,12 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         updatePing() {
             // checking if user is connected to a channel
             var currChannel=getVoiceChannelId();
-            if(!this.lastChannel && this.lastChannel!=currChannel){
+            if(this.lastChannel!=currChannel){
                 this.removePingDisplay();
                 //this.lastChannel=currChannel;
             }
             if (currChannel) {
-                if(this.hidden || !this.pingElement){
+                if(!this.pingElement){
                     this.addPingDisplay();
                 }
                 var ping=this.getPing();
@@ -238,7 +239,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
                 }
             }
             else{
-                if(!this.hidden){
+                if(!this.pingElement){
                     this.removePingDisplay();
                 }
             }
