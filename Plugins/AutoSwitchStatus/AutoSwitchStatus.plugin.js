@@ -307,7 +307,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
          */
         getUserCurrentStatus(){
             // gettimg DOM array containing the Mute Buttons
-            let container = document.querySelector(".container_b2");
+            let container = document.querySelector(".container_b2ca13");
             if (!container) {
                 log_debug("Couldn't find the mute buttons container. Maybe selector changed.");
                 return this.status;
