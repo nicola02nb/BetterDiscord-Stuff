@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.5.1
+ * @version 0.5.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -40,12 +40,17 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.5.1",
+        version: "0.5.2",
         description: "Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/AutoSwitchStatus/AutoSwitchStatus.plugin.js"
     },
     changelog: [{
+        title: "0.5.2",
+            items: [
+                "Fix for discord update"
+            ]
+        },{
         title: "0.5.1",
             items: [
                 "Added Translations"
@@ -302,9 +307,15 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
          */
         getUserCurrentStatus(){
             // gettimg DOM array containing the Mute Buttons
-            let muteButtons = document.querySelector(".container_b2ca13").querySelectorAll("button");
+            let container = document.querySelector(".container_b2");
+            if (!container) {
+                log_debug("Couldn't find the mute buttons container. Maybe selector changed.");
+                return this.status;
+            }
+            let muteButtons = container.querySelectorAll("button");
             if (muteButtons.length < 1) {
-                throw "Failed to load. Couldn't find the mute button.";
+                log_debug("Couldn't find the mute buttons.");
+                return this.status;
             }
             
             // DOM variables for Mic and Soud
