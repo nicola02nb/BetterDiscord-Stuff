@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.1.3
+ * @version 0.1.4
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -40,12 +40,18 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.1.3",
+        version: "0.1.4",
         description: "Displays your updated last ping",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js"
     },
     changelog: [{
+        title: "0.1.4",
+        items: [
+            "Removed unnecessary external libraries",
+            "Raw classname searches sobstituted with [class*=] or [class^=]"
+        ]
+    },{
         title: "0.1.3",
         items: [
             "Discord update fix"
@@ -116,11 +122,6 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             SelectedChannelStore: { getVoiceChannelId },
         } = DiscordModules;
 
-        const {
-            Webpack,
-            Webpack: { Filters },
-        } = BdApi;
-
         return class PingDisplay extends Plugin {
         constructor() {
             super();
@@ -168,7 +169,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         }
 
         addPingDisplay() {
-            this.statusBar = document.querySelector('.labelWrapper_c0cb95').firstChild;
+            this.statusBar = document.querySelector('[class*="labelWrapper_c0cb95"]').firstChild;
             if (this.statusBar) {
                 this.displayKrispButton(!this.settings.hideKrisp);
                 this.statusBar.style.width="100%";
@@ -208,7 +209,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         }
 
         displayKrispButton(show){
-            var krispContainer=document.querySelector(".inner_adcaac")
+            var krispContainer=document.querySelector('[class*="inner_adcaac"]');
             if(krispContainer){
                 if(show){
                     krispContainer.nextElementSibling.firstChild.style.display="";

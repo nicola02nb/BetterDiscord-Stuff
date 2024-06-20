@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.5.2
+ * @version 0.5.3
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -40,12 +40,18 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.5.2",
+        version: "0.5.3",
         description: "Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/AutoSwitchStatus/AutoSwitchStatus.plugin.js"
     },
     changelog: [{
+        title: "0.5.3",
+            items: [
+                "Removed unnecessary external libraries",
+                "Raw classname searches sobstituted with [class*=] or [class^=]"
+            ]
+        },{
         title: "0.5.2",
             items: [
                 "Fix for discord update"
@@ -216,14 +222,14 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
     
     const LanguageStore = Webpack.getModule(Webpack.Filters.byProps("getLocale"));
 
-    const UserSettingsProtoStore = BdApi.Webpack.getModule(
+    /*const UserSettingsProtoStore = BdApi.Webpack.getModule(
         (m) =>
             m &&
             typeof m.getName == "function" &&
             m.getName() == "UserSettingsProtoStore" &&
             m,
         { first: true, searchExports: true }
-    );
+    );*/
 
     const UserSettingsProtoUtils = BdApi.Webpack.getModule(
         (m) =>
@@ -233,7 +239,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
     );
 
     var DEBUG = false;
-    var DEBUG_ActuallyChangeStatus = false
+    var DEBUG_ActuallyChangeStatus = false;
     function log_debug(module, ...message) {
         if (DEBUG) {
             Logger.debug(module, ...message);
@@ -307,7 +313,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
          */
         getUserCurrentStatus(){
             // gettimg DOM array containing the Mute Buttons
-            let container = document.querySelector(".container_b2ca13");
+            let container = document.querySelector('[class*="container_b2ca13"]');
             if (!container) {
                 log_debug("Couldn't find the mute buttons container. Maybe selector changed.");
                 return this.status;
