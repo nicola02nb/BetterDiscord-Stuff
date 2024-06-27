@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.1.4
+ * @version 0.1.5
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -40,12 +40,17 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.1.4",
+        version: "0.1.5",
         description: "Displays your updated last ping",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js"
     },
     changelog: [{
+        title: "0.1.5",
+        items: [
+            "Discord update fix"
+        ]
+    },{
         title: "0.1.4",
         items: [
             "Removed unnecessary external libraries",
@@ -169,18 +174,16 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         }
 
         addPingDisplay() {
-            this.statusBar = document.querySelector('[class*="labelWrapper_c0cb95"]').firstChild;
+            this.statusBar = document.querySelector('[class*="labelWrapper_c02c63"]').firstChild;
             if (this.statusBar) {
                 this.displayKrispButton(!this.settings.hideKrisp);
-                this.statusBar.style.width="100%";
 
                 this.pingElement=document.createElement('div');
                 this.pingElement.id='ping-display';
-                this.pingElement.style='font-size: 14px;';
-            
-                this.statusBar.firstChild.style.cssText="text-overflow: ellipsis; overflow: hidden;";
+                this.pingElement.style='font-size: 14px; float: left;';
 
-                this.statusBar.appendChild(this.pingElement);
+                this.statusBar.firstChild.firstChild.appendChild(this.pingElement);
+                this.statusBar.firstChild.firstChild.children[1].style='width: min-content; float: left;';
             }
         }
 
@@ -189,7 +192,6 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
                 this.displayKrispButton(true);
                 this.statusBar.style.width="";
 
-                this.statusBar.firstChild.style.cssText="";
                 this.statusBar=null;
 
                 this.pingElement.remove();
@@ -225,7 +227,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             var currChannel=getVoiceChannelId();
             if(this.lastChannel!=currChannel){
                 this.removePingDisplay();
-                //this.lastChannel=currChannel;
+                this.lastChannel=currChannel;
             }
             if (currChannel) {
                 if(!this.pingElement){
