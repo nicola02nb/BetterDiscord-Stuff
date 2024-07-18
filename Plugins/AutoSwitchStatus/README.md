@@ -1,6 +1,11 @@
 # AutoSwitchStatus for BetterDiscord
 A BetterDiscord(BD) plugin that automatically switches your discord status when you are muted, connected to a server or when disconnected from a server.
 
+## ⚠️ WARNING ⚠️ 
+To do this, it does some calss to Discord API only when detects a status change(checks every ⁓1s but is customizable trough settings).
+
+If you spam status changes you'll be blocked temporarly from doing calls to Discord API([Exceeded User Rate Limit](https://discord.com/developers/docs/topics/rate-limits)) and your status will not change for a while.
+
 ## Features:
 - Customizables states for connected, disconnected, muted Microphone or Sound
 - Toast that shows your switching status
