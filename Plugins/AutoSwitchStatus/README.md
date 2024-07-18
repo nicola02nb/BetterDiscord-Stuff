@@ -8,7 +8,7 @@ If you spam status changes you'll be blocked temporarly from doing calls to Disc
 
 ## Features:
 - Customizables states for connected, disconnected, muted Microphone or Sound
-- Toast that shows your switching status
+- Enable/Disable toast that shows your switching status
 
 ## Preview:
 ![AutoSwitchStatusVideo](https://github.com/nicola02nb/AutoSwitchStatus/assets/61830443/d084eeb0-dcfa-4f2c-b221-7e6597a5f7ee)
