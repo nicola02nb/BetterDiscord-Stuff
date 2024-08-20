@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.1.5
+ * @version 0.1.6
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -40,23 +40,28 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.1.5",
+        version: "0.1.6",
         description: "Displays your updated last ping",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js"
     },
     changelog: [{
+        title: "0.1.6",
+        items: [
+            "Refactor"
+        ]
+    },{
         title: "0.1.5",
         items: [
             "Discord update fix"
         ]
-    },{
+    }, {
         title: "0.1.4",
         items: [
             "Removed unnecessary external libraries",
             "Raw classname searches sobstituted with [class*=] or [class^=]"
         ]
-    },{
+    }, {
         title: "0.1.3",
         items: [
             "Discord update fix"
@@ -68,7 +73,7 @@ const config = {
             "Fixed CSS layout",
             "Refactored some stuff"
         ]
-    },{
+    }, {
         title: "0.1.1",
         items: [
             "Fixed not working when switching channel"
@@ -128,126 +133,116 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
         } = DiscordModules;
 
         return class PingDisplay extends Plugin {
-        constructor() {
-            super();
-            this.getSettingsPanel = () => {
-                return this.buildSettingsPanel().getElement();
-            };
-            this.pingElement = null;
-            this.updateInterval = null;
-        }
-
-        getName() {
-            return config.info.name;
-        }
-
-        getAuthor() {
-            return config.info.authors.map(a => a.name).join(", ");
-        }
-
-        getVersion() {
-            return config.info.version;
-        }
-
-        getDescription() {
-            return config.info.description;
-        }
-
-        load() {
-            // Called when the plugin is loaded
-        }
-
-        start() {
-            // Called when the plugin is started
-            this.intervalTime=5000;
-            this.updatePing();
-            this.updateInterval = setInterval(() => this.updatePing(), this.intervalTime); // Update every 5 seconds
-        }
-
-        stop() {
-            // Called when the plugin is stopped
-            if (this.updateInterval) {
-                clearInterval(this.updateInterval);
-                this.updateInterval=null;
+            constructor() {
+                super();
+                this.getSettingsPanel = () => {
+                    return this.buildSettingsPanel().getElement();
+                };
+                this.pingElement = null;
+                this.updateInterval = null;
             }
-            this.removePingDisplay();
-        }
 
-        addPingDisplay() {
-            this.statusBar = document.querySelector('[class*="labelWrapper_c02c63"]').firstChild;
-            if (this.statusBar) {
-                this.displayKrispButton(!this.settings.hideKrisp);
-
-                this.pingElement=document.createElement('div');
-                this.pingElement.id='ping-display';
-                this.pingElement.style='font-size: 14px; float: left;';
-
-                this.statusBar.firstChild.firstChild.appendChild(this.pingElement);
-                this.statusBar.firstChild.firstChild.children[1].style='width: min-content; float: left;';
+            getName() {
+                return config.info.name;
             }
-        }
 
-        removePingDisplay() {
-            if (this.pingElement) {
-                this.displayKrispButton(true);
-                this.statusBar.style.width="";
-
-                this.statusBar=null;
-
-                this.pingElement.remove();
-                this.pingElement=null;
+            getAuthor() {
+                return config.info.authors.map(a => a.name).join(", ");
             }
-        }
 
-        getPing(){
-            var ping=document.querySelectorAll('[class^="ping_"]')[0];
-            if(ping){
-                var attr=ping.getAttributeNode("aria-label");
-                if(attr){
-                   return attr.value.replace(/\s/g, '');
+            getVersion() {
+                return config.info.version;
+            }
+
+            getDescription() {
+                return config.info.description;
+            }
+
+            load() {
+            }
+
+            start() {
+                this.intervalTime = 5000;
+                this.updatePing();
+                this.updateInterval = setInterval(() => this.updatePing(), this.intervalTime); // Update every this.intervalTime seconds
+            }
+
+            stop() {
+                if (this.updateInterval) {
+                    clearInterval(this.updateInterval);
+                    this.updateInterval = null;
                 }
-            }
-            return null; 
-        }
-
-        displayKrispButton(show){
-            var krispContainer=document.querySelector('[class*="inner_adcaac"]');
-            if(krispContainer){
-                if(show){
-                    krispContainer.nextElementSibling.firstChild.style.display="";
-                }
-                else{
-                    krispContainer.nextElementSibling.firstChild.style.display="none";
-                }
-            }
-        }
-
-        updatePing() {
-            // checking if user is connected to a channel
-            var currChannel=getVoiceChannelId();
-            if(this.lastChannel!=currChannel){
                 this.removePingDisplay();
-                this.lastChannel=currChannel;
             }
-            if (currChannel) {
-                if(!this.pingElement){
-                    this.addPingDisplay();
-                }
-                var ping=this.getPing();
-                if(ping){
-                    this.pingElement.textContent="\u00A0"+this.getPing();
-                }
-                else{
-                    this.pingElement.textContent="";
+
+            addPingDisplay() {
+                this.statusBar = document.querySelector('[class*="labelWrapper_c02c63"]').firstChild;
+                if (this.statusBar) {
+                    this.displayKrispButton(!this.settings.hideKrisp);
+
+                    this.pingElement = document.createElement('div');
+                    this.pingElement.id = 'ping-display';
+                    this.pingElement.style = 'font-size: 14px; float: left;';
+
+                    this.statusBar.firstChild.firstChild.appendChild(this.pingElement);
+                    this.statusBar.firstChild.firstChild.children[1].style = 'width: min-content; float: left;';
                 }
             }
-            else{
-                if(!this.pingElement){
+
+            removePingDisplay() {
+                if (this.pingElement) {
+                    this.displayKrispButton(true);
+
+                    this.statusBar.style.width = "";
+                    this.statusBar = null;
+
+                    this.pingElement.remove();
+                    this.pingElement = null;
+                }
+            }
+
+            getPing() {
+                var ping = document.querySelectorAll('[class^="ping_"]')[0];
+                if (ping) {
+                    var attr = ping.getAttributeNode("aria-label");
+                    if (attr) {
+                        return attr.value.replace(/\s/g, '');
+                    }
+                }
+                return null;
+            }
+
+            displayKrispButton(show) {
+                var krispContainer = document.querySelector('[class*="inner_adcaac"]');
+                if (krispContainer) {
+                    if (show) {
+                        krispContainer.nextElementSibling.firstChild.style.display = "";
+                    }
+                    else {
+                        krispContainer.nextElementSibling.firstChild.style.display = "none";
+                    }
+                }
+            }
+
+            updatePing() {
+                // checking if user is connected to a channel
+                var currChannel = getVoiceChannelId();
+                if (this.lastChannel != currChannel) {
+                    this.removePingDisplay();
+                    this.lastChannel = currChannel;
+                }
+                if (currChannel) {
+                    if (!this.pingElement) {
+                        this.addPingDisplay();
+                    }
+                    const ping = this.getPing();
+                    this.pingElement.textContent = ping ? `\u00A0${ping}` : '';
+                }
+                else if (!this.pingElement) {
                     this.removePingDisplay();
                 }
             }
-        }
-    };
+        };
     };
     return plugin(Plugin, Api);
 })(global.ZeresPluginLibrary.buildPlugin(config));
