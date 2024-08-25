@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.1.7
+ * @version 0.1.8
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -40,13 +40,13 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.1.7",
+        version: "0.1.8",
         description: "Displays your updated last ping",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js"
     },
     changelog: [{
-        title: "0.1.7",
+        title: "0.1.8",
         items: [
             "Updated selector"
         ]
@@ -181,7 +181,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             }
 
             addPingDisplay() {
-                this.statusBar = document.querySelector('[class*="rtcConnectionStatus_"]').children[1].firstChild;
+                this.statusBar = document.querySelector('[class^="rtcConnectionStatus_"]').children[1].firstChild;
                 if (this.statusBar) {
                     this.displayKrispButton(!this.settings.hideKrisp);
 
@@ -218,7 +218,7 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             }
 
             displayKrispButton(show) {
-                var krispContainer = document.querySelector('[class*="inner_adcaac"]');
+                var krispContainer = document.querySelector('[class*="connection_"]>[class^="inner_"]');
                 if (krispContainer) {
                     if (show) {
                         krispContainer.nextElementSibling.firstChild.style.display = "";
