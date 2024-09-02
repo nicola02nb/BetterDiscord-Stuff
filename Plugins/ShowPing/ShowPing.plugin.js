@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.1.8
+ * @version 0.1.9
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -40,7 +40,7 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.1.8",
+        version: "0.1.9",
         description: "Displays your updated last ping",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js"
@@ -181,8 +181,10 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             }
 
             addPingDisplay() {
+                var connStatus = document.querySelector('[class^="rtcConnectionStatus_"]').children[1];
                 this.statusBar = document.querySelector('[class^="rtcConnectionStatus_"]').children[1].firstChild;
-                if (this.statusBar) {
+                if (connStatus) {
+                    this.statusBar = connStatus.firstChild;
                     this.displayKrispButton(!this.settings.hideKrisp);
 
                     this.pingElement = document.createElement('div');
