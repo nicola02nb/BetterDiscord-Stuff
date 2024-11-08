@@ -173,15 +173,6 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
     
     const LanguageStore = Webpack.getModule(Webpack.Filters.byProps("getLocale"));
 
-    /*const UserSettingsProtoStore = BdApi.Webpack.getModule(
-        (m) =>
-            m &&
-            typeof m.getName == "function" &&
-            m.getName() == "UserSettingsProtoStore" &&
-            m,
-        { first: true, searchExports: true }
-    );*/
-
     const UserSettingsProtoUtils = BdApi.Webpack.getModule(
         (m) =>
             m.ProtoClass &&
