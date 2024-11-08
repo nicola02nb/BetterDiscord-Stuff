@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.5.6
+ * @version 0.5.7
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -40,77 +40,15 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.5.6",
+        version: "0.5.7",
         description: "Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/AutoSwitchStatus/AutoSwitchStatus.plugin.js"
     },
     changelog: [{
-        title: "0.5.6",
+        title: "0.5.7",
             items: [
-                "Fixed DOM selector",
-            ]
-        },{
-        title: "0.5.5",
-            items: [
-                "Added icons to toast",
-            ]
-        },{
-        title: "0.5.4",
-            items: [
-                "Changed DOM selector to get mute button status",
-            ]
-        },{
-        title: "0.5.3",
-            items: [
-                "Removed unnecessary external libraries",
-                "Raw classname searches sobstituted with [class*=] or [class^=]"
-            ]
-        },{
-        title: "0.5.2",
-            items: [
-                "Fix for discord update"
-            ]
-        },{
-        title: "0.5.1",
-            items: [
-                "Added Translations"
-            ]
-        },{
-        title: "0.5.0",
-            items: [
-                "Removed startupStatus setting and functionality",
-                "Refactoring code"
-            ]
-        },{
-            title: "0.4.0",
-            items: [
-                "Fixed startupStatus instantly overridden by disconnectedStatus on plugin startup",
-                "Fixed statusUpdateTime setting not applying until plugin reboot",
-                "Added check on a minimum statusUpdateTime to prevent API-spam",
-                "Added more debug lines",
-                "Added Comments"
-            ]
-        },{
-            title: "0.3.0",
-            items: [
-                "Fixed plugin not working with some discord languages",
-                "Added customizable statuses for Microphone or Sound muted"
-            ]
-        },{
-            title: "0.2.0",
-            items: [
-                "Changed update system from mouse click to updare every 5000ms (delay time customizable through plugin settings",
-                "Added toast when changed status (can be disabled through plugin settings",
-                "Optimized by not switching when status hasn't changed"
-            ]
-        },
-        {
-            title: "0.1.0",
-            items: [
-                "Created a basic working plugin",
-                "Updates the status on each mouse click on the window",
-                "Customizable states through plugin settings"
+                "Removed Changelog",
             ]
         }
     ],
