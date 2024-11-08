@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 0.1.9
+ * @version 1.0.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -40,55 +40,15 @@ const config = {
                 link: "https://github.com/nicola02nb"
             }
         ],
-        version: "0.1.9",
+        version: "1.0.0",
         description: "Displays your updated last ping",
         github: "https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing",
         github_raw: "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js"
     },
     changelog: [{
-        title: "0.1.8",
+        title: "1.0.0",
         items: [
-            "Updated selector"
-        ]
-    },{
-        title: "0.1.6",
-        items: [
-            "Refactor"
-        ]
-    },{
-        title: "0.1.5",
-        items: [
-            "Discord update fix"
-        ]
-    }, {
-        title: "0.1.4",
-        items: [
-            "Removed unnecessary external libraries",
-            "Raw classname searches sobstituted with [class*=] or [class^=]"
-        ]
-    }, {
-        title: "0.1.3",
-        items: [
-            "Discord update fix"
-        ]
-    },
-    {
-        title: "0.1.2",
-        items: [
-            "Fixed CSS layout",
-            "Refactored some stuff"
-        ]
-    }, {
-        title: "0.1.1",
-        items: [
-            "Fixed not working when switching channel"
-        ]
-    },
-    {
-        title: "0.1.0",
-        items: [
-            "Created a basic working plugin",
-            "Added customizable interval time"
+            "Implemented with MutationObserver"
         ]
     }],
     main: "index.js",
@@ -97,7 +57,7 @@ const config = {
             type: "switch",
             name: "Hide Krisp button?",
             note: "If enabled it hides the krisp button from bottom-left status menu(Needs to reload the plugin)",
-            id: "hideKrisp",
+            id: "hideKrispButton",
             value: true
         }
     ]
@@ -132,11 +92,6 @@ if (!global.ZeresPluginLibrary) {
 
 module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
     const plugin = (Plugin, Library) => {
-        const { DiscordModules } = Library;
-        const {
-            SelectedChannelStore: { getVoiceChannelId },
-        } = DiscordModules;
-
         return class PingDisplay extends Plugin {
             constructor() {
                 super();
@@ -144,7 +99,8 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
                     return this.buildSettingsPanel().getElement();
                 };
                 this.pingElement = null;
-                this.updateInterval = null;
+                this.panelObserver = null;
+                this.pingObserver = null;
             }
 
             getName() {
@@ -167,86 +123,137 @@ module.exports = !global.ZeresPluginLibrary ? Dummy : (([Plugin, Api]) => {
             }
 
             start() {
-                this.intervalTime = 5000;
-                this.updatePing();
-                this.updateInterval = setInterval(() => this.updatePing(), this.intervalTime); // Update every this.intervalTime seconds
+                this.addPingDisplay();
+                this.setupPanelObserver();
             }
 
-            stop() {
-                if (this.updateInterval) {
-                    clearInterval(this.updateInterval);
-                    this.updateInterval = null;
-                }
-                this.removePingDisplay();
-            }
-
-            addPingDisplay() {
-                var connStatus = document.querySelector('[class^="rtcConnectionStatus_"]').children[1];
-                this.statusBar = document.querySelector('[class^="rtcConnectionStatus_"]').children[1].firstChild;
-                if (connStatus) {
-                    this.statusBar = connStatus.firstChild;
-                    this.displayKrispButton(!this.settings.hideKrisp);
-
-                    this.pingElement = document.createElement('div');
-                    this.pingElement.id = 'ping-display';
-                    this.pingElement.style = 'font-size: 14px; float: left;';
-
-                    this.statusBar.firstChild.firstChild.appendChild(this.pingElement);
-                    this.statusBar.firstChild.firstChild.children[1].style = 'width: min-content; float: left;';
-                }
-            }
-
-            removePingDisplay() {
+            stop() { 
+                this.stopPingObserver();
+                this.stopPanelObserver();
                 if (this.pingElement) {
-                    this.displayKrispButton(true);
-
-                    this.statusBar.style.width = "";
-                    this.statusBar = null;
-
                     this.pingElement.remove();
                     this.pingElement = null;
                 }
+                // Show Krisp button back if it was hidden
+                this.displayKrispButton(true);
+            }
+
+            setupPanelObserver() {
+                // Observer configuration to watch for changes in the app's content
+                const config = { childList: true, subtree: true};
+                
+                // Callback function when mutations are observed
+                const callback = (mutationsList, observer) => {
+                    for (const mutation of mutationsList) {
+                        if (mutation.type === 'childList') {
+                            // Check if our ping element is missing and if we're in a voice channel
+                            const voiceStatus = document.querySelector('[class^="rtcConnectionStatus_"]');
+                            if (voiceStatus && (!this.pingElement || !this.pingElement.isConnected)) {
+                                this.addPingDisplay();
+                            }
+                        }
+                    }
+                };
+
+                // Create and start the observer
+                this.panelObserver = new MutationObserver(callback);
+                const targetNode = document.querySelector('[class^="panels_"]');
+                if (targetNode) {
+                    this.panelObserver.observe(targetNode, config);
+                }
+            }
+
+            stopPanelObserver(){
+                if (this.panelObserver) {
+                    this.panelObserver.disconnect();
+                    this.panelObserver = null;
+                }
+            }
+
+            setupPingObserver(){
+                this.stopPingObserver();
+
+                const config = { attributes: true};
+
+                // Callback function when mutations are observed
+                const callback = (mutationsList, observer) => {
+                    this.updatePing();
+                };
+                // Create and start the observer
+                this.pingObserver = new MutationObserver(callback);
+                const targetNode = document.querySelector('[class^="ping_"]');
+                if (targetNode) {
+                    this.pingObserver.observe(targetNode, config);
+                }
+            }
+
+            stopPingObserver(){
+                if (this.pingObserver) {
+                    this.pingObserver.disconnect();
+                    this.pingObserver = null;
+                }
+            }
+
+            async addPingDisplay() {            
+                const tryAddingDisplay = () => {
+                    const statusBar = document.querySelector('[class^="rtcConnectionStatus_"]')?.children[1]?.firstChild;
+                
+                    if (statusBar) {
+                        this.stopPingObserver();
+                        // Remove existing ping element if it exists
+                        if (this.pingElement) {
+                            this.pingElement.remove();
+                        }
+
+                        // Create ping display element
+                        this.pingElement = document.createElement('div');
+                        this.pingElement.style.width = 'min-content';
+                        this.pingElement.style.float = 'left';
+                        
+                        // Insert ping element after the status text
+                        statusBar.firstChild.firstChild.appendChild(this.pingElement);
+                        statusBar.firstChild.firstChild.children[1].style = 'width: min-content; float: left;';
+                        
+                        // Hide Krisp button if setting is enabled
+                        if (this.settings.hideKrispButton) {
+                            this.displayKrispButton(false);
+                        }
+
+                        // Update ping immediately
+                        this.updatePing();
+                        this.setupPingObserver();
+                    } else{
+                        setTimeout(tryAddingDisplay, 1000);
+                    }
+                };
+                
+                tryAddingDisplay();
             }
 
             getPing() {
-                var ping = document.querySelectorAll('[class^="ping_"]')[0];
+                const ping = document.querySelector('[class^="ping_"]');
                 if (ping) {
-                    var attr = ping.getAttributeNode("aria-label");
-                    if (attr) {
-                        return attr.value.replace(/\s/g, '');
-                    }
+                    const attr = ping.getAttribute("aria-label");
+                    return attr ? attr.replace(/\s/g, '') : null;
                 }
                 return null;
             }
 
-            displayKrispButton(show) {
-                var krispContainer = document.querySelector('[class*="connection_"]>[class^="inner_"]');
-                if (krispContainer) {
-                    if (show) {
-                        krispContainer.nextElementSibling.firstChild.style.display = "";
-                    }
-                    else {
-                        krispContainer.nextElementSibling.firstChild.style.display = "none";
+            updatePing() {
+                if (this.pingElement && this.pingElement.isConnected) {
+                    const currentPing = this.getPing();
+                    if (currentPing) {
+                        this.pingElement.textContent = `\u00A0${currentPing}`;
+                    } else {
+                        this.pingElement.textContent = '\u00A0N/A';
                     }
                 }
             }
-
-            updatePing() {
-                // checking if user is connected to a channel
-                var currChannel = getVoiceChannelId();
-                if (this.lastChannel != currChannel) {
-                    this.removePingDisplay();
-                    this.lastChannel = currChannel;
-                }
-                if (currChannel) {
-                    if (!this.pingElement) {
-                        this.addPingDisplay();
-                    }
-                    const ping = this.getPing();
-                    this.pingElement.textContent = ping ? `\u00A0${ping}` : '';
-                }
-                else if (!this.pingElement) {
-                    this.removePingDisplay();
+            
+            displayKrispButton(show) {
+                const krispContainer = document.querySelector('[class*="connection_"]>[class^="inner_"]');
+                if (krispContainer?.nextElementSibling?.firstChild) {
+                    krispContainer.nextElementSibling.firstChild.style.display = show ? "" : "none";
                 }
             }
         };
