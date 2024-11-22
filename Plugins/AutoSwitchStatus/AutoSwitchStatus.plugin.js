@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.0.0
+ * @version 1.0.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -43,10 +43,22 @@ class AutoSwitchStatus{
         this.SetUserStatus = this.setUserStatus.bind(this);
     }
 
+    /**
+     * Retrieves the setting value for the given key.
+     * If the setting is not found, returns the default setting value.
+     * @param {string} key - The key of the setting to retrieve.
+     * @returns {*} The value of the setting.
+     */
     getSetting(key) {
         return Data.load("AutoSwitchStatus", key) ?? this.defaultSettings[key];
     }
 
+    /**
+     * Saves the setting value for the given key.
+     * @param {string} key - The key of the setting to save.
+     * @param {*} value - The value of the setting to save.
+     * @returns {*} The saved value.
+     */
     setSetting(key, value) {
         return Data.save("AutoSwitchStatus", key, value);
     }
@@ -65,7 +77,7 @@ class AutoSwitchStatus{
             Object.defineProperty(this.settings, key, {
                 get: () => this.getSetting(key)
             });
-        }); 
+        });
 
         this.setUserStatus();
         this.startInterval();
@@ -76,15 +88,23 @@ class AutoSwitchStatus{
         BdApi.DOM.removeStyle("AutoSwitchStatus");
     }
 
-    startInterval(){
-        if(this.interval){
+    /**
+     * Starts the interval that periodically checks and updates the user status.
+     * If an interval is already running, it stops the existing interval first.
+     */
+    startInterval() {
+        if (this.interval) {
             this.stopInterval();
         }
-        this.interval = setInterval(this.SetUserStatus, this.updateTime);
+        this.interval = setInterval(this.SetUserStatus, this.settings.updateTime);
     }
 
-    stopInterval(){
-        if(this.interval){
+    /**
+     * Stops the interval that periodically checks and updates the user status.
+     * Clears the interval if it is running.
+     */
+    stopInterval() {
+        if (this.interval) {
             clearInterval(this.interval);
             this.interval = null;
         }
@@ -110,8 +130,7 @@ class AutoSwitchStatus{
      * @throws when the mute buttons aren't found
      */
     getUserCurrentStatus(){
-        // gettimg DOM array containing the Mute Buttons
-        //let container = document.querySelector('[class*="container_b2ca13"]');
+        // Gettimg DOM array containing the Mute Buttons
         let container = document.querySelector('[class^="panels_"]>[class^="container_"]').children[1];
         if (!container) {
             return this.status;
@@ -120,19 +139,19 @@ class AutoSwitchStatus{
         if (muteButtons.length < 1) {
             return this.status;
         }
-        
+
         // DOM variables for Mic and Soud
         const muteMicrophone = muteButtons[0];
         const muteSound = muteButtons[1];
 
-        //getting Mic and Sound button statuses
+        // Getting Mic and Sound button statuses
         this.isMicrophoneMuted = muteMicrophone.getAttribute("aria-checked") === 'true';
         this.isSoundMuted = muteSound.getAttribute("aria-checked") === 'true';
 
-        // checking channelId to detect if player is Connected to a voice chat
+        // Checking channelId to detect if player is Connected to a voice chat
         this.channelId = SelectedChannelStore.getVoiceChannelId();
         this.connected = this.channelId !== null;
-        
+
         var currStatus;
         if(!this.connected){
             currStatus=this.settings.disconnectedStatus;
@@ -155,7 +174,6 @@ class AutoSwitchStatus{
      */
     updateIntervalTime(){
         this.stopInterval();
-        this.updateTime = this.settings.updateTime;
         this.startInterval();
     }
 
@@ -190,6 +208,9 @@ class AutoSwitchStatus{
         }
     }
 
+    /**
+     * @returns {React.Component} Settings Panel
+     */
     getSettingsPanel(){
         return () => {
             const [mutedSoundStatus, setMutedSoundStatus] = useState(this.getSetting('mutedSoundStatus'));
@@ -279,7 +300,7 @@ class AutoSwitchStatus{
                 }, "Show Toast"),
             );
         }
-    }        
+    }
 };
 
 module.exports = AutoSwitchStatus;
