@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.1.0
+ * @version 2.1.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -112,7 +112,7 @@ module.exports = class ShowPing {
     }
 
     addPingDisplay() {
-        this.statusBar = document.querySelector('[class^="rtcConnectionStatus_"]').querySelector('[class^="rtcConnectionStatus"]');
+        this.statusBar = document.querySelector('[class^="rtcConnectionStatus_"]')?.querySelector('[class^="rtcConnectionStatus"]');
 
         if (this.statusBar) {
             if (this.pingObserver) {
