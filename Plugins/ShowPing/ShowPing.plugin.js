@@ -8,12 +8,12 @@
  * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js
  */
 
-const { Patcher, React, Webpack, Data} = BdApi;
+const { Patcher, React, Webpack, Data } = BdApi;
 const { DiscordModules } = Webpack.getModule(m => m.dispatch && m.subscribe);
 const { FormSwitch } = Webpack.getByKeys('FormSwitch');
 const { useState } = React;
 
-module.exports = class ShowPing{
+module.exports = class ShowPing {
     constructor() {
         this.defaultSettings = {
             hideKrispButton: true,
@@ -23,7 +23,7 @@ module.exports = class ShowPing{
         this.pingObserver = null;
     }
 
-    getSettingsPanel(){
+    getSettingsPanel() {
         return () => {
             const [hideKrispButton, setHideKrispButton] = useState(this.getSetting('hideKrispButton'));
             const onSwitch = (id, value) => {
@@ -58,7 +58,7 @@ module.exports = class ShowPing{
         this.startPingObserver();
         this.patch = Patcher.after("UserConnection", DiscordModules, "dispatch", (_, [event]) => {
             if (event.type === "RTC_CONNECTION_STATE") {
-                if(event.state === "RTC_CONNECTING"){
+                if (event.state === "RTC_CONNECTING") {
                     this.isConnected = false;
                     this.addPingDisplay();
                 } else if (event.state === "RTC_CONNECTED") {
@@ -80,10 +80,10 @@ module.exports = class ShowPing{
         this.displayKrispButton(true);
     }
 
-    startPingObserver(){
+    startPingObserver() {
         this.stopPingObserver();
 
-        const config = { attributes: true};
+        const config = { attributes: true };
 
         // Callback function when mutations are observed
         const callback = (mutationsList, observer) => {
@@ -104,7 +104,7 @@ module.exports = class ShowPing{
         createObserver();
     }
 
-    stopPingObserver(){
+    stopPingObserver() {
         if (this.pingObserver) {
             this.pingObserver.disconnect();
             this.pingObserver = null;
@@ -113,9 +113,9 @@ module.exports = class ShowPing{
 
     addPingDisplay() {
         this.statusBar = document.querySelector('[class^="rtcConnectionStatus_"]').querySelector('[class^="rtcConnectionStatus"]');
-    
+
         if (this.statusBar) {
-            if(this.pingObserver){
+            if (this.pingObserver) {
                 this.stopPingObserver();
             }
             if (this.pingElement) {
@@ -155,7 +155,7 @@ module.exports = class ShowPing{
             this.pingElement.textContent = `\u00A0${ping}`;
         }
     }
-    
+
     displayKrispButton(show) {
         const krispContainer = document.querySelector('[class*="connection_"]>[class^="inner_"]');
         if (krispContainer?.nextElementSibling?.firstChild) {
