@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.1.1
+ * @version 2.1.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -9,7 +9,7 @@
  */
 
 const { Patcher, React, Webpack, Data } = BdApi;
-const { DiscordModules } = Webpack.getModule(m => m.dispatch && m.subscribe);
+const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const { FormSwitch } = Webpack.getByKeys('FormSwitch');
 const { useState } = React;
 
@@ -56,19 +56,17 @@ module.exports = class ShowPing {
     start() {
         this.addPingDisplay();
         this.startPingObserver();
-        this.patch = Patcher.after("UserConnection", DiscordModules, "dispatch", (_, [event]) => {
-            if (event.type === "RTC_CONNECTION_STATE") {
-                if (event.state === "RTC_CONNECTING") {
-                    this.isConnected = false;
-                    this.addPingDisplay();
-                } else if (event.state === "RTC_CONNECTED") {
-                    this.isConnected = true;
-                    this.startPingObserver();
-                } else if (event.state === "DISCONNECTED") {
-                    this.isConnected = false;
-                    this.stopPingObserver();
-                    this.removePingDisplay();
-                }
+        DiscordModules.subscribe("RTC_CONNECTION_STATE", (event) => {
+            if (event.state === "RTC_CONNECTING") {
+                this.isConnected = false;
+                this.addPingDisplay();
+            } else if (event.state === "RTC_CONNECTED") {
+                this.isConnected = true;
+                this.startPingObserver();
+            } else if (event.state === "DISCONNECTED") {
+                this.isConnected = false;
+                this.stopPingObserver();
+                this.removePingDisplay();
             }
         });
     }
