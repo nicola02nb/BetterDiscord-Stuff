@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.1.0
+ * @version 1.1.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -22,7 +22,7 @@ const UserSettingsProtoUtils = Webpack.getModule(
     { first: true, searchExports: true }
 );
 
-module.exports = class AutoSwitchStatus{
+module.exports = class AutoSwitchStatus {
     constructor() {
         this.defaultSettings = {
             mutedSoundStatus: "idle",
@@ -70,22 +70,26 @@ module.exports = class AutoSwitchStatus{
         this.updateUserStatus();
 
         this.startMuteObserver();
-        DiscordModules.subscribe("RTC_CONNECTION_STATE", (event) => {
-            if (event.state === "RTC_CONNECTED") {
-                this.isConnected = true;
-                this.startMuteObserver();
-            } else if (event.state === "DISCONNECTED") {
-                this.isConnected = false;
-                this.stopMuteObserver();
-            }
-            this.updateUserStatus();
-        });
+        this.handleConnection = this.handleConnectionStateChange.bind(this);
+        DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
     }
 
     stop() {
-        DiscordModules.unsubscribe("RTC_CONNECTION_STATE");
+        DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleConnection);
+        this.handleConnection = null;
         this.stopMuteObserver();
         BdApi.DOM.removeStyle("AutoSwitchStatus");
+    }
+
+    handleConnectionStateChange(event) {
+        if (event.state === "RTC_CONNECTED") {
+            this.isConnected = true;
+            this.startMuteObserver();
+        } else if (event.state === "DISCONNECTED") {
+            this.isConnected = false;
+            this.stopMuteObserver();
+        }
+        this.updateUserStatus();
     }
 
     startMuteObserver() {
@@ -108,7 +112,7 @@ module.exports = class AutoSwitchStatus{
                     return;
                 }
             });
-            
+
         };
 
         const createObserver = () => {
@@ -131,16 +135,16 @@ module.exports = class AutoSwitchStatus{
             this.muteObserver = null;
         }
     }
-    
+
     /**
      * Functions used by the interval that checks for new user status
      *  or for changed update interval 
      */
-    updateUserStatus(){
-        var toSet=this.getUserCurrentStatus();
+    updateUserStatus() {
+        var toSet = this.getUserCurrentStatus();
 
         // checking if the status has changed since last time
-        if(this.status != toSet){
+        if (this.status != toSet) {
             this.status = toSet;
             this.setUserStatus(toSet);
         }
@@ -151,19 +155,19 @@ module.exports = class AutoSwitchStatus{
      * @returns {('online'|'idle'|'invisible'|'dnd')}
      * @throws when the mute buttons aren't found
      */
-    getUserCurrentStatus(){
+    getUserCurrentStatus() {
         var currStatus;
-        if(!this.isConnected){
-            currStatus=this.settings.disconnectedStatus;
+        if (!this.isConnected) {
+            currStatus = this.settings.disconnectedStatus;
         }
-        else if(this.isSoundMuted){
-            currStatus=this.settings.mutedSoundStatus;
+        else if (this.isSoundMuted) {
+            currStatus = this.settings.mutedSoundStatus;
         }
-        else if(this.isMicrophoneMuted){
-            currStatus=this.settings.mutedMicrophoneStatus;
+        else if (this.isMicrophoneMuted) {
+            currStatus = this.settings.mutedMicrophoneStatus;
         }
-        else{
-            currStatus=this.settings.connectedStatus;
+        else {
+            currStatus = this.settings.connectedStatus;
         }
 
         return currStatus;
@@ -181,7 +185,7 @@ module.exports = class AutoSwitchStatus{
             },
             0
         );
-        this.showToast(this.locales[toStatus], {type: toStatus});
+        this.showToast(this.locales[toStatus], { type: toStatus });
     }
 
     /**
@@ -195,7 +199,7 @@ module.exports = class AutoSwitchStatus{
         }
     }
 
-    getSettingsPanel(){
+    getSettingsPanel() {
         return () => {
             const [mutedSoundStatus, setMutedSoundStatus] = useState(this.getSetting('mutedSoundStatus'));
             const [mutedMicrophoneStatus, setMutedMicrophoneStatus] = useState(this.getSetting('mutedMicrophoneStatus'));
@@ -214,10 +218,10 @@ module.exports = class AutoSwitchStatus{
                 if (id === 'showToast') setShowToast(value);
             };
             const options = [
-                {label: "Online", value: "online"},
-                {label: "Idle", value: "idle"},
-                {label: "Invisible", value: "invisible"},
-                {label: "Do Not Disturb", value: "dnd"}
+                { label: "Online", value: "online" },
+                { label: "Idle", value: "idle" },
+                { label: "Invisible", value: "invisible" },
+                { label: "Do Not Disturb", value: "dnd" }
             ];
             return React.createElement(
                 "div",
@@ -265,5 +269,5 @@ module.exports = class AutoSwitchStatus{
                 }, "Show Toast"),
             );
         }
-    }        
+    }
 };
