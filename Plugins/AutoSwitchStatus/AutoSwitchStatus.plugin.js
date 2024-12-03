@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.0.1
+ * @version 1.1.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -9,8 +9,9 @@
  */
 
 const { React, Webpack, Data, DOM } = BdApi;
+const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const SelectedChannelStore = BdApi.Webpack.getStore("SelectedChannelStore");
-const { FormSwitch, FormItem, FormTitle, TextInput, FormText, SearchableSelect } = Webpack.getByKeys('FormSwitch', 'FormItem', 'FormTitle', 'Select');
+const { FormSwitch, FormItem, FormTitle, FormText, SearchableSelect } = Webpack.getByKeys('FormSwitch', 'FormItem', 'FormTitle', 'Select');
 const { useState } = React;
 const Margins = Webpack.getByKeys('marginBottom20');
 
@@ -21,16 +22,13 @@ const UserSettingsProtoUtils = Webpack.getModule(
     { first: true, searchExports: true }
 );
 
-DEBUG_ActuallyChangeStatus = true;
-
-class AutoSwitchStatus{
+module.exports = class AutoSwitchStatus{
     constructor() {
         this.defaultSettings = {
             mutedSoundStatus: "idle",
             mutedMicrophoneStatus: "online",
             connectedStatus: "online",
             disconnectedStatus: "invisible",
-            updateTime: 5000,
             showToast: true,
         };
         this.locales = {
@@ -39,37 +37,27 @@ class AutoSwitchStatus{
             invisible: "Invisible",
             dnd: "Do Not Disturb"
         }
-
-        this.SetUserStatus = this.setUserStatus.bind(this);
     }
 
-    /**
-     * Retrieves the setting value for the given key.
-     * If the setting is not found, returns the default setting value.
-     * @param {string} key - The key of the setting to retrieve.
-     * @returns {*} The value of the setting.
-     */
     getSetting(key) {
         return Data.load("AutoSwitchStatus", key) ?? this.defaultSettings[key];
     }
 
-    /**
-     * Saves the setting value for the given key.
-     * @param {string} key - The key of the setting to save.
-     * @param {*} value - The value of the setting to save.
-     * @returns {*} The saved value.
-     */
     setSetting(key, value) {
         return Data.save("AutoSwitchStatus", key, value);
     }
 
     start() {
-        const style = document.createElement('style')
-        style.id = "customStyle-auto-switch-status"
         DOM.addStyle("AutoSwitchStatus", `.bd-toast.toast-online.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='12.5' y='10' width='0' height='0' rx='0' ry='0' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%2323a55a' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-idle.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='6.25' y='3.75' width='7.5' height='7.5' rx='3.75' ry='3.75' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%23f0b232' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-invisible.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='10' y='7.5' width='5' height='5' rx='2.5' ry='2.5' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%2380848e' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-dnd.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='8.75' y='8.75' width='7.5' height='2.5' rx='1.25' ry='1.25' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%23f23f43' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}`);
+
+        let channelId = SelectedChannelStore.getVoiceChannelId();
+        let containerButtons = document.querySelector('[class^="panels_"]>[class^="container_"]').children[1];
+        this.isConnected = channelId !== null;
+        this.isMicrophoneMuted = containerButtons?.children[0]?.getAttribute("aria-checked") === 'true';
+        this.isSoundMuted = containerButtons?.children[1]?.getAttribute("aria-checked") === 'true';
 
         this.settings = {};
 
@@ -79,34 +67,68 @@ class AutoSwitchStatus{
             });
         });
 
-        this.setUserStatus();
-        this.startInterval();
+        this.updateUserStatus();
+
+        this.startMuteObserver();
+        DiscordModules.subscribe("RTC_CONNECTION_STATE", (event) => {
+            if (event.state === "RTC_CONNECTED") {
+                this.isConnected = true;
+                this.startMuteObserver();
+            } else if (event.state === "DISCONNECTED") {
+                this.isConnected = false;
+                this.stopMuteObserver();
+            }
+            this.updateUserStatus();
+        });
     }
 
     stop() {
-        this.stopInterval();
+        DiscordModules.unsubscribe("RTC_CONNECTION_STATE");
+        this.stopMuteObserver();
         BdApi.DOM.removeStyle("AutoSwitchStatus");
     }
 
-    /**
-     * Starts the interval that periodically checks and updates the user status.
-     * If an interval is already running, it stops the existing interval first.
-     */
-    startInterval() {
-        if (this.interval) {
-            this.stopInterval();
+    startMuteObserver() {
+        this.stopMuteObserver();
+
+        const config = { attributes: true, childList: true, subtree: true, attributesFilter: ["aria-checked"] };
+
+        // Callback function when mutations are observed
+        const callback = (mutationsList, observer) => {
+            mutationsList.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'aria-checked') {
+                    let muteButtons = mutation.target.parentElement.children;
+                    if (muteButtons.length < 2) {
+                        return;
+                    }
+                    // Getting Mic and Sound button statuses
+                    this.isMicrophoneMuted = muteButtons[0].getAttribute("aria-checked") === 'true';
+                    this.isSoundMuted = muteButtons[1].getAttribute("aria-checked") === 'true';
+                    this.updateUserStatus();
+                    return;
+                }
+            });
+            
+        };
+
+        const createObserver = () => {
+            // Create and start the observer
+            this.muteObserver = new MutationObserver(callback);
+            const targetNode = document.querySelector('[class^="panels_"]>[class^="container_"]>[class*="buttons_"]');
+            if (targetNode) {
+                this.muteObserver.observe(targetNode, config);
+            } else {
+                this.muteObserver = null;
+                setTimeout(createObserver, 500);
+            }
         }
-        this.interval = setInterval(this.SetUserStatus, this.settings.updateTime);
+        createObserver();
     }
 
-    /**
-     * Stops the interval that periodically checks and updates the user status.
-     * Clears the interval if it is running.
-     */
-    stopInterval() {
-        if (this.interval) {
-            clearInterval(this.interval);
-            this.interval = null;
+    stopMuteObserver() {
+        if (this.muteObserver) {
+            this.muteObserver.disconnect();
+            this.muteObserver = null;
         }
     }
     
@@ -114,13 +136,13 @@ class AutoSwitchStatus{
      * Functions used by the interval that checks for new user status
      *  or for changed update interval 
      */
-    setUserStatus(){
+    updateUserStatus(){
         var toSet=this.getUserCurrentStatus();
 
         // checking if the status has changed since last time
         if(this.status != toSet){
             this.status = toSet;
-            this.updateStatus(toSet);
+            this.setUserStatus(toSet);
         }
     }
 
@@ -130,30 +152,8 @@ class AutoSwitchStatus{
      * @throws when the mute buttons aren't found
      */
     getUserCurrentStatus(){
-        // Gettimg DOM array containing the Mute Buttons
-        let container = document.querySelector('[class^="panels_"]>[class^="container_"]').children[1];
-        if (!container) {
-            return this.status;
-        }
-        let muteButtons = container.querySelectorAll("button");
-        if (muteButtons.length < 1) {
-            return this.status;
-        }
-
-        // DOM variables for Mic and Soud
-        const muteMicrophone = muteButtons[0];
-        const muteSound = muteButtons[1];
-
-        // Getting Mic and Sound button statuses
-        this.isMicrophoneMuted = muteMicrophone.getAttribute("aria-checked") === 'true';
-        this.isSoundMuted = muteSound.getAttribute("aria-checked") === 'true';
-
-        // Checking channelId to detect if player is Connected to a voice chat
-        this.channelId = SelectedChannelStore.getVoiceChannelId();
-        this.connected = this.channelId !== null;
-
         var currStatus;
-        if(!this.connected){
+        if(!this.isConnected){
             currStatus=this.settings.disconnectedStatus;
         }
         else if(this.isSoundMuted){
@@ -170,30 +170,17 @@ class AutoSwitchStatus{
     }
 
     /**
-     * Function that recreates the interval with the new updateTime
-     */
-    updateIntervalTime(){
-        this.stopInterval();
-        this.startInterval();
-    }
-
-    /**
      * Updates the remote status to the param `toStatus`
      * @param {('online'|'idle'|'invisible'|'dnd')} toStatus
      */
-    updateStatus(toStatus) {
-        if (DEBUG_ActuallyChangeStatus) {
-            UserSettingsProtoUtils.updateAsync(
-                "status",
-                (statusSetting) => {
-                    statusSetting.status.value = toStatus; //TODO Fix instruction not working on new account uless status changed once manually
-                },
-                0
-            );
-        }
-        else {
-            console.log("Changing (but not changing) status to: " + toStatus);
-        }
+    setUserStatus(toStatus) {
+        UserSettingsProtoUtils.updateAsync(
+            "status",
+            (statusSetting) => {
+                statusSetting.status.value = toStatus; //TODO Fix instruction not working on new account uless status changed once manually
+            },
+            0
+        );
         this.showToast(this.locales[toStatus], {type: toStatus});
     }
 
@@ -208,16 +195,12 @@ class AutoSwitchStatus{
         }
     }
 
-    /**
-     * @returns {React.Component} Settings Panel
-     */
     getSettingsPanel(){
         return () => {
             const [mutedSoundStatus, setMutedSoundStatus] = useState(this.getSetting('mutedSoundStatus'));
             const [mutedMicrophoneStatus, setMutedMicrophoneStatus] = useState(this.getSetting('mutedMicrophoneStatus'));
             const [connectedStatus, setConnectedStatus] = useState(this.getSetting('connectedStatus'));
             const [disconnectedStatus, setDisconnectedStatus] = useState(this.getSetting('disconnectedStatus'));
-            const [updateTime, setUpdateTime] = useState(this.getSetting('updateTime'));
             const [showToast, setShowToast] = useState(this.getSetting('showToast'));
             const onSelect = (id, value) => {
                 this.setSetting(id, value);
@@ -225,15 +208,6 @@ class AutoSwitchStatus{
                 if (id === "mutedMicrophoneStatus") setMutedMicrophoneStatus(value);
                 if (id === "connectedStatus") setConnectedStatus(value);
                 if (id === "disconnectedStatus") setDisconnectedStatus(value);
-            };
-            const onChange = (id, value) => {
-                if (id === "updateTime"){
-                    setUpdateTime(value);
-                    if(value < 1000) value = 1000;
-                    this.setSetting(id, value);
-                    this.updateIntervalTime();
-                };
-                
             };
             const onSwitch = (id, value) => {
                 this.setSetting(id, value);
@@ -284,15 +258,6 @@ class AutoSwitchStatus{
                         onChange: (value) => onSelect("disconnectedStatus", value),
                     })
                 ),
-                React.createElement(FormItem, { className: Margins.marginBottom20 },
-                    React.createElement(FormTitle, null, "Update status time (ms)"),
-                    React.createElement(FormText, {}, "Interval time between each check if your current status needs to be updated. default: 5000ms"),
-                    React.createElement(TextInput, {
-                        type: 'number',
-                        value: updateTime,
-                        onChange: (value) => onChange('updateTime', parseInt(value)),
-                    })
-                ),
                 React.createElement(FormSwitch, {
                     note: "If enabled it hides the krisp button from bottom-left status menu.",
                     value: showToast,
@@ -300,7 +265,5 @@ class AutoSwitchStatus{
                 }, "Show Toast"),
             );
         }
-    }
+    }        
 };
-
-module.exports = AutoSwitchStatus;
