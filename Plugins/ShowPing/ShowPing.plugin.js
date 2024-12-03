@@ -1,14 +1,14 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.1.2
+ * @version 2.1.3
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
  * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js
  */
 
-const { Patcher, React, Webpack, Data } = BdApi;
+const { React, Webpack, Data } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const { FormSwitch } = Webpack.getByKeys('FormSwitch');
 const { useState } = React;
@@ -55,25 +55,19 @@ module.exports = class ShowPing {
 
     start() {
         this.addPingDisplay();
-        this.startPingObserver();
         DiscordModules.subscribe("RTC_CONNECTION_STATE", (event) => {
-            if (event.state === "RTC_CONNECTING") {
-                this.isConnected = false;
-                this.addPingDisplay();
-            } else if (event.state === "RTC_CONNECTED") {
+            if (event.state === "RTC_CONNECTED") {
                 this.isConnected = true;
-                this.startPingObserver();
-            } else if (event.state === "DISCONNECTED") {
+                this.addPingDisplay();
+            } else {
                 this.isConnected = false;
-                this.stopPingObserver();
                 this.removePingDisplay();
             }
         });
     }
 
     stop() {
-        Patcher.unpatchAll("UserConnection");
-        this.stopPingObserver();
+        DiscordModules.unsubscribe("RTC_CONNECTION_STATE");
         this.removePingDisplay();
         this.displayKrispButton(true);
     }
@@ -87,19 +81,15 @@ module.exports = class ShowPing {
         const callback = (mutationsList, observer) => {
             this.updatePing(mutationsList[0].target.ariaLabel);
         };
-
-        const createObserver = () => {
-            // Create and start the observer
-            this.pingObserver = new MutationObserver(callback);
-            const targetNode = document.querySelector('[class^="ping_"]');
-            if (targetNode) {
-                this.pingObserver.observe(targetNode, config);
-            } else if (this.isConnected) {
-                this.pingObserver = null;
-                setTimeout(createObserver, 500);
-            }
+        // Create and start the observer
+        this.pingObserver = new MutationObserver(callback);
+        const targetNode = document.querySelector('[class^="ping_"]');
+        if (targetNode) {
+            this.pingObserver.observe(targetNode, config);
+        } else if (this.isConnected) {
+            this.pingObserver = null;
+            setTimeout(() => this.addPingDisplay(), 500);
         }
-        createObserver();
     }
 
     stopPingObserver() {
@@ -110,41 +100,39 @@ module.exports = class ShowPing {
     }
 
     addPingDisplay() {
-        this.statusBar = document.querySelector('[class^="rtcConnectionStatus_"]')?.querySelector('[class^="rtcConnectionStatus"]');
+        this.removePingDisplay();
+        const connection = document.querySelector('[class^="rtcConnectionStatus_"]');
+        this.statusBar = connection?.querySelector('[class^="rtcConnectionStatusConnected_"]');
 
         if (this.statusBar) {
-            if (this.pingObserver) {
-                this.stopPingObserver();
-            }
-            if (this.pingElement) {
-                this.removePingDisplay();
-            }
-
             // Create ping display element
             this.pingElement = document.createElement('div');
-            this.pingElement.style.width = 'min-content';
-            this.pingElement.style.float = 'left';
-            this.pingElement.textContent = '\u00A0N/A';
+            this.pingElement.style = 'width: min-content; float: left;';
             // Insert ping element after the status text
-            this.statusBar.children[1].style = 'width: min-content; float: left;';
+            this.statusBar.style = 'float: left; display: flex;';
             this.statusBar.appendChild(this.pingElement);
 
             if (this.getSetting('hideKrispButton')) {
                 this.displayKrispButton(false);
             }
 
-            this.updatePing();
+            this.updatePing(connection.querySelector('[class^="ping_"]')?.getAttribute('aria-label'));
+            this.startPingObserver();
+        } else if(this.isConnected) {
+            setTimeout(() => this.addPingDisplay(), 500)
         }
     }
 
     removePingDisplay() {
-        if (this.statusBar) {
-            this.statusBar.children[1].style = '';
-            this.statusBar = null;
-        }
+        this.stopPingObserver();
         if (this.pingElement) {
             this.pingElement.remove();
             this.pingElement = null;
+        }
+        if (this.statusBar) {
+            this.statusBar.style.float = '';
+            this.statusBar.style.display = '';
+            this.statusBar = null;
         }
     }
 
