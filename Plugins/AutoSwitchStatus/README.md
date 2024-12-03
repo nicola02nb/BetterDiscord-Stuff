@@ -9,8 +9,8 @@ If you spam status changes you'll be blocked temporarly from doing calls to Disc
 - Enable/Disable toast that shows your switching status
 
 ## Preview:
-![Video senza titolo - Realizzato con Clipchamp (1)](https://github.com/user-attachments/assets/02d64be7-77ff-4344-b777-c73cff2d39f6)
-![Screenshot 2024-12-03 105326](https://github.com/user-attachments/assets/a3d5f44e-560a-48eb-a482-0aa0145e068d)
+![Example](https://github.com/user-attachments/assets/02d64be7-77ff-4344-b777-c73cff2d39f6)
+![Settings](https://github.com/user-attachments/assets/a3d5f44e-560a-48eb-a482-0aa0145e068d)
 
 ## Other:
 In older versions there was also the possibility to set the status when the plugin starts up, tell me if I should take it back.
