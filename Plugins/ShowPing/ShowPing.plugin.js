@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.1.3
+ * @version 2.1.4
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -55,21 +55,25 @@ module.exports = class ShowPing {
 
     start() {
         this.addPingDisplay();
-        DiscordModules.subscribe("RTC_CONNECTION_STATE", (event) => {
-            if (event.state === "RTC_CONNECTED") {
-                this.isConnected = true;
-                this.addPingDisplay();
-            } else {
-                this.isConnected = false;
-                this.removePingDisplay();
-            }
-        });
+        this.handleConnection = this.handleConnectionStateChange.bind(this);
+        DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
     }
 
     stop() {
-        DiscordModules.unsubscribe("RTC_CONNECTION_STATE");
+        DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleConnection);
+        this.handleConnection = null;
         this.removePingDisplay();
         this.displayKrispButton(true);
+    }
+
+    handleConnectionStateChange(event) {
+        if (event.state === "RTC_CONNECTED") {
+            this.isConnected = true;
+            this.addPingDisplay();
+        } else {
+            this.isConnected = false;
+            this.removePingDisplay();
+        }
     }
 
     startPingObserver() {
@@ -118,7 +122,7 @@ module.exports = class ShowPing {
 
             this.updatePing(connection.querySelector('[class^="ping_"]')?.getAttribute('aria-label'));
             this.startPingObserver();
-        } else if(this.isConnected) {
+        } else if (this.isConnected) {
             setTimeout(() => this.addPingDisplay(), 500)
         }
     }
