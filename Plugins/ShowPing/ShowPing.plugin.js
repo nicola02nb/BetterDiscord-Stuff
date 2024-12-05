@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.1.4
+ * @version 2.1.5
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -67,12 +67,15 @@ module.exports = class ShowPing {
     }
 
     handleConnectionStateChange(event) {
-        if (event.state === "RTC_CONNECTED") {
-            this.isConnected = true;
-            this.addPingDisplay();
-        } else {
-            this.isConnected = false;
-            this.removePingDisplay();
+        if (event.context === "default") {
+            if (event.state === "RTC_CONNECTED") {
+                this.isConnected = true;
+                this.addPingDisplay();
+            } else {
+                console.warn(event);
+                this.isConnected = false;
+                this.removePingDisplay();
+            }
         }
     }
 
