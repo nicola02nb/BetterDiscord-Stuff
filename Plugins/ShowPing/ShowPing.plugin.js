@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.1.5
+ * @version 2.1.6
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -143,7 +143,9 @@ module.exports = class ShowPing {
     }
 
     updatePing(ping) {
-        if (ping !== undefined && this.pingElement && this.pingElement.isConnected) {
+        if(ping === null || ping === undefined) {
+            this.pingElement.textContent = `\u00A0N/A`;
+        } else if (this.pingElement && this.pingElement.isConnected) {
             this.pingElement.textContent = `\u00A0${ping}`;
         }
     }
