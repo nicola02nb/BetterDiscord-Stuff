@@ -145,6 +145,7 @@ module.exports = class AutoSwitchStatus {
         DiscordModules.unsubscribe("AUDIO_TOGGLE_SELF_MUTE", this.handleMute);
         DiscordModules.unsubscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleMute);
         DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleConnection);
+        this.handleMute = null;
         this.handleConnection = null;
         this.api.DOM.removeStyle();
     }
