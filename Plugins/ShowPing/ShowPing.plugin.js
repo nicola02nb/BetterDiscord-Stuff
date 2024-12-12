@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.3.0
+ * @version 2.3.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -89,7 +89,6 @@ module.exports = class ShowPing {
     }
 
     handlePing(event) {
-        this.api.Logger.warn(event);
         if(this.pingElement) {
             this.updatePing(event.pings[event.pings.length - 1].value);
         }
