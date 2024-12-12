@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.3.1
+ * @version 2.3.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -68,8 +68,8 @@ module.exports = class ShowPing {
     }
 
     stop() {
-        DiscordModules.unsubscribe("RTC_CONNECTION_PING", this.handleConnection);
-        DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handlePing);
+        DiscordModules.unsubscribe("RTC_CONNECTION_PING", this.handlePing);
+        DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleConnection);
         this.handlePing = null;
         this.handleConnection = null;
         this.removePingDisplay();
