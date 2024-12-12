@@ -1,56 +1,59 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.1.6
+ * @version 2.2.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
  * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js
  */
+const config = {
+    changelog: [
+        {
+            title: "2.2.0",
+            type: "improved",
+            items: [
+                "Updated for new BetterDiscord plugin system",
+            ]
+        }
+    ],
+    settings: [
+        { 
+            type: "switch",
+            id: "hideKrispButton",
+            name: "Hide krisp button",
+            note: "If enabled, hides krisp button near disconnect channel button",
+            value: true
+        },
+    ]
+};
 
-const { React, Webpack, Data } = BdApi;
+const { Webpack } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
-const { FormSwitch } = Webpack.getByKeys('FormSwitch');
-const { useState } = React;
 
 module.exports = class ShowPing {
-    constructor() {
-        this.defaultSettings = {
-            hideKrispButton: true,
-        };
+    constructor(meta) {
+        this.meta = meta;
+        this.api = new BdApi(this.meta.name);
+        this.initSettingsValues();
         this.statusBar = null;
         this.pingElement = null;
         this.pingObserver = null;
     }
 
+    initSettingsValues() {
+        config.settings[0].value = this.api.Data.load("hideKrispButton");
+    }
+
     getSettingsPanel() {
-        return () => {
-            const [hideKrispButton, setHideKrispButton] = useState(this.getSetting('hideKrispButton'));
-            const onSwitch = (id, value) => {
-                this.setSetting(id, value);
-                if (id === 'hideKrispButton') {
-                    setHideKrispButton(value);
-                    this.displayKrispButton(!value);
-                }
-            };
-            return React.createElement(
-                "div",
-                {},
-                React.createElement(FormSwitch, {
-                    note: "If enabled it hides the krisp button from bottom-left status menu.",
-                    value: hideKrispButton,
-                    onChange: (e) => onSwitch('hideKrispButton', e),
-                }, "Hide Krisp Button")
-            );
-        }
-    }
-
-    getSetting(key) {
-        return Data.load("ShowPing", key) ?? this.defaultSettings[key];
-    }
-
-    setSetting(key, value) {
-        return Data.save("ShowPing", key, value);
+        return BdApi.UI.buildSettingsPanel({
+            settings: config.settings,
+            onChange: (category, id, value) => {
+                config.settings[0].value = value;
+                this.displayKrispButton(!value);
+                this.api.Data.save(id, value);   
+            },
+        });
     }
 
     start() {
@@ -71,18 +74,16 @@ module.exports = class ShowPing {
             if (event.state === "RTC_CONNECTED") {
                 this.isConnected = true;
                 this.addPingDisplay();
+                this.startPingObserver();
             } else {
                 this.isConnected = false;
                 this.removePingDisplay();
+                this.stopPingObserver();
             }
         }
     }
 
     startPingObserver() {
-        this.stopPingObserver();
-
-        const config = { attributes: true };
-
         // Callback function when mutations are observed
         const callback = (mutationsList, observer) => {
             this.updatePing(mutationsList[0].target.ariaLabel);
@@ -91,7 +92,7 @@ module.exports = class ShowPing {
         this.pingObserver = new MutationObserver(callback);
         const targetNode = document.querySelector('[class^="ping_"]');
         if (targetNode) {
-            this.pingObserver.observe(targetNode, config);
+            this.pingObserver.observe(targetNode, { attributes: true });
         } else if (this.isConnected) {
             this.pingObserver = null;
             setTimeout(() => this.addPingDisplay(), 500);
@@ -100,13 +101,13 @@ module.exports = class ShowPing {
 
     stopPingObserver() {
         if (this.pingObserver) {
+            console.warn('Disconnecting ping observer');
             this.pingObserver.disconnect();
             this.pingObserver = null;
         }
     }
 
     addPingDisplay() {
-        this.removePingDisplay();
         const connection = document.querySelector('[class^="rtcConnectionStatus_"]');
         this.statusBar = connection?.querySelector('[class^="rtcConnectionStatusConnected_"]');
 
@@ -118,19 +119,17 @@ module.exports = class ShowPing {
             this.statusBar.style = 'float: left; display: flex;';
             this.statusBar.appendChild(this.pingElement);
 
-            if (this.getSetting('hideKrispButton')) {
+            if (config.settings[0].value) {
                 this.displayKrispButton(false);
             }
 
             this.updatePing(connection.querySelector('[class^="ping_"]')?.getAttribute('aria-label'));
-            this.startPingObserver();
         } else if (this.isConnected) {
             setTimeout(() => this.addPingDisplay(), 500)
         }
     }
 
     removePingDisplay() {
-        this.stopPingObserver();
         if (this.pingElement) {
             this.pingElement.remove();
             this.pingElement = null;
@@ -143,7 +142,7 @@ module.exports = class ShowPing {
     }
 
     updatePing(ping) {
-        if(ping === null || ping === undefined) {
+        if (ping === null || ping === undefined) {
             this.pingElement.textContent = `\u00A0N/A`;
         } else if (this.pingElement && this.pingElement.isConnected) {
             this.pingElement.textContent = `\u00A0${ping}`;
