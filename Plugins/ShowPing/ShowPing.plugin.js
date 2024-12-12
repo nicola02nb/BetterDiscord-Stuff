@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.2.2
+ * @version 2.3.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -10,10 +10,10 @@
 const config = {
     changelog: [
         {
-            title: "2.2.0",
+            title: "2.3.0",
             type: "improved",
             items: [
-                "Updated for new BetterDiscord plugin system",
+                "Implemented with RTC_CONNECTION_PING event",
             ]
         }
     ],
@@ -28,7 +28,7 @@ const config = {
     ]
 };
 
-const { Webpack, DOM } = BdApi;
+const { Webpack } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 
 module.exports = class ShowPing {
@@ -62,11 +62,15 @@ module.exports = class ShowPing {
         this.api.DOM.addStyle(`[class^="rtcConnectionStatusConnected_"]{float: left; display: flex;}`);
         this.addPingDisplay();
         this.handleConnection = this.handleConnectionStateChange.bind(this);
+        this.handlePing = this.handlePing.bind(this);
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
+        DiscordModules.subscribe("RTC_CONNECTION_PING", this.handlePing);
     }
 
     stop() {
-        DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleConnection);
+        DiscordModules.unsubscribe("RTC_CONNECTION_PING", this.handleConnection);
+        DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handlePing);
+        this.handlePing = null;
         this.handleConnection = null;
         this.removePingDisplay();
         this.displayKrispButton(true);
@@ -84,27 +88,10 @@ module.exports = class ShowPing {
         }
     }
 
-    startPingObserver() {
-        // Callback function when mutations are observed
-        const callback = (mutationsList, observer) => {
-            this.updatePing(mutationsList[0].target.ariaLabel);
-        };
-        // Create and start the observer
-        this.pingObserver = new MutationObserver(callback);
-        const targetNode = document.querySelector('[class^="ping_"]');
-        if (targetNode) {
-            this.pingObserver.observe(targetNode, { attributes: true });
-        } else if (this.isConnected) {
-            this.pingObserver = null;
-            setTimeout(() => this.addPingDisplay(), 500);
-        }
-    }
-
-    stopPingObserver() {
-        if (this.pingObserver) {
-            this.api.Logger.warn('Disconnecting ping observer');
-            this.pingObserver.disconnect();
-            this.pingObserver = null;
+    handlePing(event) {
+        this.api.Logger.warn(event);
+        if(this.pingElement) {
+            this.updatePing(event.pings[event.pings.length - 1].value);
         }
     }
 
@@ -123,22 +110,19 @@ module.exports = class ShowPing {
                 this.displayKrispButton(false);
             }
 
-            this.updatePing(connection.querySelector('[class^="ping_"]')?.getAttribute('aria-label'));
-            this.startPingObserver();
+            this.updatePing(connection.querySelector('[class^="ping_"]')?.getAttribute('aria-label').slice(0, -3));
+
         } else if (this.isConnected) {
             setTimeout(() => this.addPingDisplay(), 500)
         }
     }
 
     removePingDisplay() {
-        this.stopPingObserver();
         if (this.pingElement) {
             this.pingElement.remove();
             this.pingElement = null;
         }
         if (this.statusBar) {
-            this.statusBar.style.float = '';
-            this.statusBar.style.display = '';
             this.statusBar = null;
         }
     }
@@ -147,7 +131,7 @@ module.exports = class ShowPing {
         if (ping === null || ping === undefined) {
             this.pingElement.textContent = `\u00A0N/A`;
         } else if (this.pingElement && this.pingElement.isConnected) {
-            this.pingElement.textContent = `\u00A0${ping}`;
+            this.pingElement.textContent = `\u00A0${ping} ms`;
         }
     }
 
