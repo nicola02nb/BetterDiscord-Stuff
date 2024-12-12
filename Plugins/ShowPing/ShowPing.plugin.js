@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.2.0
+ * @version 2.2.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -28,7 +28,7 @@ const config = {
     ]
 };
 
-const { Webpack } = BdApi;
+const { Webpack, DOM } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 
 module.exports = class ShowPing {
@@ -42,21 +42,24 @@ module.exports = class ShowPing {
     }
 
     initSettingsValues() {
-        config.settings[0].value = this.api.Data.load("hideKrispButton");
+        config.settings[0].value = this.api.Data.load("hideKrispButton") ?? config.settings[0].value;
     }
 
     getSettingsPanel() {
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
-                config.settings[0].value = value;
-                this.displayKrispButton(!value);
+                if (id === "hideKrispButton"){
+                    config.settings[0].value = value;
+                    this.displayKrispButton(!value);
+                }
                 this.api.Data.save(id, value);   
             },
         });
     }
 
     start() {
+        this.api.DOM.addStyle(`[class^="rtcConnectionStatusConnected_"]{float: left; display: flex;}`);
         this.addPingDisplay();
         this.handleConnection = this.handleConnectionStateChange.bind(this);
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
@@ -74,11 +77,9 @@ module.exports = class ShowPing {
             if (event.state === "RTC_CONNECTED") {
                 this.isConnected = true;
                 this.addPingDisplay();
-                this.startPingObserver();
             } else {
                 this.isConnected = false;
                 this.removePingDisplay();
-                this.stopPingObserver();
             }
         }
     }
@@ -101,7 +102,7 @@ module.exports = class ShowPing {
 
     stopPingObserver() {
         if (this.pingObserver) {
-            console.warn('Disconnecting ping observer');
+            this.api.Logger.warn('Disconnecting ping observer');
             this.pingObserver.disconnect();
             this.pingObserver = null;
         }
@@ -116,7 +117,6 @@ module.exports = class ShowPing {
             this.pingElement = document.createElement('div');
             this.pingElement.style = 'width: min-content; float: left;';
             // Insert ping element after the status text
-            this.statusBar.style = 'float: left; display: flex;';
             this.statusBar.appendChild(this.pingElement);
 
             if (config.settings[0].value) {
@@ -124,12 +124,14 @@ module.exports = class ShowPing {
             }
 
             this.updatePing(connection.querySelector('[class^="ping_"]')?.getAttribute('aria-label'));
+            this.startPingObserver();
         } else if (this.isConnected) {
             setTimeout(() => this.addPingDisplay(), 500)
         }
     }
 
     removePingDisplay() {
+        this.stopPingObserver();
         if (this.pingElement) {
             this.pingElement.remove();
             this.pingElement = null;
