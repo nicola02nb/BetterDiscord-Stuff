@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.3.2
+ * @version 2.3.3
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -74,6 +74,7 @@ module.exports = class ShowPing {
         this.handleConnection = null;
         this.removePingDisplay();
         this.displayKrispButton(true);
+        this.api.DOM.removeStyle();
     }
 
     handleConnectionStateChange(event) {
