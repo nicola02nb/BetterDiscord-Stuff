@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.0.0
+ * @version 1.0.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -13,7 +13,7 @@ const config = {
             title: "1.0.0",
             type: "started",
             items: [
-                "base version",
+                "Base plugin",
             ]
         }
     ],
@@ -310,7 +310,7 @@ module.exports = class BetterTTS {
         button.style.padding = "0px";
         button.style.margin = "0px";
 
-        button.title = 'Subscribes current chael to TTS';
+        button.title = 'Subscribes current channel to TTS';
         button.addEventListener("click", () => {
             this.updateSelectedChannel();
         });
@@ -364,10 +364,11 @@ module.exports = class BetterTTS {
                 continue;
             if (status.channelId !== status.oldChannelId) {
                 let user = UserStore.getUser(status.userId);
+                console.warn(user);
                 if (status.channelId === channelId) {
-                    this.playTTSfromSource(`${user.username} joined the channel`);
+                    this.playTTSfromSource(`${user.globalName} joined the channel`);
                 } else if (status.oldChannelId === channelId) {
-                    this.playTTSfromSource(`${user.username} left the channel`);
+                    this.playTTSfromSource(`${user.globalName} left the channel`);
                 }
             }
         }
