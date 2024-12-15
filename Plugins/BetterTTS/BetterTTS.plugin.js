@@ -364,7 +364,6 @@ module.exports = class BetterTTS {
                 continue;
             if (status.channelId !== status.oldChannelId) {
                 let user = UserStore.getUser(status.userId);
-                console.warn(user);
                 if (status.channelId === channelId) {
                     this.playTTSfromSource(`${user.globalName} joined the channel`);
                 } else if (status.oldChannelId === channelId) {
