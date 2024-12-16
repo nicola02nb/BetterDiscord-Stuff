@@ -15,15 +15,7 @@ const dropdownStatusOptions = [
 ]
 
 const config = {
-    changelog: [
-        {
-            title: "1.3.0",
-            type: "improved",
-            items: [
-                "Improved with AUDIO_TOGGLE_SELF_MUTE and AUDIO_TOGGLE_SELF_DEAF events",
-            ]
-        }
-    ],
+    changelog: [],
     settings: [{
         type: "category",
         id: "statuseSettings",
@@ -61,7 +53,7 @@ const config = {
             },
         ]
     },
-    { 
+    {
         type: "switch",
         id: "showToast",
         name: "Show Toast",
@@ -86,7 +78,7 @@ module.exports = class AutoSwitchStatus {
         this.meta = meta;
         this.api = new BdApi(this.meta.name);
         this.initSettingsValues();
-        
+
         this.locales = {
             online: "Online",
             idle: "Idle",
@@ -151,7 +143,7 @@ module.exports = class AutoSwitchStatus {
     }
 
     handleConnectionStateChange(event) {
-        if(event.context === "default"){
+        if (event.context === "default") {
             if (event.state === "RTC_CONNECTED") {
                 this.isConnected = true;
             } else if (event.state === "DISCONNECTED") {
@@ -162,10 +154,10 @@ module.exports = class AutoSwitchStatus {
     }
 
     handleMuteStateChange(event) {
-        if(event.type === "AUDIO_TOGGLE_SELF_MUTE"){
+        if (event.type === "AUDIO_TOGGLE_SELF_MUTE") {
             this.isMicrophoneMuted = !this.isMicrophoneMuted;
         }
-        if(event.type === "AUDIO_TOGGLE_SELF_DEAF"){
+        if (event.type === "AUDIO_TOGGLE_SELF_DEAF") {
             this.isSoundMuted = !this.isSoundMuted;
         }
         this.updateUserStatus();
