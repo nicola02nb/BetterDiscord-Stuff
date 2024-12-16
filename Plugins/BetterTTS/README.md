@@ -1,4 +1,4 @@
-# BetterTTS for BetterDiscord
+# BetterTTS for BetterDiscord 🗣️
 A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message is received.
 ## Features:
 - Announce client join/left channel
@@ -10,4 +10,6 @@ A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message
 - Set a keyboard shortcut to toggle TTS On/Off
 - Select mutliple voices and languages
 ## TTS Sources
-- Streamlabs API
+- Streamelements API
+## Settings
+![Screenshot 2024-12-15 183457](https://github.com/user-attachments/assets/f4ebd233-36d9-4304-a467-f50f840d6e29)
