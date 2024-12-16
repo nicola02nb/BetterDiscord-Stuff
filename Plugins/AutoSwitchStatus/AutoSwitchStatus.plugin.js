@@ -172,20 +172,6 @@ module.exports = class AutoSwitchStatus {
     }
 
     /**
-     * Functions used by the interval that checks for new user status
-     *  or for changed update interval 
-     */
-    updateUserStatus() {
-        var toSet = this.getUserCurrentStatus();
-
-        // checking if the status has changed since last time
-        if (this.status != toSet) {
-            this.status = toSet;
-            this.setUserStatus(toSet);
-        }
-    }
-
-    /**
      * Funtion that returns the current user status
      * @returns {('online'|'idle'|'invisible'|'dnd')}
      * @throws when the mute buttons aren't found
@@ -206,6 +192,20 @@ module.exports = class AutoSwitchStatus {
         }
 
         return currStatus;
+    }
+
+    /**
+     * Functions used by the interval that checks for new user status
+     *  or for changed update interval 
+     */
+    updateUserStatus() {
+        var toSet = this.getUserCurrentStatus();
+
+        // checking if the status has changed since last time
+        if (this.status != toSet) {
+            this.status = toSet;
+            this.setUserStatus(toSet);
+        }
     }
 
     /**
