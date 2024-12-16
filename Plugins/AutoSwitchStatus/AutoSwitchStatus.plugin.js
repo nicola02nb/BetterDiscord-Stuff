@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.3.0
+ * @version 1.3.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -128,7 +128,7 @@ module.exports = class AutoSwitchStatus {
 
         let channelId = SelectedChannelStore.getVoiceChannelId();
         const containerButtons = document.querySelector('[class^="avatarWrapper_"] + * ').children;
-        this.isConnected = channelId !== null;
+        this.isConnected = !(channelId === null || channelId === undefined);
         this.isMicrophoneMuted = containerButtons[0]?.getAttribute("aria-checked") === 'true';
         this.isSoundMuted = containerButtons[1]?.getAttribute("aria-checked") === 'true';
 
