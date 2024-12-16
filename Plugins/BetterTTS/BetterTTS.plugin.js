@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.0.1
+ * @version 1.0.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -316,7 +316,7 @@ module.exports = class BetterTTS {
         });
 
         this.subscribeButton = button;
-        this.updateButtonIcon();
+        this.updateButtonIcon(false);
         const titleWrapper = titleContainer.querySelector('[class^="titleWrapper_"]');
         titleWrapper.insertAdjacentElement('afterend', this.subscribeButton);
     }
@@ -328,17 +328,17 @@ module.exports = class BetterTTS {
         }
     }
 
-    updateButtonIcon() {
+    updateButtonIcon(showToast = true) {
         if (this.subscribeButton) {
             let currentChannel = SelectedChannelStore.getCurrentlySelectedChannelId();
             if (!currentChannel) return;
             let channelName = ChannelStore.getChannel(currentChannel).name;
             if (currentChannel === this.subscribedChannel) {
                 this.subscribeButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-toggle-on" viewBox="0 0 16 16"><path d="M5 3a5 5 0 0 0 0 10h6a5 5 0 0 0 0-10zm6 9a4 4 0 1 1 0-8 4 4 0 0 1 0 8"/></svg>';
-                this.api.showToast(`TTS Subbed to ${channelName}`);
+                if (showToast) this.api.showToast(`TTS Subbed to ${channelName}`);
             } else {
                 this.subscribeButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-toggle-off" viewBox="0 0 16 16"><path d="M11 4a4 4 0 0 1 0 8H8a5 5 0 0 0 2-4 5 5 0 0 0-2-4zm-6 8a4 4 0 1 1 0-8 4 4 0 0 1 0 8M0 8a5 5 0 0 0 5 5h6a5 5 0 0 0 0-10H5a5 5 0 0 0-5 5"/></svg>';
-                this.api.showToast(`TTS Unsubbbed from ${channelName}`);
+                if (showToast) this.api.showToast(`TTS Unsubbbed from ${channelName}`);
             }
             this.subscribeButton.children[0].style.height = "24px";
             this.subscribeButton.children[0].style.width = "24px";
