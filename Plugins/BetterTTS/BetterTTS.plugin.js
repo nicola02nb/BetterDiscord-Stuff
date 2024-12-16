@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.1.0
+ * @version 1.1.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -322,7 +322,7 @@ module.exports = class BetterTTS {
         button.style.height = "24px";
         button.style.width = "24px";
         button.style.padding = "0px";
-        button.style.margin = "0px";
+        button.style.margin = "0px 4px 0px 0px";
 
         button.title = 'Subscribes current channel to TTS';
         button.addEventListener("click", () => {
