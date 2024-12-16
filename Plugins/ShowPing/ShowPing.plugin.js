@@ -8,17 +8,9 @@
  * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js
  */
 const config = {
-    changelog: [
-        {
-            title: "2.3.0",
-            type: "improved",
-            items: [
-                "Implemented with RTC_CONNECTION_PING event",
-            ]
-        }
-    ],
+    changelog: [],
     settings: [
-        { 
+        {
             type: "switch",
             id: "hideKrispButton",
             name: "Hide krisp button",
@@ -49,11 +41,11 @@ module.exports = class ShowPing {
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
-                if (id === "hideKrispButton"){
+                if (id === "hideKrispButton") {
                     config.settings[0].value = value;
                     this.displayKrispButton(!value);
                 }
-                this.api.Data.save(id, value);   
+                this.api.Data.save(id, value);
             },
         });
     }
@@ -90,7 +82,7 @@ module.exports = class ShowPing {
     }
 
     handlePing(event) {
-        if(this.pingElement) {
+        if (this.pingElement) {
             this.updatePing(event.pings[event.pings.length - 1].value);
         }
     }
