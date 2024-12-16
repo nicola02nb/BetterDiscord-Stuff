@@ -128,7 +128,7 @@ module.exports = class AutoSwitchStatus {
 
         let channelId = SelectedChannelStore.getVoiceChannelId();
         const containerButtons = document.querySelector('[class^="avatarWrapper_"] + * ').children;
-        this.isConnected = currentChannel !== null && currentChannel !== undefined;
+        this.isConnected = channelId !== null && channelId !== undefined;
         this.isMicrophoneMuted = containerButtons[0]?.getAttribute("aria-checked") === 'true';
         this.isSoundMuted = containerButtons[1]?.getAttribute("aria-checked") === 'true';
 
