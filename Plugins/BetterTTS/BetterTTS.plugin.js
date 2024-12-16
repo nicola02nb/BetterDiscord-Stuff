@@ -10,14 +10,14 @@
 const config = {
     changelog: [],
     settings: [
-        {
+        { 
             type: "switch",
             id: "enbleTTS",
             name: "Enable TTS",
             note: "Enables/Disables the TTS",
             value: true
         },
-        {
+        { 
             type: "switch",
             id: "enbleUSerAnnouncement",
             name: "Enable User Announcement",
@@ -106,7 +106,7 @@ module.exports = class BetterTTS {
     initSettingsValues() {
         StreamElementsTTS.loadVoices();
         for (const setting of config.settings) {
-            if (setting.type === "category") {
+            if(setting.type === "category") {
                 for (const settingInt of setting.settings) {
                     settingInt.value = this.api.Data.load(settingInt.id) ?? settingInt.value;
                 }
@@ -140,12 +140,12 @@ module.exports = class BetterTTS {
                 break;
             case "enbleUSerAnnouncement":
                 config.settings[1].value = value;
-                if (config.settings[0].value) {
+                if(config.settings[0].value){
                     if (value)
                         DiscordModules.subscribe("VOICE_STATE_UPDATES", this.annouceUsers);
                     else
                         DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.annouceUsers);
-                }
+                }                
                 break;
             case "selectedChannel":
                 config.settings[2].value = value;
@@ -167,7 +167,7 @@ module.exports = class BetterTTS {
             default:
                 break;
         }
-        this.api.Data.save(id, value);
+        this.api.Data.save(id, value);   
     }
 
     start() {
@@ -180,16 +180,16 @@ module.exports = class BetterTTS {
         this.handleToolbar = this.handleToolbarLoad.bind(this);
 
         document.addEventListener("keydown", this.keyDown);
-        if (config.settings[0].value) {
+        if(config.settings[0].value){
             DiscordModules.subscribe("MESSAGE_CREATE", this.handleMessage);
         }
-        if (config.settings[1].value) {
+        if(config.settings[1].value){
             DiscordModules.subscribe("VOICE_STATE_UPDATES", this.annouceUsers);
         }
         DiscordModules.subscribe("CHANNEL_SELECT", this.handleToolbar);
 
         let currentChannel = SelectedChannelStore.getCurrentlySelectedChannelId();
-        if (currentChannel !== null && currentChannel !== undefined)
+        if(currentChannel !== null && currentChannel !== undefined)
             this.addButton();
     }
 
@@ -204,16 +204,16 @@ module.exports = class BetterTTS {
 
     // Event handelers
     onKeyDown(event) {
-        if (event.ctrlKey === this.keyShortcut.ctrlKey
-            && event.shiftKey === this.keyShortcut.shiftKey
+        if(event.ctrlKey === this.keyShortcut.ctrlKey 
+            && event.shiftKey === this.keyShortcut.shiftKey 
             && event.altKey === this.keyShortcut.altKey
-            && event.key === this.keyShortcut.key) {
+            && event.key === this.keyShortcut.key){
             this.toggleTTS();
         }
     }
 
     handleMessageRecieved(event) {
-        if (this.shouldSendMessage(event.message)) {
+        if(this.shouldSendMessage(event.message)){
             this.playTTSfromSource(event.message.content);
         }
     }
@@ -222,26 +222,26 @@ module.exports = class BetterTTS {
         let channelId = SelectedChannelStore.getVoiceChannelId();
         let userId = getConnectedUser.getCurrentUser().id;
         for (const status of event.voiceStates) {
-            if (status.userId === userId)
+            if (status.userId === userId) 
                 continue;
-            if (status.channelId !== status.oldChannelId) {
+            if(status.channelId !== status.oldChannelId){
                 let user = UserStore.getUser(status.userId);
-                if (status.channelId === channelId) {
+                if(status.channelId === channelId){
                     this.playTTSfromSource(`${user.globalName} joined the channel`);
-                } else if (status.oldChannelId === channelId) {
+                } else if(status.oldChannelId === channelId){
                     this.playTTSfromSource(`${user.globalName} left the channel`);
-                }
+                }                
             }
         }
     }
 
-    handleToolbarLoad(event) {
+    handleToolbarLoad(event){
         let toolbar = document.querySelector("[class^='upperContainer_']");
         let observer = new MutationObserver(this.addButton.bind(this));
         observer.observe(toolbar, { childList: true, attributes: true, subtree: true });
-
+        
         let currentChannel = SelectedChannelStore.getCurrentlySelectedChannelId();
-        if (currentChannel != event.channelId) {
+        if(currentChannel != event.channelId){
             setTimeout(() => this.handleToolbarLoad(), 500);
         } else {
             this.addButton();
@@ -250,7 +250,7 @@ module.exports = class BetterTTS {
 
     // Play TTS
     playTTSfromSource(text) {
-        switch (config.settings[4].settings[0].value) {
+        switch (config.settings[4].settings[0].value){
             case "streamlabs":
                 StreamElementsTTS.playSound(text, config.settings[4].settings[1].value);
                 break;
@@ -265,7 +265,7 @@ module.exports = class BetterTTS {
         let voiceChannelId = SelectedChannelStore.getVoiceChannelId();
         let selectedChannelId = SelectedChannelStore.getCurrentlySelectedChannelId();
 
-        switch (selectedChannel) {
+        switch (selectedChannel){
             case "connectedChannel":
                 return messageChannelId === voiceChannelId;
             case "focusedChannel":
@@ -279,12 +279,12 @@ module.exports = class BetterTTS {
 
     // TTS Toggle
     toggleTTS() {
-        if (config.settings[0].value) {
+        if (config.settings[0].value){
             this.api.showToast("TTS Muted 🔇");
         } else {
             this.api.showToast("TTS Enabled 🔊");
         }
-        this.updateSettingValue(null, "enbleTTS", !config.settings[0].value);
+        this.updateSettingValue(null, "enbleTTS", !config.settings[0].value);        
     }
 
     updateToggleKeys(keys) {
@@ -311,11 +311,11 @@ module.exports = class BetterTTS {
 
     // Subscribe/Unsubscribe button
     addButton() {
-        if (this.subscribeButton) {
+        if(this.subscribeButton){
             this.removeButton();
         }
         const titleContainer = document.querySelector('[class^="upperContainer_"]')?.querySelector('[class^="children_"]');
-
+        
         const button = document.createElement('button');
         button.classList.add(Button.Colors.BLURPLE, Button.Looks.BLANK, Button.Sizes.ICON);
 
@@ -328,7 +328,7 @@ module.exports = class BetterTTS {
         button.addEventListener("click", () => {
             this.updateSelectedChannel();
         });
-
+    
         this.subscribeButton = button;
         this.updateButtonIcon(false);
         const titleWrapper = titleContainer.querySelector('[class^="titleWrapper_"]');
@@ -336,25 +336,25 @@ module.exports = class BetterTTS {
     }
 
     removeButton() {
-        if (this.subscribeButton) {
+        if(this.subscribeButton){
             this.subscribeButton.remove();
             this.subscribeButton = null;
         }
     }
 
     updateButtonIcon(showToast = true) {
-        if (this.subscribeButton) {
+        if(this.subscribeButton){
             let currentChannel = SelectedChannelStore.getCurrentlySelectedChannelId();
-            if (!currentChannel) return;
+            if(!currentChannel) return;
             let channel = ChannelStore.getChannel(currentChannel);
             let channelName = channel.name;
-            if (channelName == "") channelName = channel.rawRecipients[0].display_name;
-            if (currentChannel === this.subscribedChannel) {
+            if(channelName == "") channelName = channel.rawRecipients[0].display_name;
+            if(currentChannel === this.subscribedChannel){
                 this.subscribeButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-toggle-on" viewBox="0 0 16 16"><path d="M5 3a5 5 0 0 0 0 10h6a5 5 0 0 0 0-10zm6 9a4 4 0 1 1 0-8 4 4 0 0 1 0 8"/></svg>';
-                if (showToast) this.api.showToast(`TTS Subbed to ${channelName}`);
+                if(showToast) this.api.showToast(`TTS Subbed to ${channelName}`);
             } else {
                 this.subscribeButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-toggle-off" viewBox="0 0 16 16"><path d="M11 4a4 4 0 0 1 0 8H8a5 5 0 0 0 2-4 5 5 0 0 0-2-4zm-6 8a4 4 0 1 1 0-8 4 4 0 0 1 0 8M0 8a5 5 0 0 0 5 5h6a5 5 0 0 0 0-10H5a5 5 0 0 0-5 5"/></svg>';
-                if (showToast) this.api.showToast(`TTS Unsubbbed from ${channelName}`);
+                if(showToast) this.api.showToast(`TTS Unsubbbed from ${channelName}`);
             }
             this.subscribeButton.children[0].style.height = "24px";
             this.subscribeButton.children[0].style.width = "24px";
@@ -373,7 +373,7 @@ module.exports = class BetterTTS {
 };
 
 // TTS Sources
-class StreamElementsTTS {
+class StreamElementsTTS{
     static voicesLables = [];
     static loadVoices() {
         return fetch('https://api.streamelements.com/kappa/v2/speech/voices')
