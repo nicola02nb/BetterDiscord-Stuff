@@ -14,4 +14,4 @@ A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message
 ## TTS Sources
 - Streamelements API
 ## Settings
-![Screenshot 2024-12-15 183457](https://github.com/user-attachments/assets/f4ebd233-36d9-4304-a467-f50f840d6e29)
+![Screenshot 2024-12-15 183457](https://github.com/user-attachments/assets/be8e38a2-94ff-438d-8639-7a3e3764d550)
