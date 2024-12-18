@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.3.0
+ * @version 1.3.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -33,7 +33,7 @@ const config = {
         { type: "text", id: "currentSubscribedChannel", name: "Current Subscribed Channel ID", note: "Current Subscribed Channel ID", value: "" },
         {
             type: "category", id: "advanced", name: "Advanced", collapsible: true, shown: false, settings: [
-                { type: "switch", id: "asyncronousMessages", name: "Enable Asycronous Messages", note: "Allow TTS Messages audio overlapping", value: false },
+                { type: "switch", id: "asynchronousMessages", name: "Enable Asynchronous Messages", note: "Allow TTS Messages audio overlapping", value: false },
                 { type: "number", id: "delayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages", value: 1000 }]
         },
     ]
@@ -191,7 +191,7 @@ module.exports = class BetterTTS {
     }
 
     handleMessageRecieved(event) {
-        if (this.shouldSendMessage(event.message)) {
+        if (this.shouldPlayMessage(event.message)) {
             this.appendTTS(event.message.content);
         }
     }
@@ -252,7 +252,7 @@ module.exports = class BetterTTS {
             }
             if (audio !== null) {
                 audio.play();
-                if (!getConfigSetting("asyncronousMessages"))
+                if (!getConfigSetting("asynchronousMessages"))
                     await delay(audio.duration * 1000 + getConfigSetting("delayBetweenMessages"));
             }
         }
@@ -265,7 +265,7 @@ module.exports = class BetterTTS {
     }
 
     // Message evaluation
-    shouldSendMessage(message) {
+    shouldPlayMessage(message) {
         let selectedChannel = getConfigSetting("selectedChannel");
         let messageChannelId = message.channel_id;
 
@@ -407,4 +407,3 @@ class StreamElementsTTS {
         }
     }
 }
-

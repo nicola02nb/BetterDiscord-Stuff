@@ -9,6 +9,8 @@ A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message
     - From Custom subscribe channel (There is a switch on the top bar nearby the channel name)
 - Set a keyboard shortcut to toggle TTS On/Off (With toast)
 - Select mutliple voices and languages
+- Select if messages audio can overlap(asynchronous)
+- Select delay between messages
 ## TTS Sources
 - Streamelements API
 ## Settings
