@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.3.1
+ * @version 1.3.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -18,7 +18,7 @@ const config = {
                 { label: "Focused Channel", value: "focusedChannel" },
                 { label: "Suscribed Channel", value: "subscribedChannel" }]
         },
-        { type: "keybind", id: "toggleTTS", name: "Toggle TTS", note: "Shortcut to toggle the TTS", value: ["Control", "0"] },
+        { type: "keybind", id: "toggleTTS", name: "Toggle TTS", note: "Shortcut to toggle the TTS", value: [] },
         {
             type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
                 {
@@ -103,12 +103,7 @@ module.exports = class BetterTTS {
         this.api = new BdApi(this.meta.name);
         console = this.api.Logger;
 
-        this.keyShortcut = {
-            key: "0",
-            ctrlKey: true,
-            shiftKey: false,
-            altKey: false,
-        };
+        this.keyShortcut = null;
 
         this.handleMessage = this.handleMessageRecieved.bind(this);
         this.keyDown = this.onKeyDown.bind(this);
@@ -151,6 +146,8 @@ module.exports = class BetterTTS {
             case "toggleTTS":
                 this.updateToggleKeys(value);
                 break;
+            case "delayBetweenMessages":
+                value = parseInt(value);
             default:
                 break;
         }
@@ -182,7 +179,8 @@ module.exports = class BetterTTS {
 
     // Event handelers
     onKeyDown(event) {
-        if (event.ctrlKey === this.keyShortcut.ctrlKey
+        if (this.keyShortcut
+            && event.ctrlKey === this.keyShortcut.ctrlKey
             && event.shiftKey === this.keyShortcut.shiftKey
             && event.altKey === this.keyShortcut.altKey
             && event.key === this.keyShortcut.key) {
@@ -200,14 +198,14 @@ module.exports = class BetterTTS {
         let channelId = SelectedChannelStore.getVoiceChannelId();
         let userId = getConnectedUser.getCurrentUser().id;
         for (const status of event.voiceStates) {
-            if (status.userId === userId)
-                continue;
-            if (status.channelId !== status.oldChannelId) {
-                let user = UserStore.getUser(status.userId);
-                if (status.channelId === channelId) {
-                    this.appendTTS(`${user.globalName} joined`);
-                } else if (status.oldChannelId === channelId) {
-                    this.appendTTS(`${user.globalName} left`);
+            if (channelId && status.userId !== userId){
+                if (status.channelId !== status.oldChannelId) {
+                    let user = UserStore.getUser(status.userId);
+                    if (status.channelId === channelId) {
+                        this.appendTTS(`${user.globalName} joined`);
+                    } else if (status.oldChannelId === channelId) {
+                        this.appendTTS(`${user.globalName} left`);
+                    }
                 }
             }
         }
@@ -250,8 +248,8 @@ module.exports = class BetterTTS {
                     audio = await StreamElementsTTS.getAudio(text, getConfigSetting("voiceTTS"));
                     break;
             }
-            if (audio !== null) {
-                audio.play();
+            if (audio) {
+                audio.play();;
                 if (!getConfigSetting("asynchronousMessages"))
                     await delay(audio.duration * 1000 + getConfigSetting("delayBetweenMessages"));
             }
@@ -268,6 +266,10 @@ module.exports = class BetterTTS {
     shouldPlayMessage(message) {
         let selectedChannel = getConfigSetting("selectedChannel");
         let messageChannelId = message.channel_id;
+
+        if (message.author.id === getConnectedUser.getCurrentUser().id) {
+            return false;
+        }
 
         switch (selectedChannel) {
             case "connectedChannel":
@@ -293,9 +295,17 @@ module.exports = class BetterTTS {
     }
 
     updateToggleKeys(keys) {
-        this.keyShortcut.ctrlKey = false;
-        this.keyShortcut.shiftKey = false;
-        this.keyShortcut.altKey = false;
+        if (keys.length === 0) {
+            this.keyShortcut = null;
+            return;
+        } else {
+            this.keyShortcut = {
+                key: "",
+                ctrlKey: false,
+                shiftKey: false,
+                altKey: false,
+            };
+        }
         for (const key in keys) {
             switch (keys[key]) {
                 case "Control":
