@@ -54,7 +54,7 @@ function setConfigSetting(id, newValue) {
             }
         }
     }
-    
+
 }
 
 function getConfigSetting(id) {
@@ -198,7 +198,7 @@ module.exports = class BetterTTS {
         let channelId = SelectedChannelStore.getVoiceChannelId();
         let userId = getConnectedUser.getCurrentUser().id;
         for (const status of event.voiceStates) {
-            if (channelId && status.userId !== userId){
+            if (channelId && status.userId !== userId) {
                 if (status.channelId !== status.oldChannelId) {
                     let user = UserStore.getUser(status.userId);
                     if (status.channelId === channelId) {
