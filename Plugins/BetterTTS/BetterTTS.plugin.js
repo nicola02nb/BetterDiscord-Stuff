@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.3.3
+ * @version 1.3.4
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -87,10 +87,10 @@ function initSettingsValues() {
 
 const { Webpack, Patcher, React, Data } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
-const ChannelStore = BdApi.Webpack.getStore("ChannelStore");
-const SelectedChannelStore = BdApi.Webpack.getStore("SelectedChannelStore");
+const ChannelStore = Webpack.getStore("ChannelStore");
+const SelectedChannelStore = Webpack.getStore("SelectedChannelStore");
 const UserStore = Webpack.getStore("UserStore");
-const getConnectedUser = Webpack.getModule(BdApi.Webpack.Filters.byProps("getCurrentUser"));
+const getConnectedUser = Webpack.getByKeys("getCurrentUser");
 const IconClasses = Webpack.getByKeys("browser", "icon");
 const IconWrapperClasses = Webpack.getByKeys("iconWrapper", "clickable");
 const Tooltip = Webpack.getByKeys("Tooltip", "FormSwitch")?.Tooltip;
@@ -100,8 +100,8 @@ var console = {};
 module.exports = class BetterTTS {
     constructor(meta) {
         this.meta = meta;
-        this.api = new BdApi(this.meta.name);
-        console = this.api.Logger;
+        this.BdApi = new BdApi(this.meta.name);
+        console = this.BdApi.Logger;
 
         this.keyShortcut = null;
 
@@ -110,6 +110,7 @@ module.exports = class BetterTTS {
         this.annouceUsers = this.annouceUser.bind(this);
 
         this.ttsToPlay = [];
+        console.log(getConnectedUser);
     }
 
     // Settings
@@ -215,7 +216,7 @@ module.exports = class BetterTTS {
     patchTitleBar() {
         const ChannelHeader = Webpack.getByKeys("Icon", "Divider", { defaultExport: false, });
         Patcher.before(this.meta.name, ChannelHeader, "ZP", (thisObject, methodArguments, returnValue) => {
-            if (getConfigSetting("selectedChannel")==="subscribedChannel" && Array.isArray(methodArguments[0]?.children))
+            if (getConfigSetting("selectedChannel") === "subscribedChannel" && Array.isArray(methodArguments[0]?.children))
                 if (methodArguments[0].children.some?.(child =>
                     child?.props?.channel ||
                     child?.props?.children?.some?.(grandChild => typeof grandChild === 'string')))
@@ -278,9 +279,9 @@ module.exports = class BetterTTS {
     toggleTTS() {
         let isEnabled = getConfigSetting("enbleTTS");
         if (isEnabled) {
-            this.api.showToast("TTS Muted 🔇");
+            this.BdApi.UI.showToast("TTS Muted 🔇");
         } else {
-            this.api.showToast("TTS Enabled 🔊");
+            this.BdApi.UI.showToast("TTS Enabled 🔊");
         }
         this.updateSettingValue(null, "enbleTTS", !isEnabled);
     }
@@ -339,11 +340,11 @@ module.exports = class BetterTTS {
                                 channelName = channel.rawRecipients[0].username;
                             }
                             if (!isChecked) {
-                                BdApi.showToast(`TTS Subbed to ${channelName}`);
+                                this.BdApi.UI.showToast(`TTS Subbed to ${channelName}`);
                                 setConfigSetting("currentSubscribedChannel", currentChannel);
                             }
                             else {
-                                BdApi.showToast(`TTS Unsubbbed from ${channelName}`);
+                                this.BdApi.UI.showToast(`TTS Unsubbbed from ${channelName}`);
                                 setConfigSetting("currentSubscribedChannel", "");
                             }
                         },
