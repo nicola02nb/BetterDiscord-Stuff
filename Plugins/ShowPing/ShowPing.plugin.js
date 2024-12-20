@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.3.4
+ * @version 2.3.5
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -28,6 +28,10 @@ module.exports = class ShowPing {
         this.meta = meta;
         this.api = new BdApi(this.meta.name);
         this.initSettingsValues();
+
+        this.handleConnection = this.handleConnectionStateChange.bind(this);
+        this.handlePing = this.handlePing.bind(this);
+
         this.statusBar = null;
         this.pingElement = null;
         this.pingObserver = null;
@@ -53,8 +57,6 @@ module.exports = class ShowPing {
     start() {
         this.api.DOM.addStyle(`[class^="rtcConnectionStatusConnected_"]{float: left; display: flex;}`);
         this.addPingDisplay();
-        this.handleConnection = this.handleConnectionStateChange.bind(this);
-        this.handlePing = this.handlePing.bind(this);
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
         DiscordModules.subscribe("RTC_CONNECTION_PING", this.handlePing);
     }
@@ -62,8 +64,6 @@ module.exports = class ShowPing {
     stop() {
         DiscordModules.unsubscribe("RTC_CONNECTION_PING", this.handlePing);
         DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleConnection);
-        this.handlePing = null;
-        this.handleConnection = null;
         this.removePingDisplay();
         this.displayKrispButton(true);
         this.api.DOM.removeStyle();
