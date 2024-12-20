@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.3.2
+ * @version 1.3.3
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -201,6 +201,7 @@ module.exports = class BetterTTS {
             if (channelId && status.userId !== userId) {
                 if (status.channelId !== status.oldChannelId) {
                     let user = UserStore.getUser(status.userId);
+                    console.log(user);
                     if (status.channelId === channelId) {
                         this.appendTTS(`${user.globalName} joined`);
                     } else if (status.oldChannelId === channelId) {
@@ -212,26 +213,16 @@ module.exports = class BetterTTS {
     }
 
     patchTitleBar() {
-        const filter = f => f?.Icon && f.Title,
-            modules = Webpack.getModule(m => Object.values(m).some(filter), { first: false });
-        for (const module of modules) {
-            const headerBar = [module, Object.keys(module).find(k => filter(module[k]))];
-            Patcher.before(this.meta.name, ...headerBar, (thisObject, methodArguments, returnValue) => {
-                //When elements are being re-rendered we need to check if there actually is a place for us.
-                //Along with that we need to check if what we're adding to is an array.
-                if (Array.isArray(methodArguments[0]?.children))
-                    if (methodArguments[0].children.some?.(child =>
-                        //Make sure we're on the "original" headerbar and not that of a Voice channel's chat, or thread.
-                        child?.props?.channel ||
-                        //Home page of certain servers. This is gonna be broken next update, calling it.
-                        child?.props?.children?.some?.(grandChild => typeof grandChild === 'string')))
+        const ChannelHeader = Webpack.getByKeys("Icon", "Divider", { defaultExport: false, });
+        Patcher.before(this.meta.name, ChannelHeader, "ZP", (thisObject, methodArguments, returnValue) => {
+            if (getConfigSetting("selectedChannel")==="subscribedChannel" && Array.isArray(methodArguments[0]?.children))
+                if (methodArguments[0].children.some?.(child =>
+                    child?.props?.channel ||
+                    child?.props?.children?.some?.(grandChild => typeof grandChild === 'string')))
 
-                        //Make sure our component isn't already present.
-                        if (!methodArguments[0].children.some?.(child => child?.key === this.meta.name))
-                            //And since we want to be on the most left of the header bar for style we unshift into the array.
-                            methodArguments[0].children.splice(2, 0, React.createElement(this.ToolbarComponent, { key: this.meta.name }));
-            });
-        }
+                    if (!methodArguments[0].children.some?.(child => child?.key === this.meta.name))
+                        methodArguments[0].children.splice(2, 0, React.createElement(this.ToolbarComponent, { key: this.meta.name }));
+        });
     }
 
     // Play TTS
