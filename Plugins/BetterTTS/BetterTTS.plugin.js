@@ -202,7 +202,6 @@ module.exports = class BetterTTS {
             if (channelId && status.userId !== userId) {
                 if (status.channelId !== status.oldChannelId) {
                     let user = UserStore.getUser(status.userId);
-                    console.log(user);
                     if (status.channelId === channelId) {
                         this.appendTTS(`${user.globalName} joined`);
                     } else if (status.oldChannelId === channelId) {
