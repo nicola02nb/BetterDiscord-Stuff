@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.3.5
+ * @version 2.3.6
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -22,15 +22,14 @@ const config = {
 
 const { Webpack } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
+var console = {};
 
 module.exports = class ShowPing {
     constructor(meta) {
         this.meta = meta;
         this.api = new BdApi(this.meta.name);
+        console = this.api.Logger;
         this.initSettingsValues();
-
-        this.handleConnection = this.handleConnectionStateChange.bind(this);
-        this.handlePing = this.handlePing.bind(this);
 
         this.statusBar = null;
         this.pingElement = null;
@@ -55,6 +54,8 @@ module.exports = class ShowPing {
     }
 
     start() {
+        this.handleConnection = this.handleConnectionStateChange.bind(this);
+        this.handlePing = this.handlePingChange.bind(this);
         this.api.DOM.addStyle(`[class^="rtcConnectionStatusConnected_"]{float: left; display: flex;}`);
         this.addPingDisplay();
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
@@ -70,18 +71,20 @@ module.exports = class ShowPing {
     }
 
     handleConnectionStateChange(event) {
+        console.log(event);
         if (event.context === "default") {
             if (event.state === "RTC_CONNECTED") {
                 this.isConnected = true;
                 this.addPingDisplay();
             } else {
+                console.log(event);
                 this.isConnected = false;
                 this.removePingDisplay();
             }
         }
     }
 
-    handlePing(event) {
+    handlePingChange(event) {
         if (this.pingElement) {
             this.updatePing(event.pings[event.pings.length - 1].value);
         }
