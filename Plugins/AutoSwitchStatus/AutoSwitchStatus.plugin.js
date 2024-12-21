@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.3.3
+ * @version 1.3.5
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -54,6 +54,31 @@ const config = {
         ]
     },
     {
+        type: "category",
+        id: "cooldownSettings",
+        name: "Cooldown Settings",
+        collapsible: true,
+        shown: true,
+        settings: [
+            {
+                type: "switch",
+                id: "enableCooldown",
+                name: "Enable Cooldown",
+                note: "Prevents rapid status changes",
+                value: true
+            },
+            {
+                type: "slider",
+                id: "cooldownDuration",
+                name: "Cooldown Duration",
+                note: "Time in seconds between allowed status changes",
+                value: 5,
+                markers: [1, 3, 5, 10, 15, 30],
+                defaultValue: 5
+            }
+        ]
+    },
+    {
         type: "switch",
         id: "showToast",
         name: "Show Toast",
@@ -65,7 +90,7 @@ const config = {
 const { Webpack } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const SelectedChannelStore = BdApi.Webpack.getStore("SelectedChannelStore");
-var console = {}
+var console = {};
 
 const UserSettingsProtoUtils = Webpack.getModule(
     (m) =>
@@ -87,6 +112,8 @@ module.exports = class AutoSwitchStatus {
             invisible: "Invisible",
             dnd: "Do Not Disturb"
         }
+
+        this.lastStatusChange = 0;
     }
 
     initSettingsValues() {
@@ -115,21 +142,21 @@ module.exports = class AutoSwitchStatus {
     }
 
     start() {
+        this.handleConnection = this.handleConnectionStateChange.bind(this);
+        this.handleMute = this.handleMuteStateChange.bind(this);
         this.api.DOM.addStyle(`.bd-toast.toast-online.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='12.5' y='10' width='0' height='0' rx='0' ry='0' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%2323a55a' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-idle.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='6.25' y='3.75' width='7.5' height='7.5' rx='3.75' ry='3.75' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%23f0b232' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-invisible.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='10' y='7.5' width='5' height='5' rx='2.5' ry='2.5' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%2380848e' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-dnd.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='8.75' y='8.75' width='7.5' height='2.5' rx='1.25' ry='1.25' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%23f23f43' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}`);
 
         let channelId = SelectedChannelStore.getVoiceChannelId();
-        const containerButtons = document.querySelector('[class^="avatarWrapper_"] + * ').children;
+        const containerButtons = document.querySelector('[class^="avatarWrapper_"] + * ')?.children;
         this.isConnected = channelId !== null && channelId !== undefined;
         this.isMicrophoneMuted = containerButtons[0]?.getAttribute("aria-checked") === 'true';
         this.isSoundMuted = containerButtons[1]?.getAttribute("aria-checked") === 'true';
 
         this.updateUserStatus();
 
-        this.handleConnection = this.handleConnectionStateChange.bind(this);
-        this.handleMute = this.handleMuteStateChange.bind(this);
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
         DiscordModules.subscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleMute);
         DiscordModules.subscribe("AUDIO_TOGGLE_SELF_MUTE", this.handleMute);
@@ -145,7 +172,13 @@ module.exports = class AutoSwitchStatus {
     }
 
     handleConnectionStateChange(event) {
-        console.log(event);
+        if (!this.checkCooldown()) {
+            console.log("Status change blocked by cooldown");
+            return;
+        }
+
+        this.lastStatusChange = Date.now();
+
         if (event.context === "default") {
             if (event.state === "RTC_CONNECTED") {
                 this.isConnected = true;
@@ -159,8 +192,7 @@ module.exports = class AutoSwitchStatus {
     handleMuteStateChange(event) {
         if (event.type === "AUDIO_TOGGLE_SELF_MUTE") {
             this.isMicrophoneMuted = !this.isMicrophoneMuted;
-        }
-        if (event.type === "AUDIO_TOGGLE_SELF_DEAF") {
+        } else if (event.type === "AUDIO_TOGGLE_SELF_DEAF") {
             this.isSoundMuted = !this.isSoundMuted;
         }
         this.updateUserStatus();
@@ -211,7 +243,7 @@ module.exports = class AutoSwitchStatus {
         UserSettingsProtoUtils.updateAsync(
             "status",
             (statusSetting) => {
-                statusSetting.status.value = toStatus; //TODO Fix instruction not working on new account uless status changed once manually
+                statusSetting.status.value = toStatus; // May not working on fresh accounts before changing status once
             },
             0
         );
@@ -227,5 +259,15 @@ module.exports = class AutoSwitchStatus {
         if (config.settings[1].value) {
             BdApi.UI.showToast(content, options);
         }
+    }
+
+    checkCooldown() {
+        if (!this.getStatusSetting("enableCooldown")) return true;
+
+        const now = Date.now();
+        const cooldownMs = this.getStatusSetting("cooldownDuration") * 1000;
+        const timeElapsed = now - this.lastStatusChange;
+
+        return timeElapsed >= cooldownMs;
     }
 };
