@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.3.5
+ * @version 1.3.6
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -53,12 +53,19 @@ const config = {
             },
         ]
     },
+    { 
+        type: "switch",
+        id: "showToast",
+        name: "Show Toast",
+        note: "If enabled, displays a toast message when the status changes",
+        value: true
+    },
     {
-        type: "category",
+        type: "category", 
         id: "cooldownSettings",
         name: "Cooldown Settings",
         collapsible: true,
-        shown: true,
+        shown: false,
         settings: [
             {
                 type: "switch",
@@ -68,26 +75,62 @@ const config = {
                 value: true
             },
             {
-                type: "slider",
+                type: "number",
                 id: "cooldownDuration",
                 name: "Cooldown Duration",
                 note: "Time in seconds between allowed status changes",
-                value: 5,
-                markers: [1, 3, 5, 10, 15, 30],
-                defaultValue: 5
+                value: 1,
             }
         ]
-    },
-    {
-        type: "switch",
-        id: "showToast",
-        name: "Show Toast",
-        note: "If enabled, displays a toast message when the status changes",
-        value: true
-    }]
+    },]
 };
 
-const { Webpack } = BdApi;
+function setConfigSetting(id, newValue) {
+    for (const setting of config.settings) {
+        if (setting.id === id) {
+            Data.save("AutoSwitchStatus", id, newValue);
+            return setting.value = newValue;
+        }
+        if (setting.settings) {
+            for (const settingInt of setting.settings) {
+                if (settingInt.id === id) {
+                    Data.save("AutoSwitchStatus", id, newValue);
+                    settingInt.value = newValue;
+                }
+            }
+        }
+    }
+
+}
+
+function getConfigSetting(id) {
+    for (const setting of config.settings) {
+        if (setting.id === id) {
+            return setting.value;
+        }
+        if (setting.settings) {
+            for (const settingInt of setting.settings) {
+                if (settingInt.id === id) {
+                    return settingInt.value;
+                }
+            }
+        }
+    }
+}
+
+function initSettingsValues() {
+    for (const setting of config.settings) {
+        if (setting.type === "category") {
+            for (const settingInt of setting.settings) {
+                settingInt.value = Data.load("A", settingInt.id) ?? settingInt.value;
+            }
+        } else {
+            setting.value = Data.load("AutoSwitchStatus", setting.id) ?? setting.value;
+        }
+    }
+}
+
+const { Webpack, Data } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const SelectedChannelStore = BdApi.Webpack.getStore("SelectedChannelStore");
 var console = {};
@@ -104,8 +147,8 @@ module.exports = class AutoSwitchStatus {
         this.meta = meta;
         this.api = new BdApi(this.meta.name);
         console = this.api.Logger;
-        this.initSettingsValues();
-
+        initSettingsValues();
+        
         this.locales = {
             online: "Online",
             idle: "Idle",
@@ -116,29 +159,15 @@ module.exports = class AutoSwitchStatus {
         this.lastStatusChange = 0;
     }
 
-    initSettingsValues() {
-        for (const setting of config.settings[0].settings) {
-            setting.value = this.api.Data.load(setting.id) ?? setting.value;
-        }
-        config.settings[1].value = this.api.Data.load("mutedSoundStatus") ?? config.settings[1].value;
-    }
-
     getSettingsPanel() {
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
-                if (id === "mutedSoundStatus") config.settings[0].settings[0].value = value;
-                if (id === "mutedMicrophoneStatus") config.settings[0].settings[1].value = value;
-                if (id === "connectedStatus") config.settings[0].settings[2].value = value;
-                if (id === "disconnectedStatus") config.settings[0].settings[3].value = value;
-                if (id === 'showToast') config.settings[1].value = value;
-                this.api.Data.save(id, value);
+                if(id === "cooldownDuration")
+                    value = parseInt(value);
+                setConfigSetting(id, value);
             },
         });
-    }
-
-    getStatusSetting(id) {
-        return config.settings[0].settings.find(setting => setting.id === id).value;
     }
 
     start() {
@@ -155,6 +184,7 @@ module.exports = class AutoSwitchStatus {
         this.isMicrophoneMuted = containerButtons[0]?.getAttribute("aria-checked") === 'true';
         this.isSoundMuted = containerButtons[1]?.getAttribute("aria-checked") === 'true';
 
+        this.status = null;
         this.updateUserStatus();
 
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
@@ -172,14 +202,7 @@ module.exports = class AutoSwitchStatus {
     }
 
     handleConnectionStateChange(event) {
-        if (!this.checkCooldown()) {
-            console.log("Status change blocked by cooldown");
-            return;
-        }
-
-        this.lastStatusChange = Date.now();
-
-        if (event.context === "default") {
+        if(event.context === "default"){
             if (event.state === "RTC_CONNECTED") {
                 this.isConnected = true;
             } else if (event.state === "RTC_DISCONNECTED") {
@@ -190,9 +213,9 @@ module.exports = class AutoSwitchStatus {
     }
 
     handleMuteStateChange(event) {
-        if (event.type === "AUDIO_TOGGLE_SELF_MUTE") {
+        if(event.type === "AUDIO_TOGGLE_SELF_MUTE"){
             this.isMicrophoneMuted = !this.isMicrophoneMuted;
-        } else if (event.type === "AUDIO_TOGGLE_SELF_DEAF") {
+        } else if(event.type === "AUDIO_TOGGLE_SELF_DEAF"){
             this.isSoundMuted = !this.isSoundMuted;
         }
         this.updateUserStatus();
@@ -206,16 +229,16 @@ module.exports = class AutoSwitchStatus {
     getUserCurrentStatus() {
         var currStatus;
         if (!this.isConnected) {
-            currStatus = this.getStatusSetting("disconnectedStatus");
+            currStatus = getConfigSetting("disconnectedStatus");
         }
         else if (this.isSoundMuted) {
-            currStatus = this.getStatusSetting("mutedSoundStatus");
+            currStatus = getConfigSetting("mutedSoundStatus");
         }
         else if (this.isMicrophoneMuted) {
-            currStatus = this.getStatusSetting("mutedMicrophoneStatus");
+            currStatus = getConfigSetting("mutedMicrophoneStatus");
         }
         else {
-            currStatus = this.getStatusSetting("connectedStatus");
+            currStatus = getConfigSetting("connectedStatus");
         }
 
         return currStatus;
@@ -226,6 +249,12 @@ module.exports = class AutoSwitchStatus {
      *  or for changed update interval 
      */
     updateUserStatus() {
+        if (!this.checkCooldown()) {
+            console.warn("Status change blocked by cooldown");
+            return;
+        }
+        this.lastStatusChange = Date.now();
+
         var toSet = this.getUserCurrentStatus();
 
         // checking if the status has changed since last time
@@ -262,12 +291,12 @@ module.exports = class AutoSwitchStatus {
     }
 
     checkCooldown() {
-        if (!this.getStatusSetting("enableCooldown")) return true;
-
+        if (!getConfigSetting("enableCooldown")) return true;
+        
         const now = Date.now();
-        const cooldownMs = this.getStatusSetting("cooldownDuration") * 1000;
+        const cooldownMs = getConfigSetting("cooldownDuration") * 1000;
         const timeElapsed = now - this.lastStatusChange;
-
+        
         return timeElapsed >= cooldownMs;
     }
 };
