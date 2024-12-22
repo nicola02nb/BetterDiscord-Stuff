@@ -12,6 +12,6 @@ A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message
 - Select if messages audio can overlap(asynchronous)
 - Select delay between messages
 ## TTS Sources
-- Streamelements API
+- Streamelements API (About 206 Voices)
 ## Settings
-![Screenshot 2024-12-15 183457](https://github.com/user-attachments/assets/be8e38a2-94ff-438d-8639-7a3e3764d550)
+![Screenshot 2024-12-15 183457](https://github.com/user-attachments/assets/5c9f8558-61db-4563-a337-0deb91d86057)
