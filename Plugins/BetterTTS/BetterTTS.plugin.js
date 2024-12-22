@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.3.5
+ * @version 1.3.6
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -106,7 +106,6 @@ module.exports = class BetterTTS {
         this.keyShortcut = null;
 
         this.ttsToPlay = [];
-        console.log(getConnectedUser);
     }
 
     // Settings
