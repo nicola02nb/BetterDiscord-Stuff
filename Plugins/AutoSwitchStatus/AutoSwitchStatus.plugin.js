@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.3.6
+ * @version 1.3.7
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -52,37 +52,7 @@ const config = {
                 options: dropdownStatusOptions
             },
         ]
-    },
-    { 
-        type: "switch",
-        id: "showToast",
-        name: "Show Toast",
-        note: "If enabled, displays a toast message when the status changes",
-        value: true
-    },
-    {
-        type: "category", 
-        id: "cooldownSettings",
-        name: "Cooldown Settings",
-        collapsible: true,
-        shown: false,
-        settings: [
-            {
-                type: "switch",
-                id: "enableCooldown",
-                name: "Enable Cooldown",
-                note: "Prevents rapid status changes",
-                value: true
-            },
-            {
-                type: "number",
-                id: "cooldownDuration",
-                name: "Cooldown Duration",
-                note: "Time in seconds between allowed status changes",
-                value: 1,
-            }
-        ]
-    },]
+    }]
 };
 
 function setConfigSetting(id, newValue) {
@@ -148,23 +118,19 @@ module.exports = class AutoSwitchStatus {
         this.api = new BdApi(this.meta.name);
         console = this.api.Logger;
         initSettingsValues();
-        
+
         this.locales = {
             online: "Online",
             idle: "Idle",
             invisible: "Invisible",
             dnd: "Do Not Disturb"
         }
-
-        this.lastStatusChange = 0;
     }
 
     getSettingsPanel() {
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
-                if(id === "cooldownDuration")
-                    value = parseInt(value);
                 setConfigSetting(id, value);
             },
         });
@@ -182,9 +148,10 @@ module.exports = class AutoSwitchStatus {
         const containerButtons = document.querySelector('[class^="avatarWrapper_"] + * ')?.children;
         this.isConnected = channelId !== null && channelId !== undefined;
         this.isMicrophoneMuted = containerButtons[0]?.getAttribute("aria-checked") === 'true';
+        this.wasMicrophoneMuted = this.isMicrophoneMuted;
         this.isSoundMuted = containerButtons[1]?.getAttribute("aria-checked") === 'true';
 
-        this.status = null;
+        this.status = undefined;
         this.updateUserStatus();
 
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
@@ -202,7 +169,7 @@ module.exports = class AutoSwitchStatus {
     }
 
     handleConnectionStateChange(event) {
-        if(event.context === "default"){
+        if (event.context === "default") {
             if (event.state === "RTC_CONNECTED") {
                 this.isConnected = true;
             } else if (event.state === "RTC_DISCONNECTED") {
@@ -213,12 +180,29 @@ module.exports = class AutoSwitchStatus {
     }
 
     handleMuteStateChange(event) {
-        if(event.type === "AUDIO_TOGGLE_SELF_MUTE"){
+        if (event.type === "AUDIO_TOGGLE_SELF_MUTE") {
             this.isMicrophoneMuted = !this.isMicrophoneMuted;
-        } else if(event.type === "AUDIO_TOGGLE_SELF_DEAF"){
+            this.wasMicrophoneMuted = this.isMicrophoneMuted;
+        } else if (event.type === "AUDIO_TOGGLE_SELF_DEAF") {
             this.isSoundMuted = !this.isSoundMuted;
+            this.isMicrophoneMuted = this.isSoundMuted || this.wasMicrophoneMuted;
         }
         this.updateUserStatus();
+    }
+
+    /**
+     * Functions used by the interval that checks for new user status
+     *  or for changed update interval 
+     */
+    updateUserStatus() {
+        var toSet = this.getUserCurrentStatus();
+
+        // checking if the status has changed since last time
+        if (this.status != toSet) {
+            this.status = toSet;
+
+            this.updateStatus(toSet);
+        }
     }
 
     /**
@@ -245,38 +229,27 @@ module.exports = class AutoSwitchStatus {
     }
 
     /**
-     * Functions used by the interval that checks for new user status
-     *  or for changed update interval 
-     */
-    updateUserStatus() {
-        if (!this.checkCooldown()) {
-            console.warn("Status change blocked by cooldown");
-            return;
-        }
-        this.lastStatusChange = Date.now();
-
-        var toSet = this.getUserCurrentStatus();
-
-        // checking if the status has changed since last time
-        if (this.status != toSet) {
-            this.status = toSet;
-            this.setUserStatus(toSet);
-        }
-    }
-
-    /**
      * Updates the remote status to the param `toStatus`
      * @param {('online'|'idle'|'invisible'|'dnd')} toStatus
      */
-    setUserStatus(toStatus) {
-        UserSettingsProtoUtils.updateAsync(
-            "status",
-            (statusSetting) => {
-                statusSetting.status.value = toStatus; // May not working on fresh accounts before changing status once
-            },
-            0
-        );
-        this.showToast(this.locales[toStatus], { type: toStatus });
+    async updateStatus(toStatus) {
+        try {
+            const result = await new Promise((resolve, reject) => {
+                UserSettingsProtoUtils.updateAsync(
+                    "status",
+                    (statusSetting) => {
+                        statusSetting.status.value = toStatus;
+                        resolve(statusSetting); // Resolve when update completes
+                    },
+                    0
+                );
+            });
+            this.showToast(this.locales[toStatus], { type: toStatus });
+            return result;
+        } catch (error) {
+            console.error('Failed to update status:', error);
+            throw error;
+        }
     }
 
     /**
@@ -285,18 +258,8 @@ module.exports = class AutoSwitchStatus {
      * @param {{}} [options={}]
      */
     showToast(content, options = {}) {
-        if (config.settings[1].value) {
+        if (getConfigSetting("showToast")) {
             BdApi.UI.showToast(content, options);
         }
-    }
-
-    checkCooldown() {
-        if (!getConfigSetting("enableCooldown")) return true;
-        
-        const now = Date.now();
-        const cooldownMs = getConfigSetting("cooldownDuration") * 1000;
-        const timeElapsed = now - this.lastStatusChange;
-        
-        return timeElapsed >= cooldownMs;
     }
 };
