@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.3.7
+ * @version 1.3.8
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -52,6 +52,13 @@ const config = {
                 options: dropdownStatusOptions
             },
         ]
+    },
+    {
+        type: "switch",
+        id: "showToast",
+        name: "Show Toast",
+        note: "If enabled, displays a toast message when the status changes",
+        value: true
     }]
 };
 
@@ -92,7 +99,7 @@ function initSettingsValues() {
     for (const setting of config.settings) {
         if (setting.type === "category") {
             for (const settingInt of setting.settings) {
-                settingInt.value = Data.load("A", settingInt.id) ?? settingInt.value;
+                settingInt.value = Data.load("AutoSwitchStatus", settingInt.id) ?? settingInt.value;
             }
         } else {
             setting.value = Data.load("AutoSwitchStatus", setting.id) ?? setting.value;
@@ -182,6 +189,7 @@ module.exports = class AutoSwitchStatus {
     handleMuteStateChange(event) {
         if (event.type === "AUDIO_TOGGLE_SELF_MUTE") {
             this.isMicrophoneMuted = !this.isMicrophoneMuted;
+            this.isSoundMuted = !this.isMicrophoneMuted && this.isSoundMuted ? false : this.isSoundMuted;
             this.wasMicrophoneMuted = this.isMicrophoneMuted;
         } else if (event.type === "AUDIO_TOGGLE_SELF_DEAF") {
             this.isSoundMuted = !this.isSoundMuted;
