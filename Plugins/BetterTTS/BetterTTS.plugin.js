@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.3.6
+ * @version 1.4.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -10,15 +10,21 @@
 const config = {
     changelog: [],
     settings: [
-        { type: "switch", id: "enbleTTS", name: "Enable TTS", note: "Enables/Disables the TTS", value: true },
-        { type: "switch", id: "enbleUserAnnouncement", name: "Enable User Announcement", note: "Enables/Disables the User Announcement when join/leaves the channel", value: true },
+        { type: "switch", id: "enableTTS", name: "Enable TTS", note: "Enables/Disables the TTS", value: true },
+        { type: "switch", id: "enableOvverideOriginal", name: "Enable Override Origninal TTS", note: "Overrides Original TTS form Discord", value: true },
+        { type: "switch", id: "enableUserAnnouncement", name: "Enable User Announcement", note: "Enables/Disables the User Announcement when join/leaves the channel", value: true },
+        { type: "switch", id: "enableMessageReading", name: "Enable Message Reading", note: "Enables/Disables the message reading from channels", value: true },
         {
-            type: "dropdown", id: "selectedChannel", name: "Which channel should be played:", note: "Choose the channel you want to play the TTS", value: "connectedChannel", options: [
-                { label: "Connected Channel", value: "connectedChannel" },
-                { label: "Focused Channel", value: "focusedChannel" },
-                { label: "Suscribed Channel", value: "subscribedChannel" }]
+            type: "category", id: "channelSelection", name: "Channel Selection", collapsible: true, shown: false, settings: [
+                {
+                    type: "dropdown", id: "selectedChannel", name: "Which channel should be played:", note: "Choose the channel you want to play the TTS", value: "connectedChannel", options: [
+                        { label: "Connected Channel", value: "connectedChannel" },
+                        { label: "Focused Channel", value: "focusedChannel" },
+                        { label: "Suscribed Channel", value: "subscribedChannel" }]
+                },
+                { type: "text", id: "currentSubscribedChannel", name: "Current Subscribed Channel ID", note: "Current Subscribed Channel ID", value: "" },
+            ]
         },
-        { type: "keybind", id: "toggleTTS", name: "Toggle TTS", note: "Shortcut to toggle the TTS", value: [] },
         {
             type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
                 {
@@ -30,12 +36,13 @@ const config = {
                         { label: "Brian", value: "Brian" }]
                 }]
         },
-        { type: "text", id: "currentSubscribedChannel", name: "Current Subscribed Channel ID", note: "Current Subscribed Channel ID", value: "" },
         {
-            type: "category", id: "advanced", name: "Advanced", collapsible: true, shown: false, settings: [
+            type: "category", id: "audioTiming", name: "Audio Timing", collapsible: true, shown: false, settings: [
                 { type: "switch", id: "asynchronousMessages", name: "Enable Asynchronous Messages", note: "Allow TTS Messages audio overlapping", value: false },
                 { type: "number", id: "delayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages", value: 1000 }]
         },
+        { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
+        { type: "keybind", id: "toggleTTS", name: "Toggle TTS", note: "Shortcut to toggle the TTS", value: [] },
     ]
 };
 
@@ -82,7 +89,7 @@ function initSettingsValues() {
             setting.value = Data.load("BetterTTS", setting.id) ?? setting.value;
         }
     }
-    config.settings[4].settings[1].options = StreamElementsTTS.loadVoices();
+    config.settings[6].settings[1].options = StreamElementsTTS.loadVoices();
 }
 
 const { Webpack, Patcher, React, Data } = BdApi;
@@ -94,6 +101,7 @@ const getConnectedUser = Webpack.getByKeys("getCurrentUser");
 const IconClasses = Webpack.getByKeys("browser", "icon");
 const IconWrapperClasses = Webpack.getByKeys("iconWrapper", "clickable");
 const Tooltip = Webpack.getByKeys("Tooltip", "FormSwitch")?.Tooltip;
+
 const { useState } = React;
 var console = {};
 
@@ -104,13 +112,11 @@ module.exports = class BetterTTS {
         console = this.BdApi.Logger;
 
         this.keyShortcut = null;
-
-        this.ttsToPlay = [];
     }
 
     // Settings
     getSettingsPanel() {
-        config.settings[4].settings[1].options = StreamElementsTTS.voicesLables;
+        config.settings[6].settings[1].options = StreamElementsTTS.voicesLables;
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
@@ -121,22 +127,23 @@ module.exports = class BetterTTS {
 
     updateSettingValue(category, id, value) {
         switch (id) {
-            case "enbleTTS":
-                if (value)
-                    DiscordModules.subscribe("MESSAGE_CREATE", this.handleMessage);
-                else
-                    DiscordModules.unsubscribe("MESSAGE_CREATE", this.handleMessage);
-                if (getConfigSetting("enbleUserAnnouncement") && value)
-                    DiscordModules.subscribe("VOICE_STATE_UPDATES", this.annouceUsers);
-                else
-                    DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.annouceUsers);
+            case "enableTTS":
+                this.isEnabledTTS = value;
+                if (!value)
+                    this.AudioPlayer.stopTTS();
                 break;
-            case "enbleUSerAnnouncement":
-                if (getConfigSetting("enbleTTS")) {
-                    if (value)
-                        DiscordModules.subscribe("VOICE_STATE_UPDATES", this.annouceUsers);
-                    else
-                        DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.annouceUsers);
+            case "enableUserAnnouncement":
+                if (value) {
+                    DiscordModules.subscribe("VOICE_STATE_UPDATES", this.annouceUsers);
+                } else {
+                    DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.annouceUsers);
+                }
+                break;
+            case "enableMessageReading":
+                if (value) {
+                    DiscordModules.subscribe("MESSAGE_CREATE", this.handleMessage);
+                } else {
+                    DiscordModules.unsubscribe("MESSAGE_CREATE", this.handleMessage);
                 }
                 break;
             case "toggleTTS":
@@ -144,6 +151,25 @@ module.exports = class BetterTTS {
                 break;
             case "delayBetweenMessages":
                 value = parseInt(value);
+                this.AudioPlayer.delay = value;
+                break;
+            case "sourceTTS":
+                this.AudioPlayer.source = value;
+                break;
+            case "voiceTTS":
+                this.AudioPlayer.voice = value;
+                break;
+            case "ttsSpeechRate":
+                this.AudioPlayer.updateRate(value);
+                break
+            case "enableOvverideOriginal":
+                if (value) {
+                    this.patchOriginalTTS();
+                } else {
+                    Patcher.unpatchAll(this.meta.name);
+                    this.patchTitleBar();
+                }
+                break;
             default:
                 break;
         }
@@ -155,15 +181,21 @@ module.exports = class BetterTTS {
         this.handleMessage = this.handleMessageRecieved.bind(this);
         this.keyDown = this.onKeyDown.bind(this);
         this.annouceUsers = this.annouceUser.bind(this);
+
         initSettingsValues();
         this.updateToggleKeys(getConfigSetting("toggleTTS"));
+        this.isEnabledTTS = getConfigSetting("enableTTS");
+        this.AudioPlayer = new AudioPlayer();
 
         document.addEventListener("keydown", this.keyDown);
-        if (getConfigSetting("enbleTTS")) {
+        if (getConfigSetting("enableTTS")) {
             DiscordModules.subscribe("MESSAGE_CREATE", this.handleMessage);
         }
-        if (getConfigSetting("enbleUserAnnouncement")) {
+        if (getConfigSetting("enableUserAnnouncement")) {
             DiscordModules.subscribe("VOICE_STATE_UPDATES", this.annouceUsers);
+        }
+        if (getConfigSetting("enableOvverideOriginal")) {
+            this.patchOriginalTTS();
         }
 
         this.patchTitleBar();
@@ -174,23 +206,14 @@ module.exports = class BetterTTS {
         DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.annouceUsers);
         DiscordModules.unsubscribe("MESSAGE_CREATE", this.handleMessage);
         document.removeEventListener("keydown", this.keyDown);
+        this.AudioPlayer.stopTTS();
     }
 
     // Event handelers
-    onKeyDown(event) {
-        if (this.keyShortcut
-            && event.ctrlKey === this.keyShortcut.ctrlKey
-            && event.shiftKey === this.keyShortcut.shiftKey
-            && event.altKey === this.keyShortcut.altKey
-            && event.key === this.keyShortcut.key) {
-            this.toggleTTS();
-        }
-    }
-
-    handleMessageRecieved(event) {
-        if (this.shouldPlayMessage(event.message)) {
-            this.appendTTS(event.message.content);
-        }
+    patchOriginalTTS() {
+        Patcher.instead(this.meta.name, window.speechSynthesis, "speak", (_, e) => {
+            this.appendTTS(e[0].text);
+        });
     }
 
     annouceUser(event) {
@@ -210,6 +233,22 @@ module.exports = class BetterTTS {
         }
     }
 
+    handleMessageRecieved(event) {
+        if (this.shouldPlayMessage(event.message)) {
+            this.appendTTS(event.message.content);
+        }
+    }
+
+    onKeyDown(event) {
+        if (this.keyShortcut
+            && event.ctrlKey === this.keyShortcut.ctrlKey
+            && event.shiftKey === this.keyShortcut.shiftKey
+            && event.altKey === this.keyShortcut.altKey
+            && event.key === this.keyShortcut.key) {
+            this.toggleTTS();
+        }
+    }
+
     patchTitleBar() {
         const ChannelHeader = Webpack.getByKeys("Icon", "Divider", { defaultExport: false, });
         Patcher.before(this.meta.name, ChannelHeader, "ZP", (thisObject, methodArguments, returnValue) => {
@@ -223,32 +262,9 @@ module.exports = class BetterTTS {
         });
     }
 
-    // Play TTS
-    async playTTSfromSource() {
-        if (this.isPlaying) return;
-        this.isPlaying = true;
-        const delay = ms => new Promise(res => setTimeout(res, ms));
-        let text;
-        while ((text = this.ttsToPlay.shift()) !== undefined) {
-            let audio = null;
-            let a = getConfigSetting("sourceTTS");
-            switch (a) {
-                case "streamlabs":
-                    audio = await StreamElementsTTS.getAudio(text, getConfigSetting("voiceTTS"));
-                    break;
-            }
-            if (audio) {
-                audio.play();
-                if (!getConfigSetting("asynchronousMessages"))
-                    await delay(audio.duration * 1000 + getConfigSetting("delayBetweenMessages"));
-            }
-        }
-        this.isPlaying = false;
-    }
-
     appendTTS(text) {
-        this.ttsToPlay.push(text);
-        this.playTTSfromSource();
+        if (this.isEnabledTTS)
+            this.AudioPlayer.addToQueue(text);
     }
 
     // Message evaluation
@@ -274,13 +290,13 @@ module.exports = class BetterTTS {
 
     // TTS Toggle
     toggleTTS() {
-        let isEnabled = getConfigSetting("enbleTTS");
+        let isEnabled = getConfigSetting("enableTTS");
         if (isEnabled) {
             this.BdApi.UI.showToast("TTS Muted 🔇");
         } else {
             this.BdApi.UI.showToast("TTS Enabled 🔊");
         }
-        this.updateSettingValue(null, "enbleTTS", !isEnabled);
+        this.updateSettingValue(null, "enableTTS", !isEnabled);
     }
 
     updateToggleKeys(keys) {
@@ -368,6 +384,68 @@ module.exports = class BetterTTS {
         );
     }
 };
+
+class AudioPlayer {
+    constructor() {
+        this.updateConfig();
+
+        this.isPlaying = false;
+        this.ttsToPlay = [];
+        this.audio = null;
+    }
+
+    updateConfig() {
+        this.source = getConfigSetting("sourceTTS");
+        this.voice = getConfigSetting("voiceTTS");
+        this.rate = getConfigSetting("ttsSpeechRate");
+        this.delay = getConfigSetting("delayBetweenMessages");
+        this.asynchronous = getConfigSetting("asynchronousMessages");
+    }
+
+    addToQueue(text) {
+        this.ttsToPlay.push(text);
+        if (!this.isPlaying)
+            this.playTTSfromSource();
+    }
+
+    updateRate(rate) {
+        this.rate = rate;
+        if (this.audio)
+            this.audio.playbackRate = rate;
+    }
+
+    stopTTS() {
+        if (this.audio)
+            this.audio.pause();
+        this.audio = null;
+        this.isPlaying = false;
+        this.ttsToPlay = [];
+    }
+
+    // Play TTS
+    async playTTSfromSource() {
+        this.isPlaying = true;
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+        let text;
+        while ((text = this.ttsToPlay.shift()) !== undefined) {
+            switch (this.source) {
+                case "streamlabs":
+                    this.audio = await StreamElementsTTS.getAudio(text, this.voice);
+                    break;
+            }
+            if (this.audio) {
+                this.audio.playbackRate = this.rate;
+                this.audio.play();
+                if (!this.asynchronous) {
+                    await delay(this.audio.duration * 1000 / this.rate);
+                    await delay(this.delay);
+                }
+            }
+        }
+        this.audio = null;
+        this.isPlaying = false;
+    }
+}
 
 // TTS Sources
 class StreamElementsTTS {
