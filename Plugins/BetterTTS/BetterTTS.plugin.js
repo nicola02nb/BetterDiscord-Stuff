@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.4.0
+ * @version 1.4.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -101,6 +101,7 @@ const getConnectedUser = Webpack.getByKeys("getCurrentUser");
 const IconClasses = Webpack.getByKeys("browser", "icon");
 const IconWrapperClasses = Webpack.getByKeys("iconWrapper", "clickable");
 const Tooltip = Webpack.getByKeys("Tooltip", "FormSwitch")?.Tooltip;
+const speak = [...BdApi.Webpack.getWithKey(BdApi.Webpack.Filters.byStrings("speechSynthesis.speak"))][0];
 
 const { useState } = React;
 var console = {};
@@ -211,7 +212,7 @@ module.exports = class BetterTTS {
 
     // Event handelers
     patchOriginalTTS() {
-        Patcher.instead(this.meta.name, window.speechSynthesis, "speak", (_, e) => {
+        Patcher.instead(this.meta.name, speak, "iq", (_, e, t) => {
             this.appendTTS(e[0].text);
         });
     }
