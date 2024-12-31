@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.4.2
+ * @version 1.4.3
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -89,7 +89,7 @@ function initSettingsValues() {
             setting.value = Data.load("BetterTTS", setting.id) ?? setting.value;
         }
     }
-    config.settings[6].settings[1].options = StreamElementsTTS.loadVoices();
+    config.settings[5].settings[1].options = StreamElementsTTS.loadVoices();
 }
 
 const { Webpack, Patcher, React, Data } = BdApi;
@@ -117,7 +117,7 @@ module.exports = class BetterTTS {
 
     // Settings
     getSettingsPanel() {
-        config.settings[6].settings[1].options = StreamElementsTTS.voicesLables;
+        config.settings[5].settings[1].options = StreamElementsTTS.voicesLables;
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
