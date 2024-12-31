@@ -15,8 +15,9 @@ const config = {
     ]
 };
 
-const { Webpack, Patcher, React } = BdApi;
+const { Webpack, Patcher } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
+const VoiceStatesStore = Webpack.getStore("VoiceStateStore");
 const getConnectedUser = Webpack.getByKeys("getCurrentUser");
 const userProfileMod = Webpack.getByKeys("getUserProfile");
 
@@ -43,7 +44,7 @@ module.exports = class NotifyWhenMuted {
                     case "audioUrl":
                         value = this.isValidURL(value);
                         config.settings[0].value = value;
-                    break;
+                        break;
                 }
                 this.api.Data.save(id, value);
             }
@@ -65,7 +66,6 @@ module.exports = class NotifyWhenMuted {
         this.handleSpeak = this.handleSpeaking.bind(this);
 
         this.playing = false;
-        this.userId = getConnectedUser.getCurrentUser().id;
 
         DiscordModules.subscribe("SPEAKING", this.handleSpeak);
     }
@@ -76,7 +76,11 @@ module.exports = class NotifyWhenMuted {
     }
 
     handleSpeaking(event) {
-        if (!this.playing && event.userId === this.userId) {
+        console.log(event);
+        let userId = getConnectedUser.getCurrentUser().id;
+        if (!this.playing && event.userId === userId) {
+            let userVoiceState = VoiceStatesStore.getVoiceStateForUser(userId);
+            if (!userVoiceState.selfMute && !userVoiceState.selfDeaf) return;
             this.playing = true;
             const audio = new Audio(config.settings[0].value);
             audio.onended = () => this.playing = false;
