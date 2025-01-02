@@ -16,10 +16,7 @@ const config = {
 };
 
 const { Webpack, Patcher } = BdApi;
-const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
-const VoiceStatesStore = Webpack.getStore("VoiceStateStore");
-const getConnectedUser = Webpack.getByKeys("getCurrentUser");
-const userProfileMod = Webpack.getByKeys("getUserProfile");
+const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 
 var console = {};
 
@@ -44,7 +41,7 @@ module.exports = class NotifyWhenMuted {
                     case "audioUrl":
                         value = this.isValidURL(value);
                         config.settings[0].value = value;
-                        break;
+                    break;
                 }
                 this.api.Data.save(id, value);
             }
@@ -54,10 +51,8 @@ module.exports = class NotifyWhenMuted {
     isValidURL(string) {
         try {
             new URL(string);
-            console.log("Valid URL");
             return string;
         } catch (e) {
-            console.error("Invalid URL");
             return defaultAudioUrl;
         }
     }
@@ -65,26 +60,27 @@ module.exports = class NotifyWhenMuted {
     start() {
         this.handleSpeak = this.handleSpeaking.bind(this);
 
-        this.playing = false;
+        this.audio = null;
 
-        DiscordModules.subscribe("SPEAKING", this.handleSpeak);
+        Patcher.after(this.meta.name, MediaEngineStore, "getSpeakingWhileMuted", this.handleSpeak);
     }
 
     stop() {
-        DiscordModules.unsubscribe("SPEAKING", this.handleSpeak);
         Patcher.unpatchAll(this.meta.name);
+        if(this.audio) {
+            this.audio.pause();
+            this.audio = null;
+        }
     }
 
-    handleSpeaking(event) {
-        console.log(event);
-        let userId = getConnectedUser.getCurrentUser().id;
-        if (!this.playing && event.userId === userId) {
-            let userVoiceState = VoiceStatesStore.getVoiceStateForUser(userId);
-            if (!userVoiceState.selfMute && !userVoiceState.selfDeaf) return;
-            this.playing = true;
-            const audio = new Audio(config.settings[0].value);
-            audio.onended = () => this.playing = false;
-            audio.play();
+    handleSpeaking(_, args, ret) {
+        if (ret) {
+            if (this.audio && !this.audio.ended) {
+                return; // Prevent multiple audio from playing together
+            }
+            this.audio = new Audio(config.settings[0].value);
+            this.audio.onended = () => this.audio = null;
+            this.audio.play();  
         }
     }
 };
