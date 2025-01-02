@@ -82,7 +82,6 @@ module.exports = class NotifyWhenMuted {
     async handleSpeaking(_, args, ret) {
         const delay = ms => new Promise(res => setTimeout(res, ms));
         if (ret && !this.isPlaying) {
-            console.log(this);
             this.isPlaying = true;
             this.audio = new Audio(config.settings[0].value);
             this.audio.play();
