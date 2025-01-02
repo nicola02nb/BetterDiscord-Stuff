@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.4.0
+ * @version 1.5.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -110,8 +110,7 @@ function initSettingsValues() {
 const { Webpack, Data } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const getConnectedUser = Webpack.getByKeys("getCurrentUser");
-const SelectedChannelStore = BdApi.Webpack.getStore("SelectedChannelStore");
-const VoiceStatesStore = Webpack.getStore("VoiceStateStore");
+const SelectedChannelStore = Webpack.getStore("SelectedChannelStore");
 var console = {};
 
 const UserSettingsProtoUtils = Webpack.getModule(
@@ -156,11 +155,11 @@ module.exports = class AutoSwitchStatus {
 
         let userId = getConnectedUser.getCurrentUser().id;
         let channelId = SelectedChannelStore.getVoiceChannelId();
-        let userVoiceState = VoiceStatesStore.getVoiceStateForUser(userId);
-        this.isConnected = channelId !== null && channelId !== undefined;
-        this.isMicrophoneMuted = userVoiceState.selfMute;
+        const containerButtons = document.querySelector('[class^="avatarWrapper_"] + * ')?.children
+        this.isConnected = channelId !== null;
+        this.isMicrophoneMuted = containerButtons[0]?.getAttribute("aria-checked") === 'true';;
         this.wasMicrophoneMuted = this.isMicrophoneMuted;    
-        this.isSoundMuted = userVoiceState.selfDeaf;
+        this.isSoundMuted = containerButtons[1]?.getAttribute("aria-checked") === 'true';
 
         this.status = undefined;
         this.updateUserStatus();
