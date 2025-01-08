@@ -40,17 +40,6 @@ const config = {
                         { label: "Brian", value: "Brian" }]
                 }]
         },
-        {
-            type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
-                {
-                    type: "dropdown", id: "sourceTTS", name: "TTS Source:", note: "Choose the channel you want to play the TTS", value: "streamlabs", options: [
-                        { label: "Streamlabs", value: "streamlabs" }]
-                },
-                {
-                    type: "dropdown", id: "voiceTTS", name: "Voice for TTS:", note: "Changes voice used for TTS", value: "Brian", options: [
-                        { label: "Brian", value: "Brian" }]
-                }]
-        },
         { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
         { type: "number", id: "delayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages", value: 1000 },
         { type: "keybind", id: "toggleTTS", name: "Toggle TTS", note: "Shortcut to toggle the TTS", value: [] },
