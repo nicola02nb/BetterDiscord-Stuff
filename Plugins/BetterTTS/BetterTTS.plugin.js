@@ -304,7 +304,6 @@ module.exports = class BetterTTS {
         let connectedGuild = RTCConnectionStore.getGuildId();
 
         let blockedOrIgnoredUsers = new Set(RelationshipStore.getBlockedOrIgnoredIDs());
-        let array = [];
         let mutedChannels = UserGuildSettingsStore.getMutedChannels(messageGuildId);
 
         if (messageAuthorId === userId) {
