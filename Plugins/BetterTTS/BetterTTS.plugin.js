@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 1.4.3
+ * @version 2.0.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -11,16 +11,20 @@ const config = {
     changelog: [],
     settings: [
         { type: "switch", id: "enableTTS", name: "Enable TTS", note: "Enables/Disables the TTS", value: true },
-        { type: "switch", id: "enableOvverideOriginal", name: "Enable Override Origninal TTS", note: "Overrides Original TTS form Discord", value: true },
+        { type: "switch", id: "enableTTSCommand", name: "Enable /tts Command", note: "Allo playback and usage of /tts command", value: true },
         { type: "switch", id: "enableUserAnnouncement", name: "Enable User Announcement", note: "Enables/Disables the User Announcement when join/leaves the channel", value: true },
         { type: "switch", id: "enableMessageReading", name: "Enable Message Reading", note: "Enables/Disables the message reading from channels", value: true },
         {
-            type: "category", id: "channelSelection", name: "Channel Selection", collapsible: true, shown: false, settings: [
+            type: "category", id: "messageReadingSettings", name: "Message Reading Settings", collapsible: true, shown: false, settings: [
+                { type: "switch", id: "prependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name ot the user of the message that will be read by TTS", value: true },
                 {
-                    type: "dropdown", id: "selectedChannel", name: "Which channel should be played:", note: "Choose the channel you want to play the TTS", value: "connectedChannel", options: [
-                        { label: "Connected Channel", value: "connectedChannel" },
+                    type: "dropdown", id: "selectedChannel", name: "Which channel should be played:", note: "Choose the channel you want to play the TTS", value: "subscribedChannel", options: [
+                        { label: "Never", value: "never" },
+                        { label: "Suscribed Channel", value: "subscribedChannel" },
                         { label: "Focused Channel", value: "focusedChannel" },
-                        { label: "Suscribed Channel", value: "subscribedChannel" }]
+                        { label: "Connected Channel", value: "connectedChannel" },
+                        { label: "Focused Guild Channels", value: "focusedGuildChannels" },
+                        { label: "Connected Guild Channels", value: "connectedGuildChannels" }]
                 },
                 { type: "text", id: "currentSubscribedChannel", name: "Current Subscribed Channel ID", note: "Current Subscribed Channel ID", value: "" },
             ]
@@ -37,11 +41,18 @@ const config = {
                 }]
         },
         {
-            type: "category", id: "audioTiming", name: "Audio Timing", collapsible: true, shown: false, settings: [
-                { type: "switch", id: "asynchronousMessages", name: "Enable Asynchronous Messages", note: "Allow TTS Messages audio overlapping", value: false },
-                { type: "number", id: "delayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages", value: 1000 }]
+            type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
+                {
+                    type: "dropdown", id: "sourceTTS", name: "TTS Source:", note: "Choose the channel you want to play the TTS", value: "streamlabs", options: [
+                        { label: "Streamlabs", value: "streamlabs" }]
+                },
+                {
+                    type: "dropdown", id: "voiceTTS", name: "Voice for TTS:", note: "Changes voice used for TTS", value: "Brian", options: [
+                        { label: "Brian", value: "Brian" }]
+                }]
         },
         { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
+        { type: "number", id: "delayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages", value: 1000 },
         { type: "keybind", id: "toggleTTS", name: "Toggle TTS", note: "Shortcut to toggle the TTS", value: [] },
     ]
 };
@@ -89,19 +100,26 @@ function initSettingsValues() {
             setting.value = Data.load("BetterTTS", setting.id) ?? setting.value;
         }
     }
-    config.settings[5].settings[1].options = StreamElementsTTS.loadVoices();
+    config.settings[5].settings[1].options = StreamElementsTTS.getVoices();
 }
 
 const { Webpack, Patcher, React, Data } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ChannelStore = Webpack.getStore("ChannelStore");
+const SelectedGuildStore = Webpack.getStore("SelectedGuildStore");
 const SelectedChannelStore = Webpack.getStore("SelectedChannelStore");
 const UserStore = Webpack.getStore("UserStore");
-const getConnectedUser = Webpack.getByKeys("getCurrentUser");
 const IconClasses = Webpack.getByKeys("browser", "icon");
 const IconWrapperClasses = Webpack.getByKeys("iconWrapper", "clickable");
 const Tooltip = Webpack.getByKeys("Tooltip", "FormSwitch")?.Tooltip;
-const speak = [...BdApi.Webpack.getWithKey(BdApi.Webpack.Filters.byStrings("speechSynthesis.speak"))];
+const speakMessage = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.speak"))];
+const cancelSpeak = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.cancel"))];
+const MediaEngineStore = Webpack.getStore("MediaEngineStore");
+const UserGuildSettingsStore = Webpack.getStore("UserGuildSettingsStore");
+const UserSettingsProtoStore = Webpack.getStore("UserSettingsProtoStore");
+const RelationshipStore = Webpack.getStore("RelationshipStore");
+const setTTSType = [...Webpack.getWithKey(Webpack.Filters.byStrings("setTTSType"))];
+const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
 
 const { useState } = React;
 var console = {};
@@ -131,7 +149,7 @@ module.exports = class BetterTTS {
             case "enableTTS":
                 this.isEnabledTTS = value;
                 if (!value)
-                    this.AudioPlayer.stopTTS();
+                    this.cancelTTS();
                 break;
             case "enableUserAnnouncement":
                 if (value) {
@@ -163,14 +181,10 @@ module.exports = class BetterTTS {
             case "ttsSpeechRate":
                 this.AudioPlayer.updateRate(value);
                 break
-            case "enableOvverideOriginal":
-                if (value) {
-                    this.patchOriginalTTS();
-                } else {
-                    Patcher.unpatchAll(this.meta.name);
-                    this.patchTitleBar();
-                }
-                break;
+            case "prependNames":
+                this.prependNames = value;
+            case "enableTTSCommand":
+                UserSettingsProtoStore.settings.textAndImages.enableTtsCommand.value = value;
             default:
                 break;
         }
@@ -186,6 +200,8 @@ module.exports = class BetterTTS {
         initSettingsValues();
         this.updateToggleKeys(getConfigSetting("toggleTTS"));
         this.isEnabledTTS = getConfigSetting("enableTTS");
+        this.prependNames = getConfigSetting("prependNames");
+        UserSettingsProtoStore.settings.textAndImages.enableTtsCommand.value = getConfigSetting("enableTTSCommand");
         this.AudioPlayer = new AudioPlayer();
 
         document.addEventListener("keydown", this.keyDown);
@@ -195,10 +211,8 @@ module.exports = class BetterTTS {
         if (getConfigSetting("enableUserAnnouncement")) {
             DiscordModules.subscribe("VOICE_STATE_UPDATES", this.annouceUsers);
         }
-        if (getConfigSetting("enableOvverideOriginal")) {
-            this.patchOriginalTTS();
-        }
 
+        this.patchOriginalTTS();
         this.patchTitleBar();
     }
 
@@ -212,23 +226,29 @@ module.exports = class BetterTTS {
 
     // Event handelers
     patchOriginalTTS() {
-        Patcher.instead(this.meta.name, speak[0], speak[1], (_, e, t) => {
-            this.appendTTS(e[0].text);
+        Patcher.instead(this.meta.name, speakMessage[0], speakMessage[1], (_, e, t) => {
+            setTTSType[0][setTTSType[1]]("NEVER");
+            this.AudioPlayer.addToQueue(e[0].text);
+            this.AudioPlayer.playTTSfromSource();
+        });
+        Patcher.instead(this.meta.name, cancelSpeak[0], cancelSpeak[1], (_, e, t) => {
+            this.cancelTTS();
         });
     }
 
     annouceUser(event) {
-        let channelId = SelectedChannelStore.getVoiceChannelId();
-        let userId = getConnectedUser.getCurrentUser().id;
-        for (const status of event.voiceStates) {
-            if (channelId && status.userId !== userId) {
-                if (status.channelId !== status.oldChannelId) {
-                    let user = UserStore.getUser(status.userId);
-                    if (status.channelId === channelId) {
-                        this.appendTTS(`${user.globalName} joined`);
-                    } else if (status.oldChannelId === channelId) {
-                        this.appendTTS(`${user.globalName} left`);
+        let connectedChannelId = RTCConnectionStore.getChannelId();
+        let userId = UserStore.getCurrentUser().id;
+        for (const userStatus of event.voiceStates) {
+            if (connectedChannelId && userStatus.userId !== userId) {
+                if (userStatus.channelId !== userStatus.oldChannelId) {
+                    let user = UserStore.getUser(userStatus.userId);
+                    if (userStatus.channelId === connectedChannelId) {
+                        this.AudioPlayer.addToQueue(`${user.globalName} joined`);
+                    } else if (userStatus.oldChannelId === connectedChannelId) {
+                        this.AudioPlayer.addToQueue(`${user.globalName} left`);
                     }
+                    this.AudioPlayer.playTTSfromSource();
                 }
             }
         }
@@ -236,8 +256,21 @@ module.exports = class BetterTTS {
 
     handleMessageRecieved(event) {
         if (this.shouldPlayMessage(event.message)) {
-            this.appendTTS(event.message.content);
+            let message = event.message;
+            if (this.isEnabledTTS) {
+                let text = message.content;
+                if (this.prependNames) {
+                    let author = UserStore.getUser(message.author.id);
+                    text = `${author.username} said ${text}`;
+                }
+                this.AudioPlayer.addToQueue(text);
+                this.AudioPlayer.playTTSfromSource();
+            }
         }
+    }
+
+    cancelTTS() {
+        this.AudioPlayer.stopTTS();
     }
 
     onKeyDown(event) {
@@ -263,27 +296,47 @@ module.exports = class BetterTTS {
         });
     }
 
-    appendTTS(text) {
-        if (this.isEnabledTTS)
-            this.AudioPlayer.addToQueue(text);
-    }
-
     // Message evaluation
     shouldPlayMessage(message) {
+        let isSelfDeaf = MediaEngineStore.isSelfDeaf();
         let selectedChannel = getConfigSetting("selectedChannel");
-        let messageChannelId = message.channel_id;
+        if (isSelfDeaf || selectedChannel === "never")
+            return false;
 
-        if (message.author.id === getConnectedUser.getCurrentUser().id) {
+        let messageAuthorId = message.author.id;
+        let messageChannelId = message.channel_id;
+        let messageGuildId = message.guild_id;
+
+        let userId = UserStore.getCurrentUser().id
+        let subscribedChannel = getConfigSetting("currentSubscribedChannel");
+        let focusedChannel = SelectedChannelStore.getCurrentlySelectedChannelId();
+        let connectedChannel = RTCConnectionStore.getChannelId();
+        let focusedGuild = SelectedGuildStore.getGuildId();
+        let connectedGuild = RTCConnectionStore.getGuildId();
+
+        let blockedOrIgnoredUsers = new Set(RelationshipStore.getBlockedOrIgnoredIDs());
+        let array = [];
+        let mutedChannels = UserGuildSettingsStore.getMutedChannels(messageGuildId);
+
+        if (messageAuthorId === userId) {
+            return false;
+        }
+
+        if (mutedChannels.has(messageChannelId) || blockedOrIgnoredUsers.has(messageAuthorId)) {
             return false;
         }
 
         switch (selectedChannel) {
-            case "connectedChannel":
-                return messageChannelId === SelectedChannelStore.getVoiceChannelId();
-            case "focusedChannel":
-                return messageChannelId === SelectedChannelStore.getCurrentlySelectedChannelId();
             case "subscribedChannel":
-                return messageChannelId === getConfigSetting("currentSubscribedChannel");
+                return messageChannelId === subscribedChannel;
+            case "focusedChannel":
+                return messageChannelId === focusedChannel;
+            case "connectedChannel":
+                return messageChannelId === connectedChannel;
+            case "focusedGuildChannels":
+                return messageGuildId === focusedGuild;
+            case "connectedGuildChannels":
+                return messageGuildId === connectedGuild;
             default:
                 return false;
         }
@@ -391,8 +444,9 @@ class AudioPlayer {
         this.updateConfig();
 
         this.isPlaying = false;
-        this.ttsToPlay = [];
+        this.playingText = undefined;
         this.audio = null;
+        this.messagesToPlay = [];
     }
 
     updateConfig() {
@@ -400,13 +454,10 @@ class AudioPlayer {
         this.voice = getConfigSetting("voiceTTS");
         this.rate = getConfigSetting("ttsSpeechRate");
         this.delay = getConfigSetting("delayBetweenMessages");
-        this.asynchronous = getConfigSetting("asynchronousMessages");
     }
 
     addToQueue(text) {
-        this.ttsToPlay.push(text);
-        if (!this.isPlaying)
-            this.playTTSfromSource();
+        this.messagesToPlay.push(text);
     }
 
     updateRate(rate) {
@@ -418,40 +469,44 @@ class AudioPlayer {
     stopTTS() {
         if (this.audio)
             this.audio.pause();
-        this.audio = null;
         this.isPlaying = false;
-        this.ttsToPlay = [];
+        this.playingText = undefined;
+        this.audio = null;
+        this.messagesToPlay = [];
     }
 
     // Play TTS
     async playTTSfromSource() {
+        if (this.isPlaying) return;
         this.isPlaying = true;
-        const delay = ms => new Promise(res => setTimeout(res, ms));
-        let text;
-        while ((text = this.ttsToPlay.shift()) !== undefined) {
+        this.playingText = this.messagesToPlay.shift();
+        if (this.playingText !== undefined) {
             switch (this.source) {
                 case "streamlabs":
-                    this.audio = await StreamElementsTTS.getAudio(text, this.voice);
+                    this.audio = await StreamElementsTTS.getAudio(this.playingText, this.voice);
                     break;
             }
             if (this.audio) {
                 this.audio.playbackRate = this.rate;
+                this.audio.addEventListener('ended', () => {
+                    if (this.messagesToPlay.length === 0) {
+                        this.playingText = undefined;
+                        this.audio = null;
+                        this.isPlaying = false;
+                    } else {
+                        this.playTTSfromSource();
+                    }
+                });
                 this.audio.play();
-                if (!this.asynchronous) {
-                    await delay(this.audio.duration * 1000 / this.rate);
-                    await delay(this.delay);
-                }
             }
         }
-        this.audio = null;
-        this.isPlaying = false;
     }
 }
 
 // TTS Sources
 class StreamElementsTTS {
     static voicesLables = [];
-    static async loadVoices() {
+    static async getVoices() {
         try {
             const response = await fetch('https://api.streamelements.com/kappa/v2/speech/voices');
             const data = await response.json();
@@ -474,11 +529,7 @@ class StreamElementsTTS {
             const blob = await response.blob();
             const audioUrl = URL.createObjectURL(blob);
             const audio = new Audio(audioUrl);
-            return new Promise((resolve) => {
-                audio.addEventListener('loadedmetadata', () => {
-                    resolve(audio);
-                });
-            });
+            return audio;
         } catch (error) {
             console.error('Error playing sound:', error);
             return null;
