@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.1.0
+ * @version 1.1.1
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
  * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/NotifyWhenMuted/NotifyWhenMuted.plugin.js
@@ -11,8 +11,9 @@ const defaultAudioUrl = "https://raw.githubusercontent.com/nicola02nb/BetterDisc
 const config = {
     changelog: [],
     settings: [
+        { type: "switch", id: "notifyServerMuted", name: "Notify When Server Muted", note: "Notify when you are server muted", value: false },
         { type: "text", id: "audioUrl", name: "Custom Audio URL", note: "URL to the audio file to play when user tries to speak while muted", value: defaultAudioUrl },
-        { type: "number", id: "delayBetweenNotifications", name: "Delay Between Audio Notifictions (ms)", note: "Delay Between Audio Notifictions in milliseconds", value: 5000 },
+        { type: "number", id: "delayBetweenNotifications", name: "Delay Between Audio Notifications (ms)", note: "Delay Between Audio Notifications in milliseconds", value: 5000 },
     ]
 };
 
@@ -31,8 +32,9 @@ module.exports = class NotifyWhenMuted {
     }
 
     initSettingsValues() {
-        config.settings[0].value = this.api.Data.load("audioUrl") ?? config.settings[0].value;
-        config.settings[1].value = this.api.Data.load("delayBetweenNotifications") ?? config.settings[1].value;
+        config.settings[0].value = this.api.Data.load("notifyServerMuted") ?? config.settings[0].value;
+        config.settings[1].value = this.api.Data.load("audioUrl") ?? config.settings[1].value;
+        config.settings[2].value = this.api.Data.load("delayBetweenNotifications") ?? config.settings[2].value;
     }
 
     getSettingsPanel() {
@@ -80,12 +82,13 @@ module.exports = class NotifyWhenMuted {
     }
 
     async handleSpeaking(_, args, ret) {
+        if(!(MediaEngineStore.isSelfMute() || MediaEngineStore.isSelfDeaf())) return;
         const delay = ms => new Promise(res => setTimeout(res, ms));
         if (ret && !this.isPlaying) {
             this.isPlaying = true;
-            this.audio = new Audio(config.settings[0].value);
+            this.audio = new Audio(config.settings[1].value);
             this.audio.play();
-            await delay(config.settings[1].value);
+            await delay(config.settings[2].value);
             this.isPlaying = false;
         }
     }
