@@ -82,7 +82,9 @@ module.exports = class NotifyWhenMuted {
     }
 
     async handleSpeaking(_, args, ret) {
-        if(!(MediaEngineStore.isSelfMute() || MediaEngineStore.isSelfDeaf())) return;
+        if(!(MediaEngineStore.isSelfMute() 
+            || MediaEngineStore.isSelfDeaf() 
+            || config.settings[0].value)) return;
         const delay = ms => new Promise(res => setTimeout(res, ms));
         if (ret && !this.isPlaying) {
             this.isPlaying = true;
