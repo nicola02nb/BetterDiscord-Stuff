@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.3.6
+ * @version 2.4.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
@@ -22,6 +22,7 @@ const config = {
 
 const { Webpack } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
+const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
 var console = {};
 
 module.exports = class ShowPing {
@@ -86,7 +87,7 @@ module.exports = class ShowPing {
 
     handlePingChange(event) {
         if (this.pingElement) {
-            this.updatePing(event.pings[event.pings.length - 1].value);
+            this.updatePing(RTCConnectionStore.getLastPing());
         }
     }
 
