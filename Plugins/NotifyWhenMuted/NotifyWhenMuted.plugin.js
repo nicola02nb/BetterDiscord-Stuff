@@ -11,7 +11,7 @@ const defaultAudioUrl = "https://raw.githubusercontent.com/nicola02nb/BetterDisc
 const config = {
     changelog: [],
     settings: [
-        { type: "switch", id: "notifyServerMuted", name: "Notify When Server Muted", note: "Notify when you are server muted", value: false },
+        { type: "switch", id: "notifyServerMuted", name: "Notify When Server Muted", note: "Notify when you get muted by server", value: false },
         { type: "text", id: "audioUrl", name: "Custom Audio URL", note: "URL to the audio file to play when user tries to speak while muted", value: defaultAudioUrl },
         { type: "number", id: "delayBetweenNotifications", name: "Delay Between Audio Notifications (ms)", note: "Delay Between Audio Notifications in milliseconds", value: 5000 },
     ]
@@ -82,9 +82,8 @@ module.exports = class NotifyWhenMuted {
     }
 
     async handleSpeaking(_, args, ret) {
-        if(!(MediaEngineStore.isSelfMute() 
-            || MediaEngineStore.isSelfDeaf() 
-            || config.settings[0].value)) return;
+        if(!(MediaEngineStore.isSelfMute() || MediaEngineStore.isSelfDeaf()
+            || !config.settings[0].value)) return;
         const delay = ms => new Promise(res => setTimeout(res, ms));
         if (ret && !this.isPlaying) {
             this.isPlaying = true;
