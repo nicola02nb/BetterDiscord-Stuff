@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.1.0
+ * @version 2.1.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -539,6 +539,7 @@ class StreamElementsTTS {
     }
 
     static async getAudio(text, voice = 'Brian') {
+        text = encodeURIComponent(text);
         let url = `https://api.streamelements.com/kappa/v2/speech?voice=${voice}&text=${text}`;
         try {
             const response = await fetch(url);
