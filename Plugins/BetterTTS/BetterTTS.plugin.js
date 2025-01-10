@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.1.1
+ * @version 2.2.0 
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -74,7 +74,7 @@ function setConfigSetting(id, newValue) {
     }
 }
 
-const { Webpack, Patcher, React, Data } = BdApi;
+const { Webpack, Patcher, React, Data, ContextMenu, Utils } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ChannelStore = Webpack.getStore("ChannelStore");
 const SelectedGuildStore = Webpack.getStore("SelectedGuildStore");
@@ -120,7 +120,7 @@ module.exports = class BetterTTS {
         }
         config.settings[5].settings[1].options = StreamElementsTTS.getVoices();
     }
-    
+
     getSettingsPanel() {
         config.settings[5].settings[1].options = StreamElementsTTS.voicesLables;
         return BdApi.UI.buildSettingsPanel({
@@ -184,17 +184,19 @@ module.exports = class BetterTTS {
         this.handleKeyDown = this.onKeyDown.bind(this);
         this.handleAnnouceUsers = this.annouceUser.bind(this);
         this.handleUpdateRelations = this.updateRelationships.bind(this);
+        this.patchContextMenus = this.patchContextMenu.bind(this);
 
         this.initSettingsValues();
         this.updateToggleKeys(this.settings.toggleTTS);
         UserSettingsProtoStore.settings.textAndImages.enableTtsCommand.value = this.settings.enableTTSCommand;
 
+        this.ttsMutedUsers = new Set(Data.load("BetterTTS", "ttsMutedUsers")) ?? new Set();
+        this.updateRelationships();
+
         this.AudioPlayer = new AudioPlayer(this.settings.ttsSource,
             this.settings.ttsVoice,
             this.settings.ttsSpeechRate,
             this.settings.ttsDelayBetweenMessages);
-
-        this.updateRelationships();
 
         document.addEventListener("keydown", this.handleKeyDown);
         DiscordModules.subscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
@@ -208,9 +210,11 @@ module.exports = class BetterTTS {
 
         this.patchOriginalTTS();
         this.patchTitleBar();
+        ContextMenu.patch("user-context", this.patchContextMenus);
     }
 
     stop() {
+        ContextMenu.unpatch("user-context", this.patchContextMenus);
         Patcher.unpatchAll(this.meta.name);
         DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.handleAnnouceUsers);
         DiscordModules.unsubscribe("MESSAGE_CREATE", this.handleMessage);
@@ -298,6 +302,27 @@ module.exports = class BetterTTS {
         });
     }
 
+    patchContextMenu(returnValue, props) {
+        const buttonFilter = button => button?.props?.id === "invite-to-server";
+        let buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
+        let newA = ContextMenu.buildItem({
+            type: "toggle",
+            label: "Mute TTS Messages",
+            checked: this.ttsMutedUsers.has(props.user.id),
+            action: (newValue) => {
+                if (newValue.currentTarget.ariaChecked
+                    !== "true") {
+                    this.ttsMutedUsers.add(props.user.id);
+                } else {
+                    this.ttsMutedUsers.delete(props.user.id);
+                }
+                Data.save("BetterTTS", "ttsMutedUsers", this.ttsMutedUsers);
+            }
+        });
+        if (Array.isArray(buttonParent))
+            buttonParent.push(newA);
+    }
+
     // Message evaluation
     shouldPlayMessage(message) {
         let isSelfDeaf = MediaEngineStore.isSelfDeaf();
@@ -320,6 +345,7 @@ module.exports = class BetterTTS {
         this.mutedGuild = UserGuildSettingsStore.isMuted(messageGuildId);
 
         if (messageAuthorId === userId
+            || this.ttsMutedUsers.has(messageAuthorId)
             || this.settings.blockBlockedUsers && this.usersBlocked.has(messageAuthorId)
             || this.settings.blockIgnoredUsers && this.usersIgnored.has(messageAuthorId)
             || this.settings.blockNotFriendusers && !this.usersFriends.has(messageAuthorId)
