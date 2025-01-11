@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.2.0 
+ * @version 2.2.1 
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -228,8 +228,6 @@ module.exports = class BetterTTS {
     patchOriginalTTS() {
         Patcher.instead(this.meta.name, speakMessage[0], speakMessage[1], (_, e, t) => {
             setTTSType[0][setTTSType[1]]("NEVER");
-            this.AudioPlayer.addToQueue(e[0].text);
-            this.AudioPlayer.playTTSfromSource();
         });
         Patcher.instead(this.meta.name, cancelSpeak[0], cancelSpeak[1], (_, e, t) => {
             this.cancelTTS();
@@ -327,7 +325,7 @@ module.exports = class BetterTTS {
     shouldPlayMessage(message) {
         let isSelfDeaf = MediaEngineStore.isSelfDeaf();
         let selectedChannel = this.settings.selectedChannel;
-        if (isSelfDeaf || selectedChannel === "never")
+        if (isSelfDeaf)
             return false;
 
         let messageAuthorId = message.author.id;
@@ -355,12 +353,14 @@ module.exports = class BetterTTS {
         }
 
         switch (selectedChannel) {
+            case "never":
+                return false;
             case "allChannels":
                 return true;
             case "subscribedChannel":
                 return messageChannelId === subscribedChannel;
             case "focusedChannel":
-                return messageChannelId === focusedChannel;
+                return messageChannelId === focusedChannel || message.tts;
             case "connectedChannel":
                 return messageChannelId === connectedChannel;
             case "focusedGuildChannels":
@@ -541,6 +541,8 @@ class AudioPlayer {
                 });
                 this.audio.play();
             }
+        } else {
+            this.isPlaying = false;
         }
     }
 }
