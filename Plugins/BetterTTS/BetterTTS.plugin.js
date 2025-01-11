@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.2.1 
+ * @version 2.2.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -188,7 +188,7 @@ module.exports = class BetterTTS {
 
         this.initSettingsValues();
         this.updateToggleKeys(this.settings.toggleTTS);
-        UserSettingsProtoStore.settings.textAndImages.enableTtsCommand.value = this.settings.enableTTSCommand;
+        //UserSettingsProtoStore.settings.textAndImages.enableTtsCommand?.value = this.settings.enableTTSCommand;
 
         this.ttsMutedUsers = new Set(Data.load("BetterTTS", "ttsMutedUsers")) ?? new Set();
         this.updateRelationships();
@@ -246,7 +246,6 @@ module.exports = class BetterTTS {
                     } else if (userStatus.oldChannelId === connectedChannelId) {
                         this.AudioPlayer.addToQueue(`${user.globalName} left`);
                     }
-                    this.AudioPlayer.playTTSfromSource();
                 }
             }
         }
@@ -262,7 +261,6 @@ module.exports = class BetterTTS {
                     text = `${author.username} said ${text}`;
                 }
                 this.AudioPlayer.addToQueue(text);
-                this.AudioPlayer.playTTSfromSource();
             }
         }
     }
@@ -288,6 +286,7 @@ module.exports = class BetterTTS {
     }
 
     patchTitleBar() {
+        this.BuildToolbarComponent = this.ToolbarComponent.bind(this);
         const ChannelHeader = Webpack.getByKeys("Icon", "Divider", { defaultExport: false, });
         Patcher.before(this.meta.name, ChannelHeader, "ZP", (thisObject, methodArguments, returnValue) => {
             if (this.settings.selectedChannel === "subscribedChannel" && Array.isArray(methodArguments[0]?.children))
@@ -296,7 +295,7 @@ module.exports = class BetterTTS {
                     child?.props?.children?.some?.(grandChild => typeof grandChild === 'string')))
 
                     if (!methodArguments[0].children.some?.(child => child?.key === this.meta.name))
-                        methodArguments[0].children.splice(2, 0, React.createElement(this.ToolbarComponent, { key: this.meta.name }));
+                        methodArguments[0].children.splice(2, 0, React.createElement(this.BuildToolbarComponent, { key: this.meta.name }));
         });
     }
 
@@ -333,7 +332,7 @@ module.exports = class BetterTTS {
         let messageGuildId = message.guild_id;
 
         let userId = UserStore.getCurrentUser().id
-        let subscribedChannel = this.settings.currentSubscribedChannel;
+        let subscribedChannel = this.settings.subscribedChannel;
         let focusedChannel = SelectedChannelStore.getCurrentlySelectedChannelId();
         let connectedChannel = RTCConnectionStore.getChannelId();
         let focusedGuild = SelectedGuildStore.getGuildId();
@@ -415,7 +414,7 @@ module.exports = class BetterTTS {
 
     // Subscribe/Unsubscribe button
     ToolbarComponent() {
-        const state = this.settings.currentSubscribedChannel === SelectedChannelStore.getCurrentlySelectedChannelId();
+        const state = this.settings.subscribedChannel === SelectedChannelStore.getCurrentlySelectedChannelId();
         const [isChecked, setIsChecked] = useState(state);
         return React.createElement(
             Tooltip,
@@ -438,12 +437,13 @@ module.exports = class BetterTTS {
                             }
                             if (!isChecked) {
                                 this.BdApi.UI.showToast(`TTS Subbed to ${channelName}`);
-                                setConfigSetting("currentSubscribedChannel", currentChannel);
+                                this.updateSettingValue(null, "subscribedChannel", currentChannel);
                             }
                             else {
                                 this.BdApi.UI.showToast(`TTS Unsubbbed from ${channelName}`);
-                                setConfigSetting("currentSubscribedChannel", "");
+                                this.updateSettingValue(null, "subscribedChannel", "");
                             }
+                            
                         },
                     },
                     React.createElement(
@@ -488,6 +488,9 @@ class AudioPlayer {
 
     addToQueue(text) {
         this.messagesToPlay.push(text);
+        if (this.playingText === undefined) {
+            this.startTTS();
+        }
     }
 
     updateSource(source) {
@@ -518,9 +521,7 @@ class AudioPlayer {
     }
 
     // Play TTS
-    async playTTSfromSource() {
-        if (this.isPlaying) return;
-        this.isPlaying = true;
+    async startTTS() {
         this.playingText = this.messagesToPlay.shift();
         if (this.playingText !== undefined) {
             switch (this.source) {
@@ -534,15 +535,12 @@ class AudioPlayer {
                     if (this.messagesToPlay.length === 0) {
                         this.playingText = undefined;
                         this.audio = null;
-                        this.isPlaying = false;
                     } else {
-                        this.playTTSfromSource();
+                        this.startTTS();
                     }
                 });
                 this.audio.play();
             }
-        } else {
-            this.isPlaying = false;
         }
     }
 }
