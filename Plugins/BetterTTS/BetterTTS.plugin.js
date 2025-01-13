@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.2.4
+ * @version 2.3.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -78,20 +78,23 @@ function setConfigSetting(id, newValue) {
 const { Webpack, Patcher, React, Data, ContextMenu, Utils } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ChannelStore = Webpack.getStore("ChannelStore");
-const SelectedGuildStore = Webpack.getStore("SelectedGuildStore");
+const GuildStore = Webpack.getStore("GuildStore");
+const MediaEngineStore = Webpack.getStore("MediaEngineStore");
+const RelationshipStore = Webpack.getStore("RelationshipStore");
+const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
 const SelectedChannelStore = Webpack.getStore("SelectedChannelStore");
+const SelectedGuildStore = Webpack.getStore("SelectedGuildStore");
+const UserGuildSettingsStore = Webpack.getStore("UserGuildSettingsStore");
+const UserSettingsProtoStore = Webpack.getStore("UserSettingsProtoStore");
 const UserStore = Webpack.getStore("UserStore");
+
+const speakMessage = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.speak"))];
+const cancelSpeak = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.cancel"))];
+const setTTSType = [...Webpack.getWithKey(Webpack.Filters.byStrings("setTTSType"))];
+
 const IconClasses = Webpack.getByKeys("browser", "icon");
 const IconWrapperClasses = Webpack.getByKeys("iconWrapper", "clickable");
 const Tooltip = Webpack.getByKeys("Tooltip", "FormSwitch")?.Tooltip;
-const speakMessage = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.speak"))];
-const cancelSpeak = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.cancel"))];
-const MediaEngineStore = Webpack.getStore("MediaEngineStore");
-const UserGuildSettingsStore = Webpack.getStore("UserGuildSettingsStore");
-const UserSettingsProtoStore = Webpack.getStore("UserSettingsProtoStore");
-const RelationshipStore = Webpack.getStore("RelationshipStore");
-const setTTSType = [...Webpack.getWithKey(Webpack.Filters.byStrings("setTTSType"))];
-const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
 
 const { useState } = React;
 var console = {};
@@ -184,10 +187,11 @@ module.exports = class BetterTTS {
 
     // Plugin start/stop
     start() {
-        this.handleMessage = this.handleMessageRecieved.bind(this);
-        this.handleKeyDown = this.onKeyDown.bind(this);
+        this.handleMessage = this.messageRecieved.bind(this);
         this.handleAnnouceUsers = this.annouceUser.bind(this);
         this.handleUpdateRelations = this.updateRelationships.bind(this);
+        this.handleSpeakMessage = this.speakMessage.bind(this);
+        this.handleKeyDown = this.onKeyDown.bind(this);
         this.patchContextMenus = this.patchContextMenu.bind(this);
 
         this.initSettingsValues();
@@ -206,7 +210,7 @@ module.exports = class BetterTTS {
         document.addEventListener("keydown", this.handleKeyDown);
         DiscordModules.subscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
         DiscordModules.subscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
-        DiscordModules.subscribe("SPEAK_MESSAGE", this.handleMessage);
+        DiscordModules.subscribe("SPEAK_MESSAGE", this.handleSpeakMessage);
         if (this.settings.enableTTS) {
             DiscordModules.subscribe("MESSAGE_CREATE", this.handleMessage);
         }
@@ -224,7 +228,7 @@ module.exports = class BetterTTS {
         Patcher.unpatchAll(this.meta.name);
         DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.handleAnnouceUsers);
         DiscordModules.unsubscribe("MESSAGE_CREATE", this.handleMessage);
-        DiscordModules.unsubscribe("SPEAK_MESSAGE", this.handleMessage);
+        DiscordModules.unsubscribe("SPEAK_MESSAGE", this.handleSpeakMessage);
         DiscordModules.unsubscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
         DiscordModules.unsubscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
         document.removeEventListener("keydown", this.handleKeyDown);
@@ -237,18 +241,14 @@ module.exports = class BetterTTS {
             setTTSType[0][setTTSType[1]]("NEVER");
         });
         Patcher.instead(this.meta.name, cancelSpeak[0], cancelSpeak[1], (_, e, t) => {
-            this.cancelTTS();
+            this.AudioPlayer.stopTTS();
         });
     }
 
-    handleMessageRecieved(event) {
+    messageRecieved(event) {
         let message = event.message;
-        if (event.type === "SPEAK_MESSAGE" || event.guildId && this.shouldPlayMessage(event.message)) {
-            let text = message.content;
-            if (this.settings.messagePrependNames) {
-                let author = UserStore.getUser(message.author.id);
-                text = `${author.username} said ${text}`;
-            }
+        if (event.guildId && this.shouldPlayMessage(event.message)) {
+            let text = this.getPatchedContent(message);
             this.AudioPlayer.addToQueue(text);
         }
     }
@@ -270,14 +270,15 @@ module.exports = class BetterTTS {
         }
     }
 
+    speakMessage(event) {
+        let text = this.getPatchedContent(event.message, event.channel.guild_id);
+        this.AudioPlayer.addToQueue(text);
+    }
+
     updateRelationships() {
         this.usersBlocked = new Set(RelationshipStore.getBlockedIDs());
         this.usersIgnored = new Set(RelationshipStore.getIgnoredIDs());
         this.usersFriends = new Set(RelationshipStore.getFriendIDs());
-    }
-
-    cancelTTS() {
-        this.AudioPlayer.stopTTS();
     }
 
     onKeyDown(event) {
@@ -346,14 +347,18 @@ module.exports = class BetterTTS {
         this.mutedChannels = UserGuildSettingsStore.getMutedChannels(messageGuildId);
         this.mutedGuild = UserGuildSettingsStore.isMuted(messageGuildId);
 
-        if (messageAuthorId === userId && !message.tts
-            || messageChannelId === focusedChannel && !message.tts
-            || this.ttsMutedUsers.has(messageAuthorId)
+        if (this.ttsMutedUsers.has(messageAuthorId)
             || this.settings.blockBlockedUsers && this.usersBlocked.has(messageAuthorId)
             || this.settings.blockIgnoredUsers && this.usersIgnored.has(messageAuthorId)
             || this.settings.blockNotFriendusers && !this.usersFriends.has(messageAuthorId)
             || this.settings.blockMutedChannels && this.mutedChannels.has(messageChannelId)
             || this.settings.blockMutedGuilds && this.mutedGuild) {
+            return false;
+        }
+        if (message.tts) {
+            return true;
+        }
+        if (messageAuthorId === userId) {
             return false;
         }
 
@@ -375,6 +380,19 @@ module.exports = class BetterTTS {
             default:
                 return false;
         }
+    }
+
+    getPatchedContent(message, guildId) {
+        let text = message.content
+            .replace(/<@!?(\d+)>/g, (match, userId) => UserStore.getUser(userId)?.globalName)
+            .replace(/<@&?(\d+)>/g, (match, roleId) => GuildStore.getRoles(guildId)[roleId]?.name)
+            .replace(/<#(\d+)>/g, (match, channelId) => ChannelStore.getChannel(channelId)?.name)
+            .replace(/<a?:(\w+):(\d+)>/g, (match, emojiName) => "Emoji " + emojiName);
+        if (this.settings.messagePrependNames) {
+            let author = UserStore.getUser(message.author.id);
+            text = `${author.username} said ${text}`;
+        }
+        return text;
     }
 
     // TTS Toggle
