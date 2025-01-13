@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.1.2
+ * @version 1.1.3
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
  * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/NotifyWhenMuted/NotifyWhenMuted.plugin.js
@@ -22,6 +22,7 @@ const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 
 var console = {};
 
+const delay = ms => new Promise(res => setTimeout(res, ms));
 
 module.exports = class NotifyWhenMuted {
     constructor(meta) {
@@ -87,13 +88,14 @@ module.exports = class NotifyWhenMuted {
     async handleSpeaking(_, args, ret) {
         if (!(MediaEngineStore.isSelfMute() || MediaEngineStore.isSelfDeaf()
             || config.settings[0].value)) return;
-        const delay = ms => new Promise(res => setTimeout(res, ms));
         if (ret && !this.isPlaying) {
             this.isPlaying = true;
             this.audio = new Audio(config.settings[1].value);
+            this.audio.addEventListener('ended', async () => {
+                await delay(config.settings[2].value);
+                this.isPlaying = false;
+            });
             this.audio.play();
-            await delay(config.settings[2].value);
-            this.isPlaying = false;
         }
     }
 };
