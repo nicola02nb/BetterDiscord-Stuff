@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.2.3
+ * @version 2.2.4
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -242,16 +242,14 @@ module.exports = class BetterTTS {
     }
 
     handleMessageRecieved(event) {
-        if (event.type == "SPEAK_MESSAGE" || this.shouldPlayMessage(event.message)) {
-            let message = event.message;
-            if (this.settings.enableMessageReading) {
-                let text = message.content;
-                if (this.settings.messagePrependNames) {
-                    let author = UserStore.getUser(message.author.id);
-                    text = `${author.username} said ${text}`;
-                }
-                this.AudioPlayer.addToQueue(text);
+        let message = event.message;
+        if (event.type === "SPEAK_MESSAGE" || event.guildId && this.shouldPlayMessage(event.message)) {
+            let text = message.content;
+            if (this.settings.messagePrependNames) {
+                let author = UserStore.getUser(message.author.id);
+                text = `${author.username} said ${text}`;
             }
+            this.AudioPlayer.addToQueue(text);
         }
     }
 
@@ -270,7 +268,7 @@ module.exports = class BetterTTS {
                 }
             }
         }
-    }   
+    }
 
     updateRelationships() {
         this.usersBlocked = new Set(RelationshipStore.getBlockedIDs());
@@ -331,7 +329,7 @@ module.exports = class BetterTTS {
     shouldPlayMessage(message) {
         let isSelfDeaf = MediaEngineStore.isSelfDeaf();
         let selectedChannel = this.settings.selectedChannel;
-        if (isSelfDeaf || message.content === "")
+        if (isSelfDeaf || message.state === "SENDING" || message.content === "")
             return false;
 
         let messageAuthorId = message.author.id;
@@ -349,6 +347,7 @@ module.exports = class BetterTTS {
         this.mutedGuild = UserGuildSettingsStore.isMuted(messageGuildId);
 
         if (messageAuthorId === userId && !message.tts
+            || messageChannelId === focusedChannel && !message.tts
             || this.ttsMutedUsers.has(messageAuthorId)
             || this.settings.blockBlockedUsers && this.usersBlocked.has(messageAuthorId)
             || this.settings.blockIgnoredUsers && this.usersIgnored.has(messageAuthorId)
@@ -366,7 +365,7 @@ module.exports = class BetterTTS {
             case "subscribedChannel":
                 return messageChannelId === subscribedChannel;
             case "focusedChannel":
-                return messageChannelId === focusedChannel || message.tts;
+                return messageChannelId === focusedChannel;
             case "connectedChannel":
                 return messageChannelId === connectedChannel;
             case "focusedGuildChannels":
@@ -450,7 +449,7 @@ module.exports = class BetterTTS {
                                 this.BdApi.UI.showToast(`TTS Unsubbbed from ${channelName}`);
                                 this.updateSettingValue(null, "subscribedChannel", "");
                             }
-                            
+
                         },
                     },
                     React.createElement(
@@ -475,6 +474,8 @@ module.exports = class BetterTTS {
         );
     }
 };
+
+const delay = ms => new Promise(res => setTimeout(res, ms));
 
 class AudioPlayer {
     constructor(source, voice, rate, delay, volume) {
@@ -514,7 +515,7 @@ class AudioPlayer {
         if (this.audio)
             this.audio.playbackRate = rate;
     }
-    
+
     updateVolume(volume) {
         this.volume = volume;
         if (this.audio)
@@ -546,7 +547,8 @@ class AudioPlayer {
             if (this.audio) {
                 this.audio.playbackRate = this.rate;
                 this.audio.volume = this.volume / 100;
-                this.audio.addEventListener('ended', () => {
+                this.audio.addEventListener('ended', async () => {
+                    await delay(this.delay);
                     if (this.messagesToPlay.length === 0) {
                         this.playingText = undefined;
                         this.audio = null;
