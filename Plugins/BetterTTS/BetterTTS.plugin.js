@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.2.2
+ * @version 2.2.3
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -51,6 +51,7 @@ const config = {
                 { type: "switch", id: "blockMutedGuilds", name: "Block Muted Guilds", note: "Blocks muteds server/guilds from TTS", value: false },
             ]
         },
+        { type: "slider", id: "ttsVolume", name: "TTS Volume", note: "Changes the volume of the TTS", step: 1, value: 100, min: 0, max: 100, units: "x", markers: [0, 25, 50, 75, 100], inline: false },
         { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
         { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages", value: 1000 },
         { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS", value: [] },
@@ -163,6 +164,9 @@ module.exports = class BetterTTS {
             case "ttsSpeechRate":
                 this.AudioPlayer.updateRate(value);
                 break;
+            case "ttsVolume":
+                this.AudioPlayer.updateVolume(value);
+                break;
             case "delayBetweenMessages":
                 value = parseInt(value);
                 this.AudioPlayer.updateDelay(value);
@@ -196,11 +200,13 @@ module.exports = class BetterTTS {
         this.AudioPlayer = new AudioPlayer(this.settings.ttsSource,
             this.settings.ttsVoice,
             this.settings.ttsSpeechRate,
-            this.settings.ttsDelayBetweenMessages);
+            this.settings.ttsDelayBetweenMessages,
+            this.settings.ttsVolume);
 
         document.addEventListener("keydown", this.handleKeyDown);
         DiscordModules.subscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
         DiscordModules.subscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
+        DiscordModules.subscribe("SPEAK_MESSAGE", this.handleMessage);
         if (this.settings.enableTTS) {
             DiscordModules.subscribe("MESSAGE_CREATE", this.handleMessage);
         }
@@ -218,8 +224,9 @@ module.exports = class BetterTTS {
         Patcher.unpatchAll(this.meta.name);
         DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.handleAnnouceUsers);
         DiscordModules.unsubscribe("MESSAGE_CREATE", this.handleMessage);
-        DiscordModules.unsubscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
+        DiscordModules.unsubscribe("SPEAK_MESSAGE", this.handleMessage);
         DiscordModules.unsubscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
+        DiscordModules.unsubscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
         document.removeEventListener("keydown", this.handleKeyDown);
         this.AudioPlayer.stopTTS();
     }
@@ -232,6 +239,20 @@ module.exports = class BetterTTS {
         Patcher.instead(this.meta.name, cancelSpeak[0], cancelSpeak[1], (_, e, t) => {
             this.cancelTTS();
         });
+    }
+
+    handleMessageRecieved(event) {
+        if (event.type == "SPEAK_MESSAGE" || this.shouldPlayMessage(event.message)) {
+            let message = event.message;
+            if (this.settings.enableMessageReading) {
+                let text = message.content;
+                if (this.settings.messagePrependNames) {
+                    let author = UserStore.getUser(message.author.id);
+                    text = `${author.username} said ${text}`;
+                }
+                this.AudioPlayer.addToQueue(text);
+            }
+        }
     }
 
     annouceUser(event) {
@@ -249,21 +270,7 @@ module.exports = class BetterTTS {
                 }
             }
         }
-    }
-
-    handleMessageRecieved(event) {
-        if (this.shouldPlayMessage(event.message)) {
-            let message = event.message;
-            if (this.settings.enableMessageReading) {
-                let text = message.content;
-                if (this.settings.messagePrependNames) {
-                    let author = UserStore.getUser(message.author.id);
-                    text = `${author.username} said ${text}`;
-                }
-                this.AudioPlayer.addToQueue(text);
-            }
-        }
-    }
+    }   
 
     updateRelationships() {
         this.usersBlocked = new Set(RelationshipStore.getBlockedIDs());
@@ -324,7 +331,7 @@ module.exports = class BetterTTS {
     shouldPlayMessage(message) {
         let isSelfDeaf = MediaEngineStore.isSelfDeaf();
         let selectedChannel = this.settings.selectedChannel;
-        if (isSelfDeaf)
+        if (isSelfDeaf || message.content === "")
             return false;
 
         let messageAuthorId = message.author.id;
@@ -341,7 +348,7 @@ module.exports = class BetterTTS {
         this.mutedChannels = UserGuildSettingsStore.getMutedChannels(messageGuildId);
         this.mutedGuild = UserGuildSettingsStore.isMuted(messageGuildId);
 
-        if (messageAuthorId === userId
+        if (messageAuthorId === userId && !message.tts
             || this.ttsMutedUsers.has(messageAuthorId)
             || this.settings.blockBlockedUsers && this.usersBlocked.has(messageAuthorId)
             || this.settings.blockIgnoredUsers && this.usersIgnored.has(messageAuthorId)
@@ -470,8 +477,8 @@ module.exports = class BetterTTS {
 };
 
 class AudioPlayer {
-    constructor(source, voice, rate, delay) {
-        this.updateConfig(source, voice, rate, delay);
+    constructor(source, voice, rate, delay, volume) {
+        this.updateConfig(source, voice, rate, delay, volume);
 
         this.isPlaying = false;
         this.playingText = undefined;
@@ -479,11 +486,12 @@ class AudioPlayer {
         this.messagesToPlay = [];
     }
 
-    updateConfig(source, voice, rate, delay) {
+    updateConfig(source, voice, rate, delay, volume) {
         this.source = source;
         this.voice = voice;
         this.rate = rate;
-        this.delay = rate;
+        this.delay = delay;
+        this.volume = volume;
     }
 
     addToQueue(text) {
@@ -505,6 +513,12 @@ class AudioPlayer {
         this.rate = rate;
         if (this.audio)
             this.audio.playbackRate = rate;
+    }
+    
+    updateVolume(volume) {
+        this.volume = volume;
+        if (this.audio)
+            this.audio.volume = volume;
     }
 
     updateDelay(delay) {
@@ -531,6 +545,7 @@ class AudioPlayer {
             }
             if (this.audio) {
                 this.audio.playbackRate = this.rate;
+                this.audio.volume = this.volume / 100;
                 this.audio.addEventListener('ended', () => {
                     if (this.messagesToPlay.length === 0) {
                         this.playingText = undefined;
