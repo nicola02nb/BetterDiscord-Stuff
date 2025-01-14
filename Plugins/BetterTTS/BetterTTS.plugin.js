@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.3.0
+ * @version 2.3.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -114,11 +114,11 @@ module.exports = class BetterTTS {
         for (const setting of config.settings) {
             if (setting.type === "category") {
                 for (const settingInt of setting.settings) {
-                    settingInt.value = Data.load("BetterTTS", settingInt.id) ?? settingInt.value;
+                    settingInt.value = this.BdApi.Data.load(settingInt.id) ?? settingInt.value;
                     this.settings[settingInt.id] = settingInt.value;
                 }
             } else {
-                setting.value = Data.load("BetterTTS", setting.id) ?? setting.value;
+                setting.value = this.BdApi.Data.load(setting.id) ?? setting.value;
                 this.settings[setting.id] = setting.value;
             }
         }
@@ -178,7 +178,6 @@ module.exports = class BetterTTS {
                 this.updateToggleKeys(value);
                 break;
             default:
-                console.warn(`Unknown setting id: ${id}`);
                 break;
         }
         this.settings[id] = value;
