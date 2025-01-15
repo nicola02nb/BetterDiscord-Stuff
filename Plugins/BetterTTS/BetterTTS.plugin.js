@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.3.1
+ * @version 2.3.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -139,7 +139,7 @@ module.exports = class BetterTTS {
         switch (id) {
             case "enableTTS":
                 if (!value)
-                    this.cancelTTS();
+                    this.AudioPlayer.stopTTS();
                 break;
             case "enableTTSCommand":
                 UserSettingsProtoStore.settings.textAndImages.enableTtsCommand.value = value;
