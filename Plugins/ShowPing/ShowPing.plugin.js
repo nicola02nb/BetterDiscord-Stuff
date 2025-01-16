@@ -3,6 +3,7 @@
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
  * @version 2.4.0
  * @author nicola02nb
+ * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
  * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/ShowPing/ShowPing.plugin.js

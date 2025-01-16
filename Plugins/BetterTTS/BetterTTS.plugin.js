@@ -3,6 +3,7 @@
  * @description A plugin that allows you to play a custom TTS when a message is received.
  * @version 2.4.2
  * @author nicola02nb
+ * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
  * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/BetterTTS/BetterTTS.plugin.js
