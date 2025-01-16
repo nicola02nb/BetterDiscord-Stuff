@@ -7,7 +7,7 @@ A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message
 - Select from which channel TTS should read messages:
     - Never read messages
     - Read all messages from all Channels and Servers
-    - From Custom subscribe Channels or Servers (There checkbox when you right click them)
+    - From Custom subscribe Channels or Servers (There is a checkbox when you right click them)
     - From Connected Channel
     - From Focused Channel
     - From Connected Server
@@ -20,7 +20,7 @@ A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message
     - Not firends users
     - Muted channels
     - Muted servers
-    - Muted users (There checkbox when you right click them)
+    - Muted users (There is a checkbox when you right click them)
 - Select Speech Rate
 - Select Delay between Messages
 - Set a Keyboard Shortcut to Toggle TTS On/Off (With toast)
