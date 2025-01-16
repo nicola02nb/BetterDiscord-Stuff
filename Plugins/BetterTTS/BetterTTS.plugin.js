@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.4.0
+ * @version 2.4.1
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -189,6 +189,7 @@ module.exports = class BetterTTS {
         this.handleAnnouceUsers = this.annouceUser.bind(this);
         this.handleUpdateRelations = this.updateRelationships.bind(this);
         this.handleSpeakMessage = this.speakMessage.bind(this);
+        this.handleStopTTS = this.stopTTS.bind(this);
         this.handleKeyDown = this.onKeyDown.bind(this);
 
         this.initSettingsValues();
@@ -204,7 +205,7 @@ module.exports = class BetterTTS {
         DiscordModules.subscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
         DiscordModules.subscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
         DiscordModules.subscribe("SPEAK_MESSAGE", this.handleSpeakMessage);
-        DiscordModules.subscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleSpeakMessage);
+        DiscordModules.subscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleStopTTS);
         if (this.settings.enableTTS) {
             DiscordModules.subscribe("MESSAGE_CREATE", this.handleMessage);
         }
@@ -221,7 +222,7 @@ module.exports = class BetterTTS {
         Patcher.unpatchAll(this.meta.name);
         DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.handleAnnouceUsers);
         DiscordModules.unsubscribe("MESSAGE_CREATE", this.handleMessage);
-        DiscordModules.unsubscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleSpeakMessage);
+        DiscordModules.unsubscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleStopTTS);
         DiscordModules.unsubscribe("SPEAK_MESSAGE", this.handleSpeakMessage);
         DiscordModules.unsubscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
         DiscordModules.unsubscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
