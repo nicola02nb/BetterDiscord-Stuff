@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.3.2
+ * @version 2.4.0
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -11,7 +11,7 @@ const config = {
     changelog: [],
     settings: [
         { type: "switch", id: "enableTTS", name: "Enable TTS", note: "Enables/Disables the TTS", value: true },
-        { type: "switch", id: "enableTTSCommand", name: "Enable /tts Command", note: "Allo playback and usage of /tts command", value: true },
+        { type: "switch", id: "enableTTSCommand", name: "Enable /tts Command", note: "Allow playback and usage of /tts command", value: true },
         { type: "switch", id: "enableUserAnnouncement", name: "Enable User Announcement", note: "Enables/Disables the User Announcement when join/leaves the channel", value: true },
         { type: "switch", id: "enableMessageReading", name: "Enable Message Reading", note: "Enables/Disables the message reading from channels", value: true },
         {
@@ -21,14 +21,13 @@ const config = {
                     type: "dropdown", id: "selectedChannel", name: "Which channel should be played:", note: "Choose the channel you want to play the TTS", value: "never", options: [
                         { label: "Never", value: "never" },
                         { label: "All Channels", value: "allChannels" },
-                        { label: "Suscribed Channel", value: "subscribedChannel" },
+                        { label: "Suscribed Channels or Servers", value: "subscribedChannelOrGuild" },
                         { label: "Focused Channel", value: "focusedChannel" },
                         { label: "Connected Channel", value: "connectedChannel" },
-                        { label: "Focused Guild Channels", value: "focusedGuildChannels" },
-                        { label: "Connected Guild Channels", value: "connectedGuildChannels" }
+                        { label: "Focused Server Channels", value: "focusedGuildChannels" },
+                        { label: "Connected Server Channels", value: "connectedGuildChannels" }
                     ]
                 },
-                { type: "text", id: "subscribedChannel", name: "Current Subscribed Channel ID", note: "Current Subscribed Channel ID", value: "" },
             ]
         },
         {
@@ -75,7 +74,7 @@ function setConfigSetting(id, newValue) {
     }
 }
 
-const { Webpack, Patcher, React, Data, ContextMenu, Utils } = BdApi;
+const { Webpack, Patcher, Data, React, ContextMenu, Utils } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ChannelStore = Webpack.getStore("ChannelStore");
 const GuildStore = Webpack.getStore("GuildStore");
@@ -92,11 +91,6 @@ const speakMessage = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSyn
 const cancelSpeak = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.cancel"))];
 const setTTSType = [...Webpack.getWithKey(Webpack.Filters.byStrings("setTTSType"))];
 
-const IconClasses = Webpack.getByKeys("browser", "icon");
-const IconWrapperClasses = Webpack.getByKeys("iconWrapper", "clickable");
-const Tooltip = Webpack.getByKeys("Tooltip", "FormSwitch")?.Tooltip;
-
-const { useState } = React;
 var console = {};
 
 module.exports = class BetterTTS {
@@ -122,7 +116,12 @@ module.exports = class BetterTTS {
                 this.settings[setting.id] = setting.value;
             }
         }
-        config.settings[5].settings[1].options = StreamElementsTTS.getVoices();
+        StreamElementsTTS.getVoices();
+        //UserSettingsProtoStore.settings.textAndImages.enableTtsCommand?.value = this.settings.enableTTSCommand;
+        this.ttsMutedUsers = new Set(this.BdApi.Data.load("ttsMutedUsers")) ?? new Set();
+        this.ttsSubscribedChannels = new Set(this.BdApi.Data.load("ttsSubscribedChannels")) ?? new Set();
+        this.ttsSubscribedGuilds = new Set(this.BdApi.Data.load("ttsSubscribedGuilds")) ?? new Set();
+        this.updateRelationships();
     }
 
     getSettingsPanel() {
@@ -191,14 +190,9 @@ module.exports = class BetterTTS {
         this.handleUpdateRelations = this.updateRelationships.bind(this);
         this.handleSpeakMessage = this.speakMessage.bind(this);
         this.handleKeyDown = this.onKeyDown.bind(this);
-        this.patchContextMenus = this.patchContextMenu.bind(this);
 
         this.initSettingsValues();
         this.updateToggleKeys(this.settings.toggleTTS);
-        //UserSettingsProtoStore.settings.textAndImages.enableTtsCommand?.value = this.settings.enableTTSCommand;
-
-        this.ttsMutedUsers = new Set(Data.load("BetterTTS", "ttsMutedUsers")) ?? new Set();
-        this.updateRelationships();
 
         this.AudioPlayer = new AudioPlayer(this.settings.ttsSource,
             this.settings.ttsVoice,
@@ -210,6 +204,7 @@ module.exports = class BetterTTS {
         DiscordModules.subscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
         DiscordModules.subscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
         DiscordModules.subscribe("SPEAK_MESSAGE", this.handleSpeakMessage);
+        DiscordModules.subscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleSpeakMessage);
         if (this.settings.enableTTS) {
             DiscordModules.subscribe("MESSAGE_CREATE", this.handleMessage);
         }
@@ -218,15 +213,15 @@ module.exports = class BetterTTS {
         }
 
         this.patchOriginalTTS();
-        this.patchTitleBar();
-        ContextMenu.patch("user-context", this.patchContextMenus);
+        this.patchContextMenus();
     }
 
     stop() {
-        ContextMenu.unpatch("user-context", this.patchContextMenus);
+        this.unpatchContextMenus();
         Patcher.unpatchAll(this.meta.name);
         DiscordModules.unsubscribe("VOICE_STATE_UPDATES", this.handleAnnouceUsers);
         DiscordModules.unsubscribe("MESSAGE_CREATE", this.handleMessage);
+        DiscordModules.unsubscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleSpeakMessage);
         DiscordModules.unsubscribe("SPEAK_MESSAGE", this.handleSpeakMessage);
         DiscordModules.unsubscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
         DiscordModules.unsubscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
@@ -240,7 +235,7 @@ module.exports = class BetterTTS {
             setTTSType[0][setTTSType[1]]("NEVER");
         });
         Patcher.instead(this.meta.name, cancelSpeak[0], cancelSpeak[1], (_, e, t) => {
-            this.AudioPlayer.stopTTS();
+            return;
         });
     }
 
@@ -274,6 +269,11 @@ module.exports = class BetterTTS {
         this.AudioPlayer.addToQueue(text);
     }
 
+    stopTTS() {
+        if (MediaEngineStore.isSelfDeaf())
+            this.AudioPlayer.stopTTS();
+    }
+
     updateRelationships() {
         this.usersBlocked = new Set(RelationshipStore.getBlockedIDs());
         this.usersIgnored = new Set(RelationshipStore.getIgnoredIDs());
@@ -290,39 +290,86 @@ module.exports = class BetterTTS {
         }
     }
 
-    patchTitleBar() {
-        this.BuildToolbarComponent = this.ToolbarComponent.bind(this);
-        const ChannelHeader = Webpack.getByKeys("Icon", "Divider", { defaultExport: false, });
-        Patcher.before(this.meta.name, ChannelHeader, "ZP", (thisObject, methodArguments, returnValue) => {
-            if (this.settings.selectedChannel === "subscribedChannel" && Array.isArray(methodArguments[0]?.children))
-                if (methodArguments[0].children.some?.(child =>
-                    child?.props?.channel ||
-                    child?.props?.children?.some?.(grandChild => typeof grandChild === 'string')))
+    patchContextMenus() {
+        this.patchUserContext = this.patchUserContextMenu.bind(this);
+        this.patchChannelContext = this.patchChannelContextMenu.bind(this);
+        this.patchGuildContext = this.patchGuildContextMenu.bind(this);
 
-                    if (!methodArguments[0].children.some?.(child => child?.key === this.meta.name))
-                        methodArguments[0].children.splice(2, 0, React.createElement(this.BuildToolbarComponent, { key: this.meta.name }));
-        });
+        ContextMenu.patch("user-context", this.patchUserContext);
+        ContextMenu.patch("channel-context", this.patchChannelContext);
+        ContextMenu.patch("guild-context", this.patchGuildContext);
     }
 
-    patchContextMenu(returnValue, props) {
-        const buttonFilter = button => button?.props?.id === "invite-to-server";
+    unpatchContextMenus() {
+        ContextMenu.unpatch("user-context", this.patchUserContext);
+        ContextMenu.unpatch("channel-context", this.patchChannelContext);
+        ContextMenu.unpatch("guild-context", this.patchGuildContext);
+    }
+
+    patchUserContextMenu(returnValue, props) {
+        let userId = props.user.id;
+        const buttonFilter = button => button?.props?.id === "mute";
         let buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
-        let newA = ContextMenu.buildItem({
+        let ttsToggle = ContextMenu.buildItem({
             type: "toggle",
             label: "Mute TTS Messages",
-            checked: this.ttsMutedUsers.has(props.user.id),
+            checked: this.ttsMutedUsers.has(userId),
             action: (newValue) => {
                 if (newValue.currentTarget.ariaChecked
                     !== "true") {
-                    this.ttsMutedUsers.add(props.user.id);
+                    this.ttsMutedUsers.add(userId);
                 } else {
-                    this.ttsMutedUsers.delete(props.user.id);
+                    this.ttsMutedUsers.delete(userId);
                 }
-                Data.save("BetterTTS", "ttsMutedUsers", this.ttsMutedUsers);
+                this.BdApi.Data.save("ttsMutedUsers", this.ttsMutedUsers);
             }
         });
         if (Array.isArray(buttonParent))
-            buttonParent.push(newA);
+            buttonParent.push(ttsToggle);
+    }
+
+    patchChannelContextMenu(returnValue, props) {
+        let channelId = props.channel.id;
+        const buttonFilter = button => (button?.props?.id === "mute-channel" || button?.props?.id === "unmute-channel");
+        let buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
+        let ttsGroup = ContextMenu.buildItem({
+            type: "toggle",
+            label: "TTS Subscribe Channel",
+            checked: this.ttsSubscribedChannels.has(channelId),
+            action: (newValue) => {
+                if (newValue.currentTarget.ariaChecked
+                    !== "true") {
+                    this.ttsSubscribedChannels.add(channelId);
+                } else {
+                    this.ttsSubscribedChannels.delete(channelId);
+                }
+                this.BdApi.Data.save("ttsSubscribedChannels", this.ttsSubscribedChannels);
+            }
+        });
+        if (Array.isArray(buttonParent))
+            buttonParent.push(ttsGroup);
+    }
+
+    patchGuildContextMenu(returnValue, props) {
+        let guildId = props.guild.id;
+        const buttonFilter = button => button?.props?.id === "guild-notifications";
+        let buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
+        let ttsGroup = ContextMenu.buildItem({
+            type: "toggle",
+            label: "TTS Subscribe Server",
+            checked: this.ttsSubscribedGuilds.has(guildId),
+            action: (newValue) => {
+                if (newValue.currentTarget.ariaChecked
+                    !== "true") {
+                    this.ttsSubscribedGuilds.add(guildId);
+                } else {
+                    this.ttsSubscribedGuilds.delete(guildId);
+                }
+                this.BdApi.Data.save("ttsSubscribedGuilds", this.ttsSubscribedGuilds);
+            }
+        });
+        if (Array.isArray(buttonParent))
+            buttonParent.push(ttsGroup);
     }
 
     // Message evaluation
@@ -336,8 +383,7 @@ module.exports = class BetterTTS {
         let messageChannelId = message.channel_id;
         let messageGuildId = message.guild_id;
 
-        let userId = UserStore.getCurrentUser().id
-        let subscribedChannel = this.settings.subscribedChannel;
+        let userId = UserStore.getCurrentUser().id;
         let focusedChannel = SelectedChannelStore.getCurrentlySelectedChannelId();
         let connectedChannel = RTCConnectionStore.getChannelId();
         let focusedGuild = SelectedGuildStore.getGuildId();
@@ -366,8 +412,8 @@ module.exports = class BetterTTS {
                 return false;
             case "allChannels":
                 return true;
-            case "subscribedChannel":
-                return messageChannelId === subscribedChannel;
+            case "subscribedChannelOrGuild":
+                return this.ttsSubscribedChannels.has(messageChannelId) || this.ttsSubscribedGuilds.has(messageGuildId);
             case "focusedChannel":
                 return messageChannelId === focusedChannel;
             case "connectedChannel":
@@ -433,62 +479,6 @@ module.exports = class BetterTTS {
                     break;
             }
         }
-    }
-
-    // Subscribe/Unsubscribe button
-    ToolbarComponent() {
-        const state = this.settings.subscribedChannel === SelectedChannelStore.getCurrentlySelectedChannelId();
-        const [isChecked, setIsChecked] = useState(state);
-        return React.createElement(
-            Tooltip,
-            { text: "Sub/Unsub TTS to this channel" },
-            ({ onMouseEnter, onMouseLeave }) =>
-                React.createElement(
-                    "div",
-                    {
-                        className: `${IconClasses.icon} ${IconWrapperClasses.iconWrapper} ${IconWrapperClasses.clickable}`,
-                        onMouseEnter,
-                        onMouseLeave,
-                        checked: isChecked,
-                        onClick: () => {
-                            setIsChecked(!isChecked);
-                            let currentChannel = SelectedChannelStore.getCurrentlySelectedChannelId();
-                            let channel = ChannelStore.getChannel(currentChannel);
-                            let channelName = channel.name;
-                            if (channelName === "") {
-                                channelName = channel.rawRecipients[0].username;
-                            }
-                            if (!isChecked) {
-                                this.BdApi.UI.showToast(`TTS Subbed to ${channelName}`);
-                                this.updateSettingValue(null, "subscribedChannel", currentChannel);
-                            }
-                            else {
-                                this.BdApi.UI.showToast(`TTS Unsubbbed from ${channelName}`);
-                                this.updateSettingValue(null, "subscribedChannel", "");
-                            }
-
-                        },
-                    },
-                    React.createElement(
-                        "svg",
-                        {
-                            className: IconWrapperClasses.icon,
-                            "aria-hidden": "true",
-                            role: "img",
-                            width: "24px",
-                            height: "24px",
-                            fill: "none",
-                            viewBox: "0 -960 960 960",
-                        },
-                        React.createElement("path", {
-                            fill: "currentColor",
-                            d: isChecked
-                                ? "M80-80v-80q46 0 91-6t88-22q-46-23-72.5-66.5T160-349v-91h160v-120h135L324-822l72-36 131 262q20 40-3 78t-68 38h-56v40q0 33-23.5 56.5T320-360h-80v11q0 35 21.5 61.5T316-252l12 3q40 10 45 50t-31 60q-60 33-126.5 46T80-80Zm572-114-57-56q21-21 33-48.5t12-59.5q0-32-12-59.5T595-466l57-57q32 32 50 74.5t18 90.5q0 48-18 90t-50 74ZM765-80l-57-57q43-43 67.5-99.5T800-358q0-66-24.5-122T708-579l57-57q54 54 84.5 125T880-358q0 81-30.5 152.5T765-80Z"
-                                : "m855-220-64-64q20-81-3-160t-83-138l56-58q55 54 87 126t32 156q0 36-6.5 71T855-220ZM532-541 398-676l-74-146 72-36 131 262q7 14 8 27.5t-3 27.5ZM80-80v-80q46 0 91-6t88-22q-46-23-72.5-66.5T160-349v-91h160v-120h81l80 80h-81v40q0 33-23.5 56.5T320-360h-80v11q0 35 21.5 61.5T316-252l12 3q40 10 45 50t-31 60q-60 33-126.5 46T80-80Zm740 53L28-820l56-56L876-84l-56 57Z",
-                        })
-                    )
-                )
-        );
     }
 };
 
