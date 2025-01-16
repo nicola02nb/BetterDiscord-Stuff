@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.4.1
+ * @version 2.4.2
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS
@@ -242,7 +242,7 @@ module.exports = class BetterTTS {
 
     messageRecieved(event) {
         let message = event.message;
-        if (event.guildId && this.shouldPlayMessage(event.message)) {
+        if ((event.guildId || !message.member) && this.shouldPlayMessage(event.message)) {
             let text = this.getPatchedContent(message);
             this.AudioPlayer.addToQueue(text);
         }
@@ -309,9 +309,12 @@ module.exports = class BetterTTS {
 
     patchUserContextMenu(returnValue, props) {
         let userId = props.user.id;
-        const buttonFilter = button => button?.props?.id === "mute";
-        let buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
-        let ttsToggle = ContextMenu.buildItem({
+        let channelId = props.channel.id;
+        const buttonFilterUser = button => button?.props?.id === "mute";
+        const buttonFilterChats = button => (button?.props?.id === "mute-channel" || button?.props?.id === "unmute-channel");
+        let buttonParent1 = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilterUser));
+        let buttonParent2 = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilterChats));
+        let ttsToggleUser = ContextMenu.buildItem({
             type: "toggle",
             label: "Mute TTS Messages",
             checked: this.ttsMutedUsers.has(userId),
@@ -325,8 +328,24 @@ module.exports = class BetterTTS {
                 this.BdApi.Data.save("ttsMutedUsers", this.ttsMutedUsers);
             }
         });
-        if (Array.isArray(buttonParent))
-            buttonParent.push(ttsToggle);
+        let ttsToggleChat = ContextMenu.buildItem({
+            type: "toggle",
+            label: "TTS Subscribe Chat",
+            checked: this.ttsSubscribedChannels.has(channelId),
+            action: (newValue) => {
+                if (newValue.currentTarget.ariaChecked
+                    !== "true") {
+                    this.ttsSubscribedChannels.add(channelId);
+                } else {
+                    this.ttsSubscribedChannels.delete(channelId);
+                }
+                this.BdApi.Data.save("ttsSubscribedChannels", this.ttsSubscribedChannels);
+            }
+        });
+        if (Array.isArray(buttonParent1))
+            buttonParent1.push(ttsToggleUser);
+        if (Array.isArray(buttonParent2))
+            buttonParent2.push(ttsToggleChat);
     }
 
     patchChannelContextMenu(returnValue, props) {
