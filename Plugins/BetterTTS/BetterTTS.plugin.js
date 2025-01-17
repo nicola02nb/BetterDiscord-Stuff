@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.4.2
+ * @version 2.5.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -29,6 +29,8 @@ const config = {
                         { label: "Connected Server Channels", value: "connectedGuildChannels" }
                     ]
                 },
+                { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS", children: [] },
+                { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS", children: [] },
             ]
         },
         {
@@ -44,6 +46,7 @@ const config = {
         },
         {
             type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
+                { type: "custom", id: "mutedUsers", name: "Muted Users", note: "List of users that muted to TTS", children: [] },
                 { type: "switch", id: "blockBlockedUsers", name: "Block Blocked Users", note: "Blocks blocked users from TTS", value: true },
                 { type: "switch", id: "blockIgnoredUsers", name: "Block Ignored Users", note: "Blocks ignored users from TTS", value: true },
                 { type: "switch", id: "blockNotFriendusers", name: "Block Not Friend Users", note: "Blocks not friends users from TTS", value: false },
@@ -75,7 +78,7 @@ function setConfigSetting(id, newValue) {
     }
 }
 
-const { Webpack, Patcher, Data, React, ContextMenu, Utils } = BdApi;
+const { Webpack, Patcher, Data, React, ContextMenu, Utils, Components } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ChannelStore = Webpack.getStore("ChannelStore");
 const GuildStore = Webpack.getStore("GuildStore");
@@ -91,6 +94,8 @@ const UserStore = Webpack.getStore("UserStore");
 const speakMessage = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.speak"))];
 const cancelSpeak = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.cancel"))];
 const setTTSType = [...Webpack.getWithKey(Webpack.Filters.byStrings("setTTSType"))];
+
+const { useState } = React;
 
 var console = {};
 
@@ -125,8 +130,47 @@ module.exports = class BetterTTS {
         this.updateRelationships();
     }
 
+    DropdownButtonGroup = ({labeltext, setName, getFunction}) => {
+        const [selectedOption, setSelectedOption] = useState("");
+
+        const options = Array.from(this[setName]);
+
+        return React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(
+                Components.DropdownInput,
+                {
+                    value: selectedOption,
+                    onChange: (event) => {
+                        setSelectedOption(event);
+                    },
+                    options: [{ label: "Select", value: "" }, ...options.map((option, index) => { 
+                        let obj = getFunction(option);
+                        let name = obj?.name ?? obj?.username;
+                        return { label: name, value: option }; })]
+                },
+
+            ),
+            React.createElement(
+                Components.Button,
+                { onClick: () => {
+                    if (selectedOption === "") return;
+                    options.splice(options.indexOf(selectedOption), 1);
+                    setSelectedOption("");
+                    this[setName].delete(selectedOption);
+                    this.BdApi.Data.save(setName, this[setName]);
+                }},
+                labeltext
+            )
+        );
+    };
+
     getSettingsPanel() {
+        config.settings[4].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
+        config.settings[4].settings[3].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
         config.settings[5].settings[1].options = StreamElementsTTS.voicesLables;
+        config.settings[6].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
@@ -311,7 +355,7 @@ module.exports = class BetterTTS {
     patchUserContextMenu(returnValue, props) {
         let userId = props.user.id;
         let channelId = props.channel.id;
-        const buttonFilterUser = button => button?.props?.id === "mute";
+        const buttonFilterUser = button => (button?.props?.id === "mute" || button?.props?.id === "block");
         const buttonFilterChats = button => (button?.props?.id === "mute-channel" || button?.props?.id === "unmute-channel");
         let buttonParent1 = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilterUser));
         let buttonParent2 = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilterChats));
