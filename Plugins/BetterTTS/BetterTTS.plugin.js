@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.5.0
+ * @version 2.6.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -14,45 +14,42 @@ const config = {
         { type: "switch", id: "enableTTSCommand", name: "Enable /tts Command", note: "Allow playback and usage of /tts command", value: true },
         { type: "switch", id: "enableUserAnnouncement", name: "Enable User Announcement", note: "Enables/Disables the User Announcement when join/leaves the channel", value: true },
         { type: "switch", id: "enableMessageReading", name: "Enable Message Reading", note: "Enables/Disables the message reading from channels", value: true },
-        {
-            type: "category", id: "messageReadingSettings", name: "Message Reading Settings", collapsible: true, shown: false, settings: [
-                { type: "switch", id: "messagePrependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name ot the user of the message that will be read by TTS", value: true },
-                {
-                    type: "dropdown", id: "selectedChannel", name: "Which channel should be played:", note: "Choose the channel you want to play the TTS", value: "never", options: [
-                        { label: "Never", value: "never" },
-                        { label: "All Channels", value: "allChannels" },
-                        { label: "Suscribed Channels or Servers", value: "subscribedChannelOrGuild" },
-                        { label: "Focused Channel", value: "focusedChannel" },
-                        { label: "Connected Channel", value: "connectedChannel" },
-                        { label: "Focused Server Channels", value: "focusedGuildChannels" },
-                        { label: "Connected Server Channels", value: "connectedGuildChannels" }
-                    ]
-                },
-                { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS", children: [] },
-                { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS", children: [] },
-            ]
-        },
-        {
-            type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
-                {
-                    type: "dropdown", id: "ttsSource", name: "TTS Source:", note: "Choose the channel you want to play the TTS", value: "streamlabs", options: [
-                        { label: "Streamlabs", value: "streamlabs" }]
-                },
-                {
-                    type: "dropdown", id: "ttsVoice", name: "Voice for TTS:", note: "Changes voice used for TTS", value: "Brian", options: [
-                        { label: "Brian", value: "Brian" }]
-                }]
-        },
-        {
-            type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
-                { type: "custom", id: "mutedUsers", name: "Muted Users", note: "List of users that muted to TTS", children: [] },
-                { type: "switch", id: "blockBlockedUsers", name: "Block Blocked Users", note: "Blocks blocked users from TTS", value: true },
-                { type: "switch", id: "blockIgnoredUsers", name: "Block Ignored Users", note: "Blocks ignored users from TTS", value: true },
-                { type: "switch", id: "blockNotFriendusers", name: "Block Not Friend Users", note: "Blocks not friends users from TTS", value: false },
-                { type: "switch", id: "blockMutedChannels", name: "Block Muted Channels", note: "Blocks muteds channels from TTS", value: true },
-                { type: "switch", id: "blockMutedGuilds", name: "Block Muted Guilds", note: "Blocks muteds server/guilds from TTS", value: false },
-            ]
-        },
+        { type: "category", id: "messageReadingSettings", name: "Message Reading Settings", collapsible: true, shown: false, settings: [
+            { type: "switch", id: "messagePrependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name ot the user of the message that will be read by TTS", value: true },
+            { type: "dropdown", id: "messageLinksReading", name: "Message Links Reading", note: "Select how links should be read by TTS", value: "domain", options: [
+                { label: "Remove Links", value: "remove" },
+                { label: "Read Only Domain", value: "domain" },
+                { label: "Sobstitute With word URL", value: "sobstitute" },
+                { label: "Keep URL", value: "keep" },
+            ] },
+            { type: "dropdown", id: "selectedChannel", name: "Which channel should be played:", note: "Choose the channel you want to play the TTS", value: "never", options: [
+                { label: "Never", value: "never" },
+                { label: "All Channels", value: "allChannels" },
+                { label: "Suscribed Channels or Servers", value: "subscribedChannelOrGuild" },
+                { label: "Focused Channel", value: "focusedChannel" },
+                { label: "Connected Channel", value: "connectedChannel" },
+                { label: "Focused Server Channels", value: "focusedGuildChannels" },
+                { label: "Connected Server Channels", value: "connectedGuildChannels" },
+            ]},
+            { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS", children: [] },
+            { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS", children: [] },
+        ]},
+        { type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
+            { type: "dropdown", id: "ttsSource", name: "TTS Source:", note: "Choose the channel you want to play the TTS", value: "streamlabs", options: [
+                    { label: "Streamlabs", value: "streamlabs" },
+            ]},
+            { type: "dropdown", id: "ttsVoice", name: "Voice for TTS:", note: "Changes voice used for TTS", value: "Brian", options: [
+                    { label: "Brian", value: "Brian" },
+            ]}
+        ]},
+        { type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
+            { type: "custom", id: "mutedUsers", name: "Muted Users", note: "List of users that muted to TTS", children: [] },
+            { type: "switch", id: "blockBlockedUsers", name: "Block Blocked Users", note: "Blocks blocked users from TTS", value: true },
+            { type: "switch", id: "blockIgnoredUsers", name: "Block Ignored Users", note: "Blocks ignored users from TTS", value: true },
+            { type: "switch", id: "blockNotFriendusers", name: "Block Not Friend Users", note: "Blocks not friends users from TTS", value: false },
+            { type: "switch", id: "blockMutedChannels", name: "Block Muted Channels", note: "Blocks muteds channels from TTS", value: true },
+            { type: "switch", id: "blockMutedGuilds", name: "Block Muted Guilds", note: "Blocks muteds server/guilds from TTS", value: false },
+        ]},
         { type: "slider", id: "ttsVolume", name: "TTS Volume", note: "Changes the volume of the TTS", step: 1, value: 100, min: 0, max: 100, units: "x", markers: [0, 25, 50, 75, 100], inline: false },
         { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
         { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages", value: 1000 },
@@ -166,8 +163,8 @@ module.exports = class BetterTTS {
     };
 
     getSettingsPanel() {
-        config.settings[4].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
-        config.settings[4].settings[3].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
+        config.settings[4].settings[3].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
+        config.settings[4].settings[4].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
         config.settings[5].settings[1].options = StreamElementsTTS.voicesLables;
         config.settings[6].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
         return BdApi.UI.buildSettingsPanel({
@@ -496,7 +493,22 @@ module.exports = class BetterTTS {
             .replace(/<@!?(\d+)>/g, (match, userId) => UserStore.getUser(userId)?.globalName)
             .replace(/<@&?(\d+)>/g, (match, roleId) => GuildStore.getRoles(guildId)[roleId]?.name)
             .replace(/<#(\d+)>/g, (match, channelId) => ChannelStore.getChannel(channelId)?.name)
-            .replace(/<a?:(\w+):(\d+)>/g, (match, emojiName) => "Emoji " + emojiName);
+            .replace(/<a?:(\w+):(\d+)>/g, (match, emojiName) => "Emoji " + emojiName)
+            .replace(/https?:\/\/[^\s]+/g, (url) => {
+                switch (this.settings.messageLinksReading) {
+                    case 'remove':
+                        return '';
+                    case 'domain':
+                        const domain = new URL(url).hostname;
+                        return domain;
+                    case 'sobstitute':
+                        return 'URL';
+                    case 'keep':
+                        return url;
+                    default:
+                        return url;
+            }});
+        if (text === "") return;
         if (this.settings.messagePrependNames) {
             let author = UserStore.getUser(message.author.id);
             text = `${author.username} said ${text}`;
@@ -567,6 +579,7 @@ class AudioPlayer {
     }
 
     addToQueue(text) {
+        if (text === "") return;
         this.messagesToPlay.push(text);
         if (this.playingText === undefined) {
             this.startTTS();
