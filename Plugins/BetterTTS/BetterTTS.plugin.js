@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.6.0
+ * @version 2.6.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -198,23 +198,23 @@ module.exports = class BetterTTS {
                     DiscordModules.unsubscribe("MESSAGE_CREATE", this.handleMessage);
                 }
                 break;
-            case "sourceTTS":
+            case "ttsSource":
                 this.AudioPlayer.updateSource(value);
                 break;
-            case "voiceTTS":
+            case "ttsVoice":
                 this.AudioPlayer.updateVoice(value);
                 break;
             case "ttsSpeechRate":
                 this.AudioPlayer.updateRate(value);
                 break;
             case "ttsVolume":
-                this.AudioPlayer.updateVolume(value);
+                this.AudioPlayer.updateVolume(value/100);
                 break;
-            case "delayBetweenMessages":
+            case "ttsDelayBetweenMessages":
                 value = parseInt(value);
                 this.AudioPlayer.updateDelay(value);
                 break;
-            case "toggleTTS":
+            case "ttsToggle":
                 this.updateToggleKeys(value);
                 break;
             default:
