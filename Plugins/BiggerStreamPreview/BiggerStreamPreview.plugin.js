@@ -106,6 +106,7 @@ module.exports = class BiggerStreamPreview {
   }
 
   handleUserContextMenu = (menu, { user }) => {
+    if(!user) return;
     const [stream, previewUrl] = useStateFromStores([StreamStore, StreamPreviewStore], () => {
       const stream = StreamStore.getAnyStreamForUser(user.id);
       const previewUrl = stream && StreamPreviewStore.getPreviewURL(

@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.6.1
+ * @version 2.6.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -349,6 +349,7 @@ module.exports = class BetterTTS {
     }
 
     patchUserContextMenu(returnValue, props) {
+        if (!props.user) return;
         let userId = props.user.id;
         let channelId = props.channel.id;
         const buttonFilterUser = button => (button?.props?.id === "mute" || button?.props?.id === "block");
