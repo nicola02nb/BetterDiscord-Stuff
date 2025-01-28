@@ -77,7 +77,6 @@ module.exports = class ShowPing {
                 this.isConnected = true;
                 this.addPingDisplay();
             } else {
-                console.log(event);
                 this.isConnected = false;
                 this.removePingDisplay();
             }
