@@ -4,11 +4,9 @@
  * @authorLink https://github.com/nicola02nb
  * @invite hFuY8DfDGK
  * @description View bigger stream previews via the context menu.
- * @version 1.1.5
+ * @version 1.1.6
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview
  */
-// Original code by Marmota (Jaime Filho) https://github.com/jaimeadf/BetterDiscordPlugins/tree/main/packages/BiggerStreamPreview 
-
 const { Webpack, ContextMenu, React } = BdApi;
 const { Filters } = Webpack;
 
@@ -21,8 +19,8 @@ const ImageModal = Webpack.getModule(Filters.byStrings("renderLinkComponent", "z
 
 const useStateFromStores = Webpack.getModule(Filters.byStrings("useStateFromStores"), { searchExports: true });
 
-const StreamStore = Webpack.getModule(Filters.byProps("getStreamForUser"));
-const StreamPreviewStore = Webpack.getModule(Filters.byProps("getPreviewURL"));
+const ApplicationStreamingStore = Webpack.getStore("ApplicationStreamingStore");
+const ApplicationStreamPreviewStore = Webpack.getStore("ApplicationStreamPreviewStore");
 
 var console = {};
 
@@ -107,9 +105,9 @@ module.exports = class BiggerStreamPreview {
 
   handleUserContextMenu = (menu, { user }) => {
     if(!user) return;
-    const [stream, previewUrl] = useStateFromStores([StreamStore, StreamPreviewStore], () => {
-      const stream = StreamStore.getAnyStreamForUser(user.id);
-      const previewUrl = stream && StreamPreviewStore.getPreviewURL(
+    const [stream, previewUrl] = useStateFromStores([ApplicationStreamingStore, ApplicationStreamPreviewStore], () => {
+      const stream = ApplicationStreamingStore.getAnyStreamForUser(user.id);
+      const previewUrl = stream && ApplicationStreamPreviewStore.getPreviewURL(
         stream.guildId,
         stream.channelId,
         stream.ownerId
@@ -123,7 +121,7 @@ module.exports = class BiggerStreamPreview {
   };
 
   handleStreamContextMenu = (menu, { stream }) => {
-    const previewUrl = useStateFromStores([StreamPreviewStore], () => StreamPreviewStore.getPreviewURL(
+    const previewUrl = useStateFromStores([ApplicationStreamPreviewStore], () => ApplicationStreamPreviewStore.getPreviewURL(
       stream.guildId,
       stream.channelId,
       stream.ownerId
