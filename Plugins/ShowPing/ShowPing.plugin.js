@@ -72,7 +72,6 @@ module.exports = class ShowPing {
     }
 
     handleConnectionStateChange(event) {
-        console.log(event);
         if (event.context === "default") {
             if (event.state === "RTC_CONNECTED") {
                 this.isConnected = true;
