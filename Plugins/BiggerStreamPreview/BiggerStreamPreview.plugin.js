@@ -2,9 +2,8 @@
  * @name BiggerStreamPreview
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
- * @invite hFuY8DfDGK
  * @description View bigger stream previews via the context menu.
- * @version 1.1.6
+ * @version 1.1.7
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview
  */
 const { Webpack, ContextMenu, React } = BdApi;
@@ -13,7 +12,7 @@ const { Filters } = Webpack;
 const openModal = Webpack.getModule(Filters.byStrings("modalKey", "Layer", "onCloseCallback"), { searchExports: true });
 
 const ModalRoot = Webpack.getModule(Filters.byStrings("impressionType", "MODAL"), { searchExports: true });
-const ModalSize = Webpack.getModule(Filters.byProps("DYNAMIC"), { searchExports: true });
+const ModalSize = Webpack.getModule(m => m?.DYNAMIC, { searchExports: true });
 const RenderLinkComponent = Webpack.getModule(m => m.type?.toString?.().includes("MASKED_LINK"), { searchExports: false });
 const ImageModal = Webpack.getModule(Filters.byStrings("renderLinkComponent", "zoomThumbnailPlaceholder"), { searchExports: true });
 
