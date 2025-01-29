@@ -1,9 +1,8 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.1.3
+ * @version 1.2.0
  * @author nicola02nb
- * @invite hFuY8DfDGK
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
 
@@ -13,6 +12,7 @@ const config = {
     settings: [
         { type: "switch", id: "notifyServerMuted", name: "Notify When Server Muted", note: "Notify when you get muted by server", value: false },
         { type: "text", id: "audioUrl", name: "Custom Audio URL", note: "URL to the audio file to play when user tries to speak while muted", value: defaultAudioUrl },
+        { type: "slider", id: "audioVolume", name: "Audio Volume", note: "Sets audio volume", value: 100, min: 0, max: 100, step:1, units:"%", markers:[0, 25, 50, 75, 100] },
         { type: "number", id: "delayBetweenNotifications", name: "Delay Between Audio Notifications (ms)", note: "Delay Between Audio Notifications in milliseconds", value: 5000 },
     ]
 };
@@ -35,7 +35,8 @@ module.exports = class NotifyWhenMuted {
     initSettingsValues() {
         config.settings[0].value = this.api.Data.load("notifyServerMuted") ?? config.settings[0].value;
         config.settings[1].value = this.api.Data.load("audioUrl") ?? config.settings[1].value;
-        config.settings[2].value = this.api.Data.load("delayBetweenNotifications") ?? config.settings[2].value;
+        config.settings[2].value = this.api.Data.load("audioVolume") ?? config.settings[2].value;
+        config.settings[3].value = this.api.Data.load("delayBetweenNotifications") ?? config.settings[3].value;
     }
 
     getSettingsPanel() {
@@ -50,9 +51,14 @@ module.exports = class NotifyWhenMuted {
                         value = this.isValidURL(value);
                         config.settings[1].value = value;
                         break;
+                    case "audioVolume":
+                        value = parseInt(value);
+                        if (this.audio) this.audio.volume = value / 100;
+                        config.settings[2].value = value;
+                        break;
                     case "delayBetweenNotifications":
                         value = parseInt(value);
-                        config.settings[2].value = value;
+                        config.settings[3].value = value;
                         break;
                 }
                 this.api.Data.save(id, value);
@@ -91,8 +97,9 @@ module.exports = class NotifyWhenMuted {
         if (ret && !this.isPlaying) {
             this.isPlaying = true;
             this.audio = new Audio(config.settings[1].value);
+            this.audio.volume = config.settings[2].value / 100;
             this.audio.addEventListener('ended', async () => {
-                await delay(config.settings[2].value);
+                await delay(config.settings[3].value);
                 this.isPlaying = false;
             });
             this.audio.play();
