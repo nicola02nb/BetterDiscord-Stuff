@@ -94,7 +94,6 @@ module.exports = class BiggerStreamPreview {
   }
 
   async openImageModal(url) {
-    console.log(url);
     if (!this.isValidUrl(url)) {
       this.BdApi.UI.showToast("Stream Preview not available, try later", { type: "error" });
       return;
