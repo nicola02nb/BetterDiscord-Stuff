@@ -3,7 +3,7 @@
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @description View bigger stream previews via the context menu.
- * @version 1.1.7
+ * @version 1.1.8
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview
  */
 const { Webpack, ContextMenu, React } = BdApi;
@@ -79,25 +79,51 @@ module.exports = class BiggerStreamPreview {
       )
     );
   }
+  
+  fetchImageInfo(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.width, height: img.height });
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
 
-  openImageModal(previewUrl) {
+  isValidUrl(url) {
+    return url && url.startsWith("https://");
+  }
+
+  async openImageModal(url) {
+    console.log(url);
+    if (!this.isValidUrl(url)) {
+      this.BdApi.UI.showToast("Stream Preview not available, try later", { type: "error" });
+      return;
+    }
+    const imageInfo = await this.fetchImageInfo(url);
+    const isGif = imageInfo.type === "gif";
+    const imgProps = {
+      width: imageInfo.width,
+      height: imageInfo.height,
+      url: url,
+      proxyUrl: url,
+      animated: isGif,
+      srcIsAnimated: isGif
+    };
     openModal(props => (
       React.createElement(ModalRoot, { className: "bigger-stream-preview", size: ModalSize.DYNAMIC, ...props, }
         , React.createElement('div', { className: "imageModalwrapper", }, React.createElement(ImageModal, {
-          media: {
-            ...props,
+          media: {            
             type: "IMAGE",
-            url: previewUrl,
-            proxyUrl: previewUrl,
-            height: "fit-content",
-            width: "fit-content",
+            alt: "Stream Preview",
+            original: url,
+            zoomThumbnailPlaceholder: url,
+            ...imgProps,
           },
+          obscured: true,
         }), React.createElement('div', { className: "imageModalOptions", }, React.createElement(RenderLinkComponent, {
           className: "downloadLink",
-          href: previewUrl,
-        }, "Open in Browser"
-
-        )))
+          href: url,
+        }, "Open in Browser")))
       )
     ));
   }
@@ -128,4 +154,4 @@ module.exports = class BiggerStreamPreview {
 
     this.appendStreamPreviewMenuGroup(menu.props.children, previewUrl);
   };
-}
+};
