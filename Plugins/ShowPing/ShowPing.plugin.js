@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.4.0
+ * @version 2.5.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -20,9 +20,12 @@ const config = {
     ]
 };
 
-const { Webpack } = BdApi;
+const { Webpack, Patcher } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
+
+const ConnectionStatus = Webpack.getAllByStrings("rtcConnectionStatusWrapper")[0].prototype;
+
 var console = {};
 
 module.exports = class ShowPing {
@@ -57,13 +60,22 @@ module.exports = class ShowPing {
     start() {
         this.handleConnection = this.handleConnectionStateChange.bind(this);
         this.handlePing = this.handlePingChange.bind(this);
-        this.api.DOM.addStyle(`[class^="rtcConnectionStatusConnected_"]{float: left; display: flex;}`);
+        this.api.DOM.addStyle(`[class^="rtcConnectionStatusConnected_"]{display: flex;}
+            [class*="voiceButtonsContainer_"]{margin-left: 2px !important;}
+            [class^="labelWrapper_"] > button {width: 100%; display: inline;}
+            .pingDisplay{min-width: min-content;}`);
         this.addPingDisplay();
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
         DiscordModules.subscribe("RTC_CONNECTION_PING", this.handlePing);
+        Patcher.after(this.meta.name, ConnectionStatus, "renderStatus", (_, [props], ret) => {
+            if(!this.pingElement){
+                this.addPingDisplay();
+            }
+        });
     }
 
     stop() {
+        Patcher.unpatchAll(this.meta.name);
         DiscordModules.unsubscribe("RTC_CONNECTION_PING", this.handlePing);
         DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleConnection);
         this.removePingDisplay();
@@ -74,10 +86,8 @@ module.exports = class ShowPing {
     handleConnectionStateChange(event) {
         if (event.context === "default") {
             if (event.state === "RTC_CONNECTED") {
-                this.isConnected = true;
                 this.addPingDisplay();
             } else {
-                this.isConnected = false;
                 this.removePingDisplay();
             }
         }
@@ -85,7 +95,7 @@ module.exports = class ShowPing {
 
     handlePingChange(event) {
         if (this.pingElement) {
-            this.updatePing(RTCConnectionStore.getLastPing());
+            this.updatePing();
         }
     }
 
@@ -96,18 +106,14 @@ module.exports = class ShowPing {
         if (this.statusBar) {
             // Create ping display element
             this.pingElement = document.createElement('div');
-            this.pingElement.style = 'width: min-content; float: left;';
+            this.pingElement.className = 'pingDisplay';
             // Insert ping element after the status text
             this.statusBar.appendChild(this.pingElement);
 
+            this.updatePing();
             if (config.settings[0].value) {
                 this.displayKrispButton(false);
             }
-
-            this.updatePing(connection.querySelector('[class^="ping_"]')?.getAttribute('aria-label')?.slice(0, -3));
-
-        } else if (this.isConnected) {
-            setTimeout(() => this.addPingDisplay(), 500)
         }
     }
 
@@ -121,7 +127,8 @@ module.exports = class ShowPing {
         }
     }
 
-    updatePing(ping) {
+    updatePing() {
+        let ping = RTCConnectionStore.getLastPing();
         if (ping === null || ping === undefined) {
             this.pingElement.textContent = `\u00A0N/A`;
         } else if (this.pingElement && this.pingElement.isConnected) {
