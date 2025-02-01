@@ -129,7 +129,7 @@ module.exports = class ShowPing {
 
     updatePing() {
         let ping = RTCConnectionStore.getLastPing();
-        if (ping === null || ping === undefined) {
+        if (ping === null || ping === undefined || ping === "") {
             this.pingElement.textContent = `\u00A0N/A`;
         } else if (this.pingElement && this.pingElement.isConnected) {
             this.pingElement.textContent = `\u00A0${ping} ms`;
