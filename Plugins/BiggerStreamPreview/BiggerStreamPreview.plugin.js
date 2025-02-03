@@ -3,7 +3,7 @@
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @description View bigger stream previews via the context menu.
- * @version 1.1.8
+ * @version 1.1.9
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview
  */
 const { Webpack, ContextMenu, React } = BdApi;
@@ -94,35 +94,38 @@ module.exports = class BiggerStreamPreview {
   }
 
   async openImageModal(url) {
-    if (!this.isValidUrl(url)) {
-      this.BdApi.UI.showToast("Stream Preview not available, try later", { type: "error" });
-      return;
-    }
     const imageInfo = await this.fetchImageInfo(url);
-    const isGif = imageInfo.type === "gif";
     const imgProps = {
+      //src: url,
+      alt: "Stream Preview",
       width: imageInfo.width,
       height: imageInfo.height,
+    };
+    const imageModalProps = {
+      type: "IMAGE",
       url: url,
       proxyUrl: url,
-      animated: isGif,
-      srcIsAnimated: isGif
-    };
+      original: url,
+      zoomThumbnailPlaceholder: url,
+      animated: false,
+      srcIsAnimated: false,
+    }
+
+    const OpenLink = React.createElement('div', { className: "imageModalOptions", }, React.createElement(RenderLinkComponent, {
+      className: "downloadLink",
+      href: url,
+    }, "Open in Browser"));
+    const StreamImage = React.createElement('div', { className: "imageModalwrapper", }, React.createElement(ImageModal, {
+      media: {            
+        ...imageModalProps,
+        ...imgProps,
+      },
+      obscured: false,
+    }), OpenLink);
+
     openModal(props => (
-      React.createElement(ModalRoot, { className: "bigger-stream-preview", size: ModalSize.DYNAMIC, ...props, }
-        , React.createElement('div', { className: "imageModalwrapper", }, React.createElement(ImageModal, {
-          media: {            
-            type: "IMAGE",
-            alt: "Stream Preview",
-            original: url,
-            zoomThumbnailPlaceholder: url,
-            ...imgProps,
-          },
-          obscured: true,
-        }), React.createElement('div', { className: "imageModalOptions", }, React.createElement(RenderLinkComponent, {
-          className: "downloadLink",
-          href: url,
-        }, "Open in Browser")))
+      React.createElement(ModalRoot, { className: "bigger-stream-preview", size: ModalSize.DYNAMIC, ...props, },
+        StreamImage
       )
     ));
   }
