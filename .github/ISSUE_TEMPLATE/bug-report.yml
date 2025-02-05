@@ -8,8 +8,8 @@ body:
     attributes:
       label: Plugin Name
       description: The name of the plugin where the bug occurred.
-      default: -1
       options:
+        - "Select a plugin"
         - "AutoSwitchStatus"
         - "BetterTTS"
         - "BiggerStreamPreview"
