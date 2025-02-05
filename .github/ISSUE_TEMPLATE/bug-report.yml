@@ -1,0 +1,68 @@
+name: Plugin Bug Report 🪳
+description: Report a bug in one of the plugins
+title: "[BUG] - "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: plugin_name
+    attributes:
+      label: Plugin Name
+      description: The name of the plugin where the bug occurred.
+      options:
+        - "AutoSwitchStatus"
+        - "BetterTTS"
+        - "BiggerStreamPreview"
+        - "NotifyWhenMuted"
+        - "ShowPing"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "Describe the bug"
+    validations:
+      required: true
+  - type: input
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: "Enter the expected behavior"
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem.
+      placeholder: "Add screenshots"
+  - type: input
+    id: discord_version
+    attributes:
+      label: Discord Version
+      description: The version of Discord you are using.
+      placeholder: "Enter your Discord version"
+    validations:
+      required: false
+  - type: input
+    id: betterdiscord_version
+    attributes:
+      label: BetterDiscord Version
+      description: The version of BetterDiscord you are using.
+      placeholder: "Enter your BetterDiscord version"
+    validations:
+      required: false
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: The operating system you are using.
+      options:
+        - "Select"
+        - "Windows"
+        - "macOS"
+        - "Linux"
+    validations:
+      required: false
