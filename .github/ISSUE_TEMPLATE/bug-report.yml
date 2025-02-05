@@ -24,14 +24,6 @@ body:
       placeholder: "Describe the bug"
     validations:
       required: true
-  - type: input
-    id: expected_behavior
-    attributes:
-      label: Expected Behavior
-      description: A clear and concise description of what you expected to happen.
-      placeholder: "Enter the expected behavior"
-    validations:
-      required: true
   - type: textarea
     id: screenshots
     attributes:
