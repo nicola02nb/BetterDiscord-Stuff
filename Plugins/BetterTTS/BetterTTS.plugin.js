@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.6.2
+ * @version 2.6.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -413,6 +413,7 @@ module.exports = class BetterTTS {
     }
 
     patchGuildContextMenu(returnValue, props) {
+        if(!props.guild) return;
         let guildId = props.guild.id;
         const buttonFilter = button => button?.props?.id === "guild-notifications";
         let buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
