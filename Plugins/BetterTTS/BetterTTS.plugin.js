@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.7.1
+ * @version 2.8.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,8 +9,8 @@
 */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["New Setting that lets you select what user name sould be read"] },
-        //{ title: "Bug Fix", type: "fixed", items: [""] },
+        { title: "New Features", type: "added", items: ["Added button in settings to test TTS"] },
+        { title: "Bug Fix", type: "fixed", items: ["Fixed some issues with volume slider made by ShizCalev (PR #12)"] },
         //{ title: "Improvements", type: "improved", items: [""] },
     ],
     settings: [
@@ -63,6 +63,7 @@ const config = {
         ]},
         { type: "slider", id: "ttsVolume", name: "TTS Volume", note: "Changes the volume of the TTS.", step: 0.1, value: 100, min: 0, max: 100, units: "%", markers: [0, 25, 50, 75, 100], inline: false },
         { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS.", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
+        { type: "custom", id: "ttsPreview", name: "Play TTS Preview", note: "Plays a default test message.", children: [] },
         { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages.", value: 1000 },
         { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", value: [] },
     ]
@@ -172,11 +173,57 @@ module.exports = class BetterTTS {
         );
     };
 
+    PreviewTTS = () => {
+        const [isPlaying, setIsPlaying] = React.useState(false);
+        const [text, setText] = React.useState("This is what text-to-speech sounds like at the current speed.");
+
+        const getLabel = (play) => {
+            let icon;
+            if (play) {
+                icon = React.createElement("svg", 
+                    {xmlns:"http://www.w3.org/2000/svg", width:"24", height:"24", fill:"currentColor", class:"bi bi-pause-fill", viewBox:"0 0 16 16"}, 
+                    React.createElement("path", {d: "M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"})
+                );
+            } else {
+                icon = React.createElement("svg", 
+                    {xmlns:"http://www.w3.org/2000/svg", width:"24", height:"24", fill:"currentColor", class:"bi bi-play-fill", viewBox:"0 0 16 16"}, 
+                    React.createElement("path", {d: "m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"})
+                );
+            }
+            return React.createElement(React.Fragment, null, icon, "Preview");
+        }
+
+        return React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(Components.TextInput, {
+                value: text,
+                placeholder: "Enter text to preview",
+                onChange: (event) => {
+                    console.log(event);
+                    setText(event);
+                }
+            }),
+            React.createElement(Components.Button,{ 
+                onClick: () => {
+                    this.AudioPlayer.stopTTS();
+                    if (!isPlaying) {
+                        this.AudioPlayer.addToQueue(text);
+                    }              
+                    setIsPlaying(!isPlaying);
+                }
+            }, getLabel(isPlaying))
+        );
+
+        return 
+    };
+
     getSettingsPanel() {
         config.settings[4].settings[4].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
         config.settings[4].settings[5].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
         config.settings[5].settings[1].options = StreamElementsTTS.voicesLables;
         config.settings[6].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
+        config.settings[9].children = [React.createElement(this.PreviewTTS)];
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
