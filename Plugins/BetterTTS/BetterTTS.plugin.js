@@ -214,8 +214,6 @@ module.exports = class BetterTTS {
                 }
             }, getLabel(isPlaying))
         );
-
-        return 
     };
 
     getSettingsPanel() {
@@ -638,7 +636,7 @@ module.exports = class BetterTTS {
 
 function clamp(number, min, max) {
     return Math.max(min, Math.min(number, max));
-  }
+}
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
