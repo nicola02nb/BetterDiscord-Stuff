@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.8.0
+ * @version 2.8.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -11,6 +11,7 @@ const config = {
     changelog: [
         { title: "New Features", type: "added", items: ["Added button in settings to test TTS"] },
         { title: "Bug Fix", type: "fixed", items: ["Fixed some issues with volume slider made by ShizCalev (PR #12)"] },
+        { title: "Bug Fix", type: "fixed", items: ["Fixed enableTTS not working"] },
         //{ title: "Improvements", type: "improved", items: [""] },
     ],
     settings: [
@@ -302,7 +303,7 @@ module.exports = class BetterTTS {
         DiscordModules.subscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
         DiscordModules.subscribe("SPEAK_MESSAGE", this.handleSpeakMessage);
         DiscordModules.subscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleStopTTS);
-        if (this.settings.enableTTS) {
+        if (this.settings.enableMessageReading) {
             DiscordModules.subscribe("MESSAGE_CREATE", this.handleMessage);
         }
         if (this.settings.enableUserAnnouncement) {
@@ -337,6 +338,7 @@ module.exports = class BetterTTS {
     }
 
     messageRecieved(event) {
+        if(!this.settings.enableTTS) return
         let message = event.message;
         if ((event.guildId || !message.member) && this.shouldPlayMessage(event.message)) {
             let text = this.getPatchedContent(message, message.guild_id);
@@ -345,6 +347,7 @@ module.exports = class BetterTTS {
     }
 
     annouceUser(event) {
+        if(!this.settings.enableTTS) return
         let connectedChannelId = RTCConnectionStore.getChannelId();
         let userId = UserStore.getCurrentUser().id;
         for (const userStatus of event.voiceStates) {
@@ -362,6 +365,7 @@ module.exports = class BetterTTS {
     }
 
     speakMessage(event) {
+        if(!this.settings.enableTTS) return
         let text = this.getPatchedContent(event.message, event.channel.guild_id);
         this.AudioPlayer.addToQueue(text);
     }
