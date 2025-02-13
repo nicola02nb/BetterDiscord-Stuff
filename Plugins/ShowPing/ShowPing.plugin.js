@@ -31,8 +31,8 @@ var console = {};
 module.exports = class ShowPing {
     constructor(meta) {
         this.meta = meta;
-        this.api = new BdApi(this.meta.name);
-        console = this.api.Logger;
+        this.BdApi = new BdApi(this.meta.name);
+        console = this.BdApi.Logger;
         this.initSettingsValues();
 
         this.statusBar = null;
@@ -41,7 +41,7 @@ module.exports = class ShowPing {
     }
 
     initSettingsValues() {
-        config.settings[0].value = this.api.Data.load("hideKrispButton") ?? config.settings[0].value;
+        config.settings[0].value = this.BdApi.Data.load("hideKrispButton") ?? config.settings[0].value;
     }
 
     getSettingsPanel() {
@@ -52,7 +52,7 @@ module.exports = class ShowPing {
                     config.settings[0].value = value;
                     this.displayKrispButton(!value);
                 }
-                this.api.Data.save(id, value);
+                this.BdApi.Data.save(id, value);
             },
         });
     }
@@ -60,7 +60,7 @@ module.exports = class ShowPing {
     start() {
         this.handleConnection = this.handleConnectionStateChange.bind(this);
         this.handlePing = this.handlePingChange.bind(this);
-        this.api.DOM.addStyle(`[class^="rtcConnectionStatusConnected_"]{display: flex;}
+        this.BdApi.DOM.addStyle(`[class^="rtcConnectionStatusConnected_"]{display: flex;}
             [class*="voiceButtonsContainer_"]{margin-left: 2px !important;}
             [class^="labelWrapper_"] > button {width: 100%; display: inline;}
             .pingDisplay{min-width: min-content;}`);
@@ -80,7 +80,7 @@ module.exports = class ShowPing {
         DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleConnection);
         this.removePingDisplay();
         this.displayKrispButton(true);
-        this.api.DOM.removeStyle();
+        this.BdApi.DOM.removeStyle();
     }
 
     handleConnectionStateChange(event) {
@@ -137,9 +137,15 @@ module.exports = class ShowPing {
     }
 
     displayKrispButton(show) {
-        const krispContainer = document.querySelector('[class*="connection_"]>[class^="inner_"]');
-        if (krispContainer?.nextElementSibling?.firstChild) {
-            krispContainer.nextElementSibling.firstChild.style.display = show ? "" : "none";
+        if(this.krispStyle && show){
+            this.krispStyle.remove();
+            this.krispStyle = null;
+        } else if(!this.krispStyle && !show){
+            this.krispStyle = document.createElement('style');
+            this.krispStyle.textContent = '[aria-label*="Krisp"] {display: none !important;}';
+            document.head.appendChild(this.krispStyle);
+        } else {
+            this.krispStyle = null;
         }
     }
 };
