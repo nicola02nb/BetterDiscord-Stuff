@@ -137,15 +137,10 @@ module.exports = class ShowPing {
     }
 
     displayKrispButton(show) {
-        if(this.krispStyle && show){
-            this.krispStyle.remove();
-            this.krispStyle = null;
-        } else if(!this.krispStyle && !show){
-            this.krispStyle = document.createElement('style');
-            this.krispStyle.textContent = '[aria-label*="Krisp"] {display: none !important;}';
-            document.head.appendChild(this.krispStyle);
+        if(show){
+            this.BdApi.DOM.removeStyle("hidekrispStyle");
         } else {
-            this.krispStyle = null;
+            this.BdApi.DOM.addStyle("hidekrispStyle", `[aria-label*="Krisp"] {display: none !important;}`);
         }
     }
 };
