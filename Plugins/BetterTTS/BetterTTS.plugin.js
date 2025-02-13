@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.8.1
+ * @version 2.9.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -10,6 +10,7 @@
 const config = {
     changelog: [
         { title: "New Features", type: "added", items: ["Added button in settings to test TTS"] },
+        { title: "New Features", type: "added", items: ["Added Discord source and voices"] },
         { title: "Bug Fix", type: "fixed", items: ["Fixed some issues with volume slider made by ShizCalev (PR #12)"] },
         { title: "Bug Fix", type: "fixed", items: ["Fixed enableTTS not working"] },
         //{ title: "Improvements", type: "improved", items: [""] },
@@ -130,7 +131,6 @@ module.exports = class BetterTTS {
                 this.settings[setting.id] = setting.value;
             }
         }
-        StreamElementsTTS.getVoices();
         //UserSettingsProtoStore.settings.textAndImages.enableTtsCommand?.value = this.settings.enableTTSCommand;
         this.ttsMutedUsers = new Set(this.BdApi.Data.load("ttsMutedUsers")) ?? new Set();
         this.ttsSubscribedChannels = new Set(this.BdApi.Data.load("ttsSubscribedChannels")) ?? new Set();
@@ -220,7 +220,8 @@ module.exports = class BetterTTS {
     getSettingsPanel() {
         config.settings[4].settings[4].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
         config.settings[4].settings[5].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
-        config.settings[5].settings[1].options = StreamElementsTTS.voicesLables;
+        config.settings[5].settings[0].options = getTTSSources();
+        config.settings[5].settings[1].options = getTTSVoices(this.settings.ttsSource);
         config.settings[6].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
         config.settings[9].children = [React.createElement(this.PreviewTTS)];
         return BdApi.UI.buildSettingsPanel({
@@ -256,6 +257,7 @@ module.exports = class BetterTTS {
                 break;
             case "ttsSource":
                 this.AudioPlayer.updateSource(value);
+                config.settings[5].settings[1].options = getTTSVoices(value);
                 break;
             case "ttsVoice":
                 this.AudioPlayer.updateVoice(value);
@@ -650,7 +652,7 @@ class AudioPlayer {
 
         this.isPlaying = false;
         this.playingText = undefined;
-        this.audio = null;
+        this.media = null;
         this.messagesToPlay = [];
     }
 
@@ -680,14 +682,22 @@ class AudioPlayer {
 
     updateRate(rate) {
         this.rate = rate;
-        if (this.audio)
-            this.audio.playbackRate = rate;
+        if (this.media) {
+            if(this.media instanceof Audio)
+                this.media.playbackRate = rate;
+            else if(this.media instanceof SpeechSynthesisUtterance)
+                this.media.rate = rate;
+        }        
     }
 
     updateVolume(volume) {
         this.volume = volume;
-        if (this.audio)
-            this.audio.volume = clamp(volume, 0, 1);
+        if (this.media) {
+            if(this.media instanceof Audio)
+                this.media.volume = clamp(volume, 0, 1);
+            else if(this.media instanceof SpeechSynthesisUtterance)
+                this.media.volume = clamp(volume, 0, 1);
+        }            
     }
 
     updateDelay(delay) {
@@ -695,11 +705,15 @@ class AudioPlayer {
     }
 
     stopTTS() {
-        if (this.audio)
-            this.audio.pause();
+        if (this.media){
+            if(this.media instanceof Audio)
+                this.media.pause();
+            else if(this.media instanceof SpeechSynthesisUtterance)
+                speechSynthesis.cancel();
+        }
         this.isPlaying = false;
         this.playingText = undefined;
-        this.audio = null;
+        this.media = null;
         this.messagesToPlay = [];
     }
 
@@ -708,59 +722,107 @@ class AudioPlayer {
         this.playingText = this.messagesToPlay.shift();
         if (this.playingText !== undefined) {
             switch (this.source) {
+                case "discord":
+                    this.media = DiscordTTS.getUtterance(this.playingText, this.voice);
+                    break;
                 case "streamlabs":
-                    this.audio = await StreamElementsTTS.getAudio(this.playingText, this.voice);
+                    this.media = StreamElementsTTS.getAudio(this.playingText, this.voice);
                     break;
             }
-            if (this.audio) {
-                this.audio.playbackRate = this.rate;
-                this.audio.volume = clamp(this.volume, 0, 1);
-                this.audio.addEventListener('ended', async () => {
+            if (this.media instanceof Audio) {
+                this.media.playbackRate = this.rate;
+                this.media.volume = clamp(this.volume, 0, 1);
+                this.media.addEventListener('ended', async () => {
                     await delay(this.delay);
                     if (this.messagesToPlay.length === 0) {
                         this.playingText = undefined;
-                        this.audio = null;
+                        this.media = null;
                     } else {
                         this.startTTS();
                     }
                 });
-                this.audio.play();
+                this.media.play();
+            } else if (this.media instanceof SpeechSynthesisUtterance) {
+                this.media.rate = this.rate;
+                this.media.volume = clamp(this.volume, 0, 1);
+                this.media.onend = async () => {
+                    await delay(this.delay);
+                    if (this.messagesToPlay.length === 0) {
+                        this.playingText = undefined;
+                        this.media = null;
+                    } else {
+                        this.startTTS();
+                    }
+                };
+                speechSynthesis.speak(this.media);
             }
         }
     }
 }
 
 // TTS Sources
+function getTTSSources() {
+    const soucrcesLabels = [
+        {label:"Discord", value: "discord"},
+        {label:"Streamlabs", value: "streamlabs"},
+    ];
+    return soucrcesLabels;
+}
+function getTTSVoices(source){
+    switch (source) {
+        case "discord":
+            return DiscordTTS.getVoices();
+        case "streamlabs":
+            return StreamElementsTTS.getVoices();
+        default:
+            return [{label: "No voices available", value: "none"}];
+    }
+}
+
+class DiscordTTS {
+    static voicesLables = [{label: "No voices available", value: "none"}];
+    static getVoices() {
+        let voices = speechSynthesis.getVoices();
+        DiscordTTS.voicesLables = voices
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(voice => ({
+                label: voice.name,
+                value: voice.voiceURI
+            }));
+        return DiscordTTS.voicesLables;
+    }
+
+    static getUtterance(text, voice) {
+        let utterance = new SpeechSynthesisUtterance(text);
+        utterance.voice = speechSynthesis.getVoices().find(v => v.voiceURI === voice);
+        return utterance;
+    }
+}
 class StreamElementsTTS {
-    static voicesLables = [];
-    static async getVoices() {
-        try {
-            const response = await fetch('https://api.streamelements.com/kappa/v2/speech/voices');
-            const data = await response.json();
+    static voicesLables = [{label: "No voices available", value: "none"}];
+    static getVoices() {
+        const request = new XMLHttpRequest();
+        request.open('GET', 'https://api.streamelements.com/kappa/v2/speech/voices', false);
+        request.send(null);
+    
+        if (request.status === 200) {
+            const data = JSON.parse(request.responseText);
             let voices = data.voices;
-            return StreamElementsTTS.voicesLables = Object.values(voices)
+            StreamElementsTTS.voicesLables = Object.values(voices)
                 .sort((a, b) => a.languageName.localeCompare(b.languageName))
                 .map(voice => ({
                     label: `${voice.name} (${voice.languageName} ${voice.languageCode})`,
                     value: voice.id
                 }));
-        } catch (error) {
-            console.error('Error loading voices:', error);
+        } else {
+            console.error('Error loading voices:', request.statusText);
         }
+        return StreamElementsTTS.voicesLables;
     }
 
-    static async getAudio(text, voice = 'Brian') {
+    static getAudio(text, voice = 'Brian') {
         text = encodeURIComponent(text);
         let url = `https://api.streamelements.com/kappa/v2/speech?voice=${voice}&text=${text}`;
-        try {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const audioUrl = URL.createObjectURL(blob);
-            const audio = new Audio(audioUrl);
-            return audio;
-        } catch (error) {
-            console.error('Error playing sound:', error);
-            return null;
-        }
+        return new Audio(url);
     }
 }
