@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.0
+ * @version 1.4.1
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
@@ -46,6 +46,7 @@ const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 const buttonStates = Webpack.getByKeys("enabled","button");
 const buttonLook = Webpack.getByKeys("button","lookBlank","colorBrand","grow");
 const voiceButtonsContainer = Webpack.getModule((a,b) => b.id == 600164);
+
 var console = {};
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -111,6 +112,15 @@ module.exports = class NotifyWhenMuted {
     start() {
         this.handleSpeak = this.handleSpeaking.bind(this);
         this.addButton = this.handleAddButton.bind(this);
+
+        this.BdApi.DOM.addStyle(`.toggleNotifyMuted > svg {transition: transform 1s ease-in-out;}
+            .toggleNotifyMuted:hover > svg {animation: zoomOscillate 1s forwards ease-in-out;}
+            @keyframes zoomOscillate {
+                0% {transform: scale(1.3) rotate(0deg);}
+                35% {transform: scale(1.3) rotate(5deg);}
+                85% {transform: scale(1.3) rotate(-5deg);}
+                100% {transform: scale(1) rotate(0deg);}
+            }`);
         
         this.initSettingsValues();
         this.isPlaying = false;
@@ -125,6 +135,7 @@ module.exports = class NotifyWhenMuted {
             this.audio.pause();
             this.audio = null;
         }
+        this.BdApi.DOM.removeStyle();
     }
 
     async handleSpeaking(_, args, ret) {
@@ -153,7 +164,12 @@ module.exports = class NotifyWhenMuted {
             }
     
             const getIcon = (enabled) => {
-                return React.createElement("svg", {xmlns:"http://www.w3.org/2000/svg", width:"20", height:"20", fill:"currentColor", class:"bi", viewBox:"0 0 16 16"}, 
+                return React.createElement("svg", {
+                    xmlns:"http://www.w3.org/2000/svg",
+                    width:"20",
+                    height:"20",
+                    fill:"currentColor",
+                    viewBox:"0 0 16 16"}, 
                     React.createElement("path", {
                         d: "M 8 16 a 2 2 0 0 0 2 -2 l -4 0 a 2 2 0 0 0 2 2 m 0 -14.1 l -0.8 0.2 a 4 4 0 0 0 -3.2 3.9 c 0 0.6 -0.1 2.2 -0.5 3.7 c -0.2 0.8 -0.4 1.6 -0.7 2.3 l 10.2 0 c -0.3 -0.7 -0.5 -1.5 -0.7 -2.3 c -0.3 -1.5 -0.5 -3.1 -0.5 -3.7 a 4 4 0 0 0 -3.2 -3.9 l -0.8 -0.2 z m 6.2 10.1 c 0.2 0.5 0.5 0.8 0.8 1 l -14 0 c 0.3 -0.2 0.6 -0.6 0.8 -1 c 0.9 -1.8 1.2 -5.1 1.2 -6 c 0 -2.4 1.7 -4.4 4 -4.9 a 1 1 0 1 1 2 0 a 5 5 0 0 1 4 4.9 c 0 0.9 0.3 4.2 1.2 6",
                         fill: !enabled ? "var(--status-danger)" :"currentColor" }
@@ -176,7 +192,7 @@ module.exports = class NotifyWhenMuted {
             }, (props) => React.createElement(
                 "button", {
                     ...props,
-                    className: buttonStates.button + " " + buttonStates.enabled + " " + buttonLook.button + " " + buttonLook.lookBlank + " " + buttonLook.colorBrand + " " + buttonLook.grow,
+                    className: "toggleNotifyMuted " + buttonStates.button + " " + buttonStates.enabled + " " + buttonLook.button + " " + buttonLook.lookBlank + " " + buttonLook.colorBrand + " " + buttonLook.grow,
                     onClick: () => {
                         update();
                     },
