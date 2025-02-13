@@ -45,10 +45,7 @@ const { Webpack, Patcher, React, Components, Data } = BdApi;
 const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 const buttonStates = Webpack.getByKeys("enabled","button");
 const buttonLook = Webpack.getByKeys("button","lookBlank","colorBrand","grow");
-const voiceButtonsContainer = {f: Webpack.getByStrings("HORIZONTAL", "START", "STRETCH")};
-const voiceButtonsContainer2 = [...Webpack.getModules(Webpack.Filters.byStrings("HORIZONTAL", "START", "STRETCH"))][0];
-const voiceButtonsContainer3 = Webpack.getModule((a,b) => b.id == 600164);
-
+const voiceButtonsContainer = Webpack.getModule((a,b) => b.id == 600164);
 var console = {};
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -119,7 +116,7 @@ module.exports = class NotifyWhenMuted {
         this.isPlaying = false;
 
         Patcher.after(this.meta.name, MediaEngineStore, "getSpeakingWhileMuted", this.handleSpeak);
-        Patcher.after(this.meta.name, voiceButtonsContainer3, "Z", this.handleAddButton);
+        Patcher.after(this.meta.name, voiceButtonsContainer, "Z", this.handleAddButton);
     }
 
     stop() {
