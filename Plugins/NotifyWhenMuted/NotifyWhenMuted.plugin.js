@@ -14,7 +14,7 @@ const config = {
         //{ title: "Improvements", type: "improved", items: [""] },
     ],
     settings: [
-        { type: "switch", id: "enabled", name: "Enbable Notify When Muted", note:"Enables/Disables the plugin audio notifications.", settings: [] },
+        { type: "switch", id: "enabled", name: "Enable Notify When Muted", note:"Enables/Disables the plugin audio notifications.", settings: [] },
         { type: "switch", id: "notifyWhenDeafen", name: "Notify When Deafen", note: "Notify when you are self deafen.", value: true },
         { type: "switch", id: "notifyServerMuted", name: "Notify When Server Muted", note: "Notify when you get muted by server.", value: false },
         { type: "text", id: "audioUrl", name: "Custom Audio URL", note: "URL to the audio file to play when user tries to speak while muted.", value: defaultAudioUrl },
