@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.1
+ * @version 1.4.2
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
@@ -14,13 +14,13 @@ const config = {
         //{ title: "Improvements", type: "improved", items: [""] },
     ],
     settings: [
-        { type: "switch", id: "enabled", name: "Enbable Notify When Muted", note:"note", settings: [] },
-        { type: "switch", id: "notifyWhenDeafen", name: "Notify When Deafen", note: "Notify when you are self deafen", value: true },
-        { type: "switch", id: "notifyServerMuted", name: "Notify When Server Muted", note: "Notify when you get muted by server", value: false },
-        { type: "text", id: "audioUrl", name: "Custom Audio URL", note: "URL to the audio file to play when user tries to speak while muted", value: defaultAudioUrl },
-        { type: "slider", id: "audioVolume", name: "Audio Volume", note: "Sets audio volume", value: 100, min: 0, max: 100, step: 1, units: "%", markers: [0, 25, 50, 75, 100] },
-        { type: "number", id: "delayBetweenNotifications", name: "Delay Between Audio Notifications (ms)", note: "Delay Between Audio Notifications in milliseconds", value: 5000 },
-        { type: "switch", id: "showToggleButton", name: "Show Toggle Button", note:"note", value: true }
+        { type: "switch", id: "enabled", name: "Enbable Notify When Muted", note:"Enables/Disables the plugin audio notifications.", settings: [] },
+        { type: "switch", id: "notifyWhenDeafen", name: "Notify When Deafen", note: "Notify when you are self deafen.", value: true },
+        { type: "switch", id: "notifyServerMuted", name: "Notify When Server Muted", note: "Notify when you get muted by server.", value: false },
+        { type: "text", id: "audioUrl", name: "Custom Audio URL", note: "URL to the audio file to play when user tries to speak while muted.", value: defaultAudioUrl },
+        { type: "slider", id: "audioVolume", name: "Audio Volume", note: "Sets audio volume.", value: 100, min: 0, max: 100, step: 1, units: "%", markers: [0, 25, 50, 75, 100] },
+        { type: "number", id: "delayBetweenNotifications", name: "Delay Between Audio Notifications (ms)", note: "Delay Between Audio Notifications in milliseconds.", value: 5000 },
+        { type: "switch", id: "showToggleButton", name: "Show Toggle Button", note:"Displays a button nearby krisp in the RTC panel to toggle On/Off the audio notifications.", value: true }
     ]
 };
 
@@ -46,6 +46,8 @@ const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 const buttonStates = Webpack.getByKeys("enabled","button");
 const buttonLook = Webpack.getByKeys("button","lookBlank","colorBrand","grow");
 const voiceButtonsContainer = Webpack.getModule((a,b) => b.id == 600164);
+//const voiceButtonsContainer = {f: Webpack.getByStrings("HORIZONTAL", "START", "STRETCH")};
+//const voiceButtonsContainer = [...Webpack.getModules(Webpack.Filters.byStrings("HORIZONTAL", "START", "STRETCH"))][0];
 
 var console = {};
 
