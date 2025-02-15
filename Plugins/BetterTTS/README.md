@@ -21,6 +21,7 @@ A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message
 You can select:
 - The TTS Audio Source:
 - The Voice Type and Languages
+
 Sources Available:
 - Discord Default TTS
 - Streamelements API (About 206 Voices)
