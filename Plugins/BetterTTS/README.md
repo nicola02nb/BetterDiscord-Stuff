@@ -40,4 +40,5 @@ Block messages from:
 - Set a Keyboard Shortcut to Toggle TTS On/Off (With toast)
 
 ## Settings
-![Screenshot 2025-01-10 110141](https://github.com/user-attachments/assets/48c7b1a2-4d0c-474f-a229-3fbfe525f99e)
+![Screenshot 2025-02-15 111243](https://github.com/user-attachments/assets/8d6e1848-69ad-4f2e-8e66-5c9485cb780f)
+
