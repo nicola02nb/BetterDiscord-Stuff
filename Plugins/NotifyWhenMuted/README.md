@@ -9,4 +9,4 @@ A BetterDiscord(BD) plugin that plays a sound when user tries to speak while mut
 - Set delay between audio notifications
 - Display/Hide a custom button to toggle On/Off the audio notifications
 ## Settings
-![Screenshot 2025-01-29 185758](https://github.com/user-attachments/assets/8d6618c8-c9ba-4f7d-8baa-17cc6468ee71)
+![Screenshot 2025-02-15 090856](https://github.com/user-attachments/assets/966f7b33-fc70-463e-bad0-5be9b9a025cc)
