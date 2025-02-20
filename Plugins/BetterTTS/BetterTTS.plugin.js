@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.9.0
+ * @version 2.9.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -13,6 +13,7 @@ const config = {
         { title: "New Features", type: "added", items: ["Added Discord source and voices"] },
         { title: "Bug Fix", type: "fixed", items: ["Fixed some issues with volume slider made by ShizCalev (PR #12)"] },
         { title: "Bug Fix", type: "fixed", items: ["Fixed enableTTS not working"] },
+        { title: "Bug Fix", type: "fixed", items: ["Fixed TTS reading spoilers(it shuldnt)"] },
         //{ title: "Improvements", type: "improved", items: [""] },
     ],
     settings: [
@@ -576,6 +577,7 @@ module.exports = class BetterTTS {
             .replace(/<@&?(\d+)>/g, (match, roleId) => GuildStore.getRoles(guildId)[roleId]?.name)
             .replace(/<#(\d+)>/g, (match, channelId) => ChannelStore.getChannel(channelId)?.name)
             .replace(/<a?:(\w+):(\d+)>/g, (match, emojiName) => "Emoji " + emojiName)
+            .replace(/\|\|([^|]+)\|\|/g, (match, content) => "Spoiler")
             .replace(/https?:\/\/[^\s]+/g, (url) => {
                 switch (this.settings.messageLinksReading) {
                     case 'remove':
