@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.9.1
+ * @version 2.10.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -69,6 +69,10 @@ const config = {
         { type: "custom", id: "ttsPreview", name: "Play TTS Preview", note: "Plays a default test message.", children: [] },
         { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages.", value: 1000 },
         { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", value: [] },
+        { type: "category", id: "textReplacer", name: "Text Replacer", collapsible: true, shown: false, settings: [
+            { type: "custom", id: "textReplacerRules", name: "Rules", note: "Sobstitute Texts that matches your regex before reading it", children: [] },
+            { type: "custom", id: "textReplacerAdd", name: "Add Rule", note: "", children: [] },
+        ]},
     ]
 };
 
@@ -136,6 +140,7 @@ module.exports = class BetterTTS {
         this.ttsMutedUsers = new Set(this.BdApi.Data.load("ttsMutedUsers")) ?? new Set();
         this.ttsSubscribedChannels = new Set(this.BdApi.Data.load("ttsSubscribedChannels")) ?? new Set();
         this.ttsSubscribedGuilds = new Set(this.BdApi.Data.load("ttsSubscribedGuilds")) ?? new Set();
+        this.textReplacerRules = new Set(this.BdApi.Data.load("textReplacerRules")) ?? new Set();
         this.updateRelationships();
     }
 
@@ -147,31 +152,26 @@ module.exports = class BetterTTS {
         return React.createElement(
             React.Fragment,
             null,
-            React.createElement(
-                Components.DropdownInput,
-                {
-                    value: selectedOption,
-                    onChange: (event) => {
-                        setSelectedOption(event);
-                    },
-                    options: [{ label: "Select", value: "" }, ...options.map((option, index) => { 
-                        let obj = getFunction(option);
-                        let name = obj?.name ?? obj?.username;
-                        return { label: name, value: option }; })]
+            React.createElement(Components.DropdownInput, {
+                value: selectedOption,
+                onChange: (event) => {
+                    setSelectedOption(event);
                 },
-
-            ),
-            React.createElement(
-                Components.Button,
-                { onClick: () => {
+                options: [{ label: "Select", value: "" }, ...options.map((option, index) => {
+                    let obj = getFunction(option);
+                    let name = obj?.name ?? obj?.username;
+                    return { label: name, value: option }; 
+                })]
+            },),            
+            React.createElement( Components.Button, {
+                onClick: () => {
                     if (selectedOption === "") return;
                     options.splice(options.indexOf(selectedOption), 1);
                     setSelectedOption("");
                     this[setName].delete(selectedOption);
                     this.BdApi.Data.save(setName, this[setName]);
-                }},
-                labeltext
-            )
+                }
+            }, labeltext),          
         );
     };
 
@@ -202,7 +202,6 @@ module.exports = class BetterTTS {
                 value: text,
                 placeholder: "Enter text to preview",
                 onChange: (event) => {
-                    console.log(event);
                     setText(event);
                 }
             }),
@@ -218,6 +217,70 @@ module.exports = class BetterTTS {
         );
     };
 
+    TextReplaceDropdown = ({}) => {
+        const [selectedOption, setSelectedOption] = React.useState(0);
+
+        const options = Array.from(this.textReplacerRules);
+
+        return React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(Components.DropdownInput, {
+                value: selectedOption,
+                onChange: (event) => {
+                    setSelectedOption(event);
+                },
+                options: [{ label: "Select", value: 0 }, ...options.map((option, index) => {
+                    return {label: option.regex + " - " + option.replacement, value: index + 1 };
+                })]
+            },),            
+            React.createElement( Components.Button, {
+                onClick: () => {
+                    if (selectedOption === 0) return;
+                    let deleted = options.splice(selectedOption-1, 1);
+                    setSelectedOption(0);
+                    this.textReplacerRules.delete(deleted[0]);
+                    this.BdApi.Data.save("textReplacerRules", this.textReplacerRules);
+                }
+            }, "Remove Regex"),          
+        );
+    };
+
+    TextReplaceAdd = () => {
+        const [regex, setRegex] = React.useState("");
+        const [replacement, setReplacement] = React.useState("");
+
+        const disabled = regex === "" || replacement === "";
+
+        return React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(Components.TextInput, {
+                value: regex,
+                placeholder: "Enter Regex",
+                onChange: (event) => {
+                    setRegex(event);
+                },
+            }),
+            React.createElement(Components.TextInput, {
+                value: replacement,
+                placeholder: "Text To Soubstitute",
+                onChange: (event) => {
+                    setReplacement(event);
+                }
+            }),
+            React.createElement(Components.Button, {
+                disabled: disabled,
+                onClick: () => {
+                    this.textReplacerRules.add({regex: regex, replacement: replacement});
+                    this.BdApi.Data.save("textReplacerRules", this.textReplacerRules);
+                    setRegex("");
+                    setReplacement("");
+                }
+            },"Add"),
+        );
+    };
+
     getSettingsPanel() {
         config.settings[4].settings[4].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
         config.settings[4].settings[5].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
@@ -225,6 +288,8 @@ module.exports = class BetterTTS {
         config.settings[5].settings[1].options = getTTSVoices(this.settings.ttsSource);
         config.settings[6].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
         config.settings[9].children = [React.createElement(this.PreviewTTS)];
+        config.settings[12].settings[0].children = [React.createElement(this.TextReplaceDropdown, {})];
+        config.settings[12].settings[1].children = [React.createElement(this.TextReplaceAdd)];
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
@@ -592,6 +657,15 @@ module.exports = class BetterTTS {
                     default:
                         return url;
             }});
+        this.textReplacerRules.forEach(rule => {
+            let parts = /\/(.*)\/(.*)/.exec(rule.regex);
+            let regex;
+            if (regex == null) 
+                regex = new RegExp(rule.regex);
+            else 
+                regex = new RegExp(parts[1], parts[2]);
+            text = text.replace(regex, rule.replacement);
+        });
         if (text === "") return;
         if (this.settings.messagePrependNames) {
             let username = this.getUserName(message.author.id, guildId);
