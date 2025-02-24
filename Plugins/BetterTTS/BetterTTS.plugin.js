@@ -11,6 +11,7 @@ const config = {
     changelog: [
         { title: "New Features", type: "added", items: ["Added button in settings to test TTS"] },
         { title: "New Features", type: "added", items: ["Added Discord source and voices"] },
+        { title: "New Features", type: "added", items: ["Added Regex Settings to sobstitute matches"] },
         { title: "Bug Fix", type: "fixed", items: ["Fixed some issues with volume slider made by ShizCalev (PR #12)"] },
         { title: "Bug Fix", type: "fixed", items: ["Fixed enableTTS not working"] },
         { title: "Bug Fix", type: "fixed", items: ["Fixed TTS reading spoilers(it shuldnt)"] },
