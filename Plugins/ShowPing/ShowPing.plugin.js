@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.5.3
+ * @version 2.5.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -26,7 +26,7 @@ const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
 
 const { labelWrapper, rtcConnectionStatus, rtcConnectionStatusConnected } = Webpack.getByKeys("labelWrapper", "rtcConnectionStatus", "rtcConnectionStatusConnected");
 const { voiceButtonsContainer } = Webpack.getByKeys("voiceButtonsContainer");
-const ConnectionStatus = Webpack.getAllByStrings("rtcConnectionStatusWrapper")[0].prototype;
+const ConnectionStatus = Webpack.getModule(Webpack.Filters.byStrings("rtcConnectionStatusWrapper")).prototype;
 
 var console = {};
 
