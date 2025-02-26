@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.5.2
+ * @version 2.5.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -25,7 +25,7 @@ const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
 
 const { labelWrapper, rtcConnectionStatus, rtcConnectionStatusConnected } = Webpack.getByKeys("labelWrapper", "rtcConnectionStatus", "rtcConnectionStatusConnected");
-const voiceButtonsContainer = Webpack.getByKeys("voiceButtonsContainer");
+const { voiceButtonsContainer } = Webpack.getByKeys("voiceButtonsContainer");
 const ConnectionStatus = Webpack.getAllByStrings("rtcConnectionStatusWrapper")[0].prototype;
 
 var console = {};
@@ -142,7 +142,7 @@ module.exports = class ShowPing {
         if (show) {
             this.BdApi.DOM.removeStyle("hidekrispStyle");
         } else {
-            this.BdApi.DOM.addStyle("hidekrispStyle", `[aria-label*="Krisp"] {display: none !important;}`);
+            this.BdApi.DOM.addStyle("hidekrispStyle", `.${voiceButtonsContainer} > button[aria-label*="Krisp"] {display: none !important;}`);
         }
     }
 };
