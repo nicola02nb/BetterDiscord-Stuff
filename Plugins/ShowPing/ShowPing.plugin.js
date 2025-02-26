@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.5.1
+ * @version 2.5.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -24,6 +24,8 @@ const { Webpack, Patcher } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
 
+const { labelWrapper, rtcConnectionStatus, rtcConnectionStatusConnected } = Webpack.getByKeys("labelWrapper", "rtcConnectionStatus", "rtcConnectionStatusConnected");
+const voiceButtonsContainer = Webpack.getByKeys("voiceButtonsContainer");
 const ConnectionStatus = Webpack.getAllByStrings("rtcConnectionStatusWrapper")[0].prototype;
 
 var console = {};
@@ -60,15 +62,15 @@ module.exports = class ShowPing {
     start() {
         this.handleConnection = this.handleConnectionStateChange.bind(this);
         this.handlePing = this.handlePingChange.bind(this);
-        this.BdApi.DOM.addStyle(`[class^="rtcConnectionStatusConnected_"]{display: flex;}
-            [class*="voiceButtonsContainer_"]{margin-left: 2px !important;}
-            [class^="labelWrapper_"] > button {width: 100%; display: inline;}
+        this.BdApi.DOM.addStyle(`.${rtcConnectionStatusConnected.split(" ")[0]}{display: flex;}
+            .${voiceButtonsContainer}{margin-left: 2px !important;}
+            .${labelWrapper} > button {width: 100%; display: inline;}
             .pingDisplay{min-width: min-content;}`);
         this.addPingDisplay();
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
         DiscordModules.subscribe("RTC_CONNECTION_PING", this.handlePing);
         Patcher.after(this.meta.name, ConnectionStatus, "renderStatus", (_, [props], ret) => {
-            if(!this.pingElement){
+            if (!this.pingElement) {
                 this.addPingDisplay();
             }
         });
@@ -100,8 +102,8 @@ module.exports = class ShowPing {
     }
 
     addPingDisplay() {
-        const connection = document.querySelector('[class^="rtcConnectionStatus_"]');
-        this.statusBar = connection?.querySelector('[class^="rtcConnectionStatusConnected_"]');
+        const connection = document.getElementsByClassName(rtcConnectionStatus)[0];
+        this.statusBar = connection?.getElementsByClassName(rtcConnectionStatusConnected)[0];
 
         if (this.statusBar) {
             // Create ping display element
@@ -137,7 +139,7 @@ module.exports = class ShowPing {
     }
 
     displayKrispButton(show) {
-        if(show){
+        if (show) {
             this.BdApi.DOM.removeStyle("hidekrispStyle");
         } else {
             this.BdApi.DOM.addStyle("hidekrispStyle", `[aria-label*="Krisp"] {display: none !important;}`);
