@@ -1,5 +1,5 @@
 # BetterDiscord-Stuff
-A bunch of stuff for Betterdiscord by Me 🙃
+A bunch of stuff for [BetterDiscord](https://github.com/BetterDiscord/BetterDiscord) by Me 🙃
 ## Plugins
 - [AutoSwitchStatus](https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus)
 - [BetterTTS](https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS)
