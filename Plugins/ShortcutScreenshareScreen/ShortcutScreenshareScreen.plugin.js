@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 0.9.0
+ * @version 1.0.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -15,6 +15,7 @@ const config = {
     ],
     settings: [
         { type: "number", id: "displayNumber", name: "Default Display to Screenshare", note: "Set the default display number to screenshare.", value: 1, min: 1, max: 1, step: 1 },
+        { type: "keybind", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", value: [] },
         { type: "switch", id: "disablePreview", name: "Disable Preview", note: "If enabled, the preview will be disabled.", value: false },
         { type: "switch", id: "shareAudio", name: "Share Audio", note: "If enabled, the audio will be shared.", value: true },
         { type: "switch", id: "shareAlwaysScreen", name: "Share Always Screen", note: "If enabled, when you start a stream, it will always screenshare the screen instead of a game.", value: false },
@@ -22,21 +23,27 @@ const config = {
     ]
 };
 
-const { Webpack, Patcher } = BdApi;
+const { Webpack } = BdApi;
 const { Filters } = Webpack;
 
-const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ApplicationStreamingStore = Webpack.getStore("ApplicationStreamingStore");
 const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
+const RunningGameStore = Webpack.getStore("RunningGameStore");
 const StreamRTCConnectionStore = Webpack.getStore("StreamRTCConnectionStore");
 
 const streamStart = Webpack.getModule(Filters.byStrings("STREAM_START", "GUILD", "CALL", "OVERLAY"), { searchExports: true });
 const streamStop = Webpack.getModule(Filters.byStrings("STREAM_STOP"), { searchExports: true });
 
+const platform = process.platform;
+const ctrl = platform === "win32" ? 0xa2 : platform === "darwin" ? 0xe0 : 0x25;
+const keybindModule = Webpack.getModule(m => m.ctrl === ctrl, { searchExports: true });
+
 var console = {};
 
-var pluginToggleStream = () => {};
+const TOGGLE_STREAM_KEYBIND = 1006;
+
+var pluginToggleStream = () => { };
 
 module.exports = class ShortcutScreenshareScreen {
     constructor(meta) {
@@ -45,7 +52,7 @@ module.exports = class ShortcutScreenshareScreen {
         console = this.BdApi.Logger;
 
         this.settings = {};
-        this.windowPreviews = [];
+        this.screenPreviews = [];
         pluginToggleStream = this.toggleStream.bind(this);
     }
 
@@ -82,37 +89,63 @@ module.exports = class ShortcutScreenshareScreen {
 
     getSettingsPanel() {
         this.updateScreenPreviews().then(() => {
-            config.settings[0].max = this.windowPreviews.length;
+            config.settings[0].max = this.screenPreviews.length;
         });
         return this.BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
                 this.settings[id] = value;
                 this.setConfigSetting(id, value);
+                if (id === "toggleStreamShortcut") {
+                    this.updateKeybind();
+                }
             }
         });
     }
 
     start() {
         this.initSettingsValues();
+        this.updateKeybind();
         this.updateScreenPreviews();
-
-        /* Patcher.after(this.meta.name, DiscordModules.MessageActions, "sendMessage", (orginalFunc, args, retValue) => {
-            console.log(originalFunc, args, retValue);
-        }); */
     }
 
     stop() {
-        Patcher.unpatchAll(this.meta.name);
+        this.removeKeybind();
     }
 
     async updateScreenPreviews(width = 100, height = 100) {
         const mediaEngine = MediaEngineStore.getMediaEngine();
-        this.windowPreviews = await mediaEngine.getScreenPreviews(width, height);
+        this.screenPreviews = await mediaEngine.getScreenPreviews(width, height);
+    }
+
+    updateKeybind() {
+        this.removeKeybind();
+        let mappedKeybind = this.settings.toggleStreamShortcut.map((key) => {
+            key = key.toLowerCase();
+            if (key === "control") key = "ctrl";
+            return [0, keybindModule[key]];
+        });
+
+        DiscordNative.nativeModules.requireModule("discord_utils").inputEventRegister(
+            TOGGLE_STREAM_KEYBIND,
+            mappedKeybind,
+            (isDown) => { if (isDown) this.toggleStream() },
+            {
+                blurred: true,
+                focused: true,
+                keydown: true,
+                keyup: true
+            }
+        );
+
+    }
+
+    removeKeybind() {
+        DiscordNative.nativeModules.requireModule("discord_utils").inputEventUnregister(TOGGLE_STREAM_KEYBIND);
     }
 
     toggleStream() {
-        if(ApplicationStreamingStore.getCurrentUserActiveStream()) {
+        if (ApplicationStreamingStore.getCurrentUserActiveStream()) {
             this.stopStream();
         } else {
             this.startStream();
@@ -120,30 +153,31 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     startStream() {
+        let game = RunningGameStore.getVisibleGame();
+        let streamGame = !this.settings.shareAlwaysScreen && game;
         let displayIndex = this.settings.displayNumber - 1;
-        if(this.windowPreviews.length === 0) return;
-        if(displayIndex >= this.windowPreviews.length){
+
+        if (!streamGame && game && this.screenPreviews.length === 0) return;
+        if (displayIndex >= this.screenPreviews.length) {
             this.settings.displayNumber = 1;
             this.setConfigSetting("displayNumber", 1);
             displayIndex = this.settings.displayNumber - 1;
         }
-    
-        let windowPreview = this.windowPreviews[displayIndex];
+
+        let windowPreview = this.screenPreviews[displayIndex];
         let channelId = RTCConnectionStore.getChannelId();
         let guildId = RTCConnectionStore.getGuildId(channelId);
         let options = {
             audioSourceId: null,
             goLiveModalDurationMs: 8132,
             nativePickerStyleUsed: undefined,
-            pid: null,
+            pid: streamGame ? game.pid : null,
             previewDisabled: this.settings.disablePreview,
             sound: this.settings.shareAudio,
-            sourceId: windowPreview.id,
-            sourceName: windowPreview.name,
-        }
+            sourceId: streamGame ? game.id : windowPreview.id,
+            sourceName: streamGame ? game.name : windowPreview.name,
+        };
 
-        console.log(options);
-    
         streamStart(guildId, channelId, options);
     }
 
