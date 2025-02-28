@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.0.1
+ * @version 1.0.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -15,7 +15,7 @@ const config = {
     ],
     settings: [
         { type: "number", id: "displayNumber", name: "Default Display to Screenshare", note: "Set the default display number to screenshare.", value: 1, min: 1, max: 1, step: 1 },
-        { type: "keybind", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", value: [] },
+        { type: "keybind", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", clearable: true, value: [] },
         { type: "switch", id: "disablePreview", name: "Disable Preview", note: "If enabled, the preview will be disabled.", value: false },
         { type: "switch", id: "shareAudio", name: "Share Audio", note: "If enabled, the audio will be shared.", value: true },
         { type: "switch", id: "shareAlwaysScreen", name: "Share Always Screen", note: "If enabled, when you start a stream, it will always screenshare the screen instead of a game.", value: false },
@@ -39,7 +39,7 @@ const platform = process.platform;
 const ctrl = platform === "win32" ? 0xa2 : platform === "darwin" ? 0xe0 : 0x25;
 const keybindModule = Webpack.getModule(m => m.ctrl === ctrl, { searchExports: true });
 
-const TOGGLE_STREAM_KEYBIND = 1006;
+const TOGGLE_STREAM_KEYBIND = 3006;
 
 var console = {};
 var pluginToggleStream = () => { };
@@ -51,6 +51,7 @@ module.exports = class ShortcutScreenshareScreen {
         console = this.BdApi.Logger;
 
         this.settings = {};
+        this.nKeybinds = 0;
         this.screenPreviews = [];
         pluginToggleStream = this.toggleStream.bind(this);
     }
@@ -109,7 +110,7 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     stop() {
-        this.removeKeybind();
+        this.unregisterKeybind();
     }
 
     async updateScreenPreviews(width = 100, height = 100) {
@@ -118,30 +119,67 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     updateKeybind() {
-        this.removeKeybind();
-        let mappedKeybind = this.settings.toggleStreamShortcut.map((key) => {
+        this.unregisterKeybind();
+        if (this.settings.toggleStreamShortcut.length < 2) return;
+        // Create all possible key combinations based on special keys like shift and ctrl
+        const mappedKeybinds = [];
+        const specialKeys = [];
+        const normalKeys = [];
+
+        // First identify special keys and regular keys
+        this.settings.toggleStreamShortcut.forEach((key) => {
             key = key.toLowerCase();
             if (key === "control") key = "ctrl";
             if (key.startsWith("arrow")) key = key.replace("arrow", "");
-            return [0, keybindModule[key]];
+
+            if (key === "ctrl" || key === "shift" || key === "alt" || key === "meta") {
+                specialKeys.push(key);
+            } else {
+                normalKeys.push(key);
+            }
         });
 
-        DiscordNative.nativeModules.requireModule("discord_utils").inputEventRegister(
-            TOGGLE_STREAM_KEYBIND,
-            mappedKeybind,
-            (isDown) => { if (isDown) this.toggleStream() },
-            {
-                blurred: true,
-                focused: true,
-                keydown: true,
-                keyup: true
+        // Create all permutations
+        let numberOfCombinations = Math.pow(2, specialKeys.length);
+        this.nKeybinds = numberOfCombinations;
+        for (let i = 0; i < numberOfCombinations; i++) {
+            let combination = [];
+            for (let j = 0; j < specialKeys.length; j++) {
+                if ((i & Math.pow(2, j)) > 0) {
+                    combination.push([0, keybindModule[specialKeys[j]]]);
+                }
+                else {
+                    combination.push([0, keybindModule["right " + specialKeys[j]]]);
+                }
             }
-        );
+            mappedKeybinds.push(combination);
+        }
 
+        // Append to all combinations all normal keys
+        for (const mappedKeybind of mappedKeybinds) {
+            for (const key of normalKeys) {
+                mappedKeybind.push([0, keybindModule[key]]);
+            }
+        }
+
+        for (let i = 0; i < mappedKeybinds.length; i++) {
+            this.registerKeybind(mappedKeybinds[i], TOGGLE_STREAM_KEYBIND+i);
+        }
     }
 
-    removeKeybind() {
-        DiscordNative.nativeModules.requireModule("discord_utils").inputEventUnregister(TOGGLE_STREAM_KEYBIND);
+    registerKeybind(keybind, id) {
+        DiscordNative.nativeModules.requireModule("discord_utils").inputEventRegister(
+            id, 
+            keybind,
+            (isDown) => { if (isDown) this.toggleStream() },
+            { blurred: true, focused: true, keydown: true, keyup: true }
+        );
+    }
+
+    unregisterKeybind() {
+        for (let i = 0; i < this.nKeybinds; i++){
+            DiscordNative.nativeModules.requireModule("discord_utils").inputEventUnregister(TOGGLE_STREAM_KEYBIND+i);
+        }
     }
 
     toggleStream() {
