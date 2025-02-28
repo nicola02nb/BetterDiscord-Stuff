@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.0.0
+ * @version 1.0.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -39,10 +39,9 @@ const platform = process.platform;
 const ctrl = platform === "win32" ? 0xa2 : platform === "darwin" ? 0xe0 : 0x25;
 const keybindModule = Webpack.getModule(m => m.ctrl === ctrl, { searchExports: true });
 
-var console = {};
-
 const TOGGLE_STREAM_KEYBIND = 1006;
 
+var console = {};
 var pluginToggleStream = () => { };
 
 module.exports = class ShortcutScreenshareScreen {
@@ -123,6 +122,7 @@ module.exports = class ShortcutScreenshareScreen {
         let mappedKeybind = this.settings.toggleStreamShortcut.map((key) => {
             key = key.toLowerCase();
             if (key === "control") key = "ctrl";
+            if (key.startsWith("arrow")) key = key.replace("arrow", "");
             return [0, keybindModule[key]];
         });
 
