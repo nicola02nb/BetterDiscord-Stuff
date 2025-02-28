@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.10.0
+ * @version 2.11.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,12 +9,8 @@
 */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added button in settings to test TTS"] },
-        { title: "New Features", type: "added", items: ["Added Discord source and voices"] },
-        { title: "New Features", type: "added", items: ["Added Regex Settings to sobstitute matches"] },
-        { title: "Bug Fix", type: "fixed", items: ["Fixed some issues with volume slider made by ShizCalev (PR #12)"] },
-        { title: "Bug Fix", type: "fixed", items: ["Fixed enableTTS not working"] },
-        { title: "Bug Fix", type: "fixed", items: ["Fixed TTS reading spoilers(it shuldnt)"] },
+        { title: "New Features", type: "added", items: ["Added Speak Announcement into user context menu"] },
+        { title: "Bug Fix", type: "fixed", items: ["Settings menu entry for adding regex"] },
         //{ title: "Improvements", type: "improved", items: [""] },
     ],
     settings: [
@@ -71,8 +67,8 @@ const config = {
         { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages.", value: 1000 },
         { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", value: [] },
         { type: "category", id: "textReplacer", name: "Text Replacer", collapsible: true, shown: false, settings: [
-            { type: "custom", id: "textReplacerRules", name: "Rules", note: "Sobstitute Texts that matches your regex before reading it", children: [] },
-            { type: "custom", id: "textReplacerAdd", name: "Add Rule", note: "", children: [] },
+            { type: "custom", id: "textReplacerRules", name: "Rules", note: "Sobstitute Texts that matches your regex before reading it.", children: [] },
+            { type: "custom", id: "textReplacerAdd", name: "Add Rule", note: "Adds a regex rule to sobstitute matches with a custom text.", children: [] },
         ]},
     ]
 };
@@ -111,6 +107,8 @@ const UserStore = Webpack.getStore("UserStore");
 const speakMessage = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.speak"))];
 const cancelSpeak = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.cancel"))];
 const setTTSType = [...Webpack.getWithKey(Webpack.Filters.byStrings("setTTSType"))];
+
+const listenIcon = Webpack.getModule(Webpack.Filters.byStrings("evenodd", "M12 22a10 10 0 1"), { searchExports: true });
 
 var console = {};
 
@@ -278,7 +276,7 @@ module.exports = class BetterTTS {
                     setRegex("");
                     setReplacement("");
                 }
-            },"Add"),
+            },"Add Regex")
         );
     };
 
@@ -351,6 +349,7 @@ module.exports = class BetterTTS {
 
     // Plugin start/stop
     start() {
+        this.BdApi.DOM.addStyle(`label[for="textReplacerAdd"] + input[type="text"]{ min-width: 100px; width: 150px;}`);
         this.handleMessage = this.messageRecieved.bind(this);
         this.handleAnnouceUsers = this.annouceUser.bind(this);
         this.handleUpdateRelations = this.updateRelationships.bind(this);
@@ -394,6 +393,7 @@ module.exports = class BetterTTS {
         DiscordModules.unsubscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
         document.removeEventListener("keydown", this.handleKeyDown);
         this.AudioPlayer.stopTTS();
+        this.BdApi.DOM.removeStyle();
     }
 
     // Event handelers
@@ -498,6 +498,15 @@ module.exports = class BetterTTS {
                 this.BdApi.Data.save("ttsMutedUsers", this.ttsMutedUsers);
             }
         });
+        let ttsTestAnnouceUser = ContextMenu.buildItem({
+            type: "button",
+            label: "Speak Announcement",
+            icon: listenIcon,
+            action: () => {
+                let username = this.getUserName(userId);
+                this.AudioPlayer.addToQueue(`${username} joined`);
+            }
+        });
         let ttsToggleChat = ContextMenu.buildItem({
             type: "toggle",
             label: "TTS Subscribe Chat",
@@ -512,8 +521,10 @@ module.exports = class BetterTTS {
                 this.BdApi.Data.save("ttsSubscribedChannels", this.ttsSubscribedChannels);
             }
         });
-        if (Array.isArray(buttonParent1))
+        if (Array.isArray(buttonParent1)){
             buttonParent1.push(ttsToggleUser);
+            buttonParent1.push(ttsTestAnnouceUser);
+        }
         if (Array.isArray(buttonParent2))
             buttonParent2.push(ttsToggleChat);
     }
