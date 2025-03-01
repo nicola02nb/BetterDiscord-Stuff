@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.0.2
+ * @version 1.0.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -120,7 +120,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     updateKeybind() {
         this.unregisterKeybind();
-        if (this.settings.toggleStreamShortcut.length < 2) return;
+        if (this.settings.toggleStreamShortcut.length == 0) return;
         // Create all possible key combinations based on special keys like shift and ctrl
         const mappedKeybinds = [];
         const specialKeys = [];
@@ -131,6 +131,7 @@ module.exports = class ShortcutScreenshareScreen {
             key = key.toLowerCase();
             if (key === "control") key = "ctrl";
             if (key.startsWith("arrow")) key = key.replace("arrow", "");
+            if (key.startsWith("page")) key = key.replace("page", "page ");
 
             if (key === "ctrl" || key === "shift" || key === "alt" || key === "meta") {
                 specialKeys.push(key);
