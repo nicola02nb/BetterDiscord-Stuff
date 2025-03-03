@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.0
+ * @version 1.1.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -19,12 +19,12 @@ const config = {
             { type: "keybind", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", clearable: true, value: [] },
             { type: "keybind", id: "toggleGameOrScreenShortcut", name: "Toggle Game/Screen Shortcut", note: "Set the shortcut to toggle between sharing game or screen.", clearable: true, value: [] },
             { type: "keybind", id: "toggleAudioShortcut", name: "Toggle Audio Shortcut", note: "Set the shortcut to toggle audio sharing.", clearable: true, value: [] },
-        ] },
+        ]},
         { type: "category", id: "streamOptions", name: "Stream Options", settings: [
             { type: "switch", id: "disablePreview", name: "Disable Preview", note: "If enabled, the preview will be disabled.", value: false },
             { type: "switch", id: "shareAudio", name: "Share Audio", note: "If enabled, the audio will be shared.", value: true },
             { type: "switch", id: "shareAlwaysScreen", name: "Share Always Screen", note: "If enabled, when you start a stream, it will always screenshare the screen instead of a game.", value: false },
-        ]},        
+        ]},
         /* { type: "category", id: "testButtons", name: "Test Buttons", settings: [
             { type: "button", id: "toggleStream", name: "Start/Stop Stream", note: "Starts/Stops the stream.", children: ["Start/Stop"], onClick: () => pluginToggleStream() },
             { type: "button", id: "toggleGameOrScreen", name: "Toggle Game/Screen", note: "Toggles between sharing game or screen.", children: ["Toggle"], onClick: () => pluginToggleGameOrScreen() },
@@ -142,7 +142,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     isStreamingWindow() {
         let streamkey = StreamRTCConnectionStore.getActiveStreamKey();
-        if(streamkey === null) return false;
+        if (streamkey === null) return false;
         let streamSource = StreamRTCConnectionStore.getStreamSourceId(streamkey);
         return streamSource === null || streamSource.startsWith("window");
     }
@@ -221,7 +221,7 @@ module.exports = class ShortcutScreenshareScreen {
         }
 
         let screenPreview = screenPreviews[displayIndex];
-        let windowPreview = windowPreviews.find(window => window.id.endsWith(game.windowHandle));
+        let windowPreview = windowPreviews.find(window => window.id.endsWith(game?.windowHandle));
 
         this.streamChannelId = RTCConnectionStore.getChannelId();
         this.streamGuildId = RTCConnectionStore.getGuildId(this.streamChannelId);
@@ -243,7 +243,7 @@ module.exports = class ShortcutScreenshareScreen {
 
         for (const [shortcutName, shortcutFunction] of Object.entries(shortcuts)) {
             if (this.settings[shortcutName]?.length > 0) {
-                this.registerKeybind(TOGGLE_STREAM_KEYBIND+i, this.mapKeybind(this.settings[shortcutName]), shortcutFunction);
+                this.registerKeybind(TOGGLE_STREAM_KEYBIND + i, this.mapKeybind(this.settings[shortcutName]), shortcutFunction);
                 i++;
             }
         }
@@ -264,7 +264,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     registerKeybind(id, keybind, toCall) {
         DiscordNative.nativeModules.requireModule("discord_utils").inputEventRegister(
-            id, 
+            id,
             keybind,
             (isDown) => { if (isDown) toCall() },
             { blurred: true, focused: true, keydown: true, keyup: true }
