@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.0.3
+ * @version 1.1.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -15,11 +15,20 @@ const config = {
     ],
     settings: [
         { type: "number", id: "displayNumber", name: "Default Display to Screenshare", note: "Set the default display number to screenshare.", value: 1, min: 1, max: 1, step: 1 },
-        { type: "keybind", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", clearable: true, value: [] },
-        { type: "switch", id: "disablePreview", name: "Disable Preview", note: "If enabled, the preview will be disabled.", value: false },
-        { type: "switch", id: "shareAudio", name: "Share Audio", note: "If enabled, the audio will be shared.", value: true },
-        { type: "switch", id: "shareAlwaysScreen", name: "Share Always Screen", note: "If enabled, when you start a stream, it will always screenshare the screen instead of a game.", value: false },
-        { type: "button", id: "toggleStream", name: "Start/Stop Stream", note: "Starts/Stops the stream.", children: ["Start/Stop"], onClick: () => pluginToggleStream() }
+        { type: "category", id: "keybinds", name: "Keybinds", settings: [
+            { type: "keybind", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", clearable: true, value: [] },
+            { type: "keybind", id: "toggleGameOrScreenShortcut", name: "Toggle Game/Screen Shortcut", note: "Set the shortcut to toggle between sharing game or screen.", clearable: true, value: [] },
+            { type: "keybind", id: "toggleAudioShortcut", name: "Toggle Audio Shortcut", note: "Set the shortcut to toggle audio sharing.", clearable: true, value: [] },
+        ] },
+        { type: "category", id: "streamOptions", name: "Stream Options", settings: [
+            { type: "switch", id: "disablePreview", name: "Disable Preview", note: "If enabled, the preview will be disabled.", value: false },
+            { type: "switch", id: "shareAudio", name: "Share Audio", note: "If enabled, the audio will be shared.", value: true },
+            { type: "switch", id: "shareAlwaysScreen", name: "Share Always Screen", note: "If enabled, when you start a stream, it will always screenshare the screen instead of a game.", value: false },
+        ]},        
+        /* { type: "category", id: "testButtons", name: "Test Buttons", settings: [
+            { type: "button", id: "toggleStream", name: "Start/Stop Stream", note: "Starts/Stops the stream.", children: ["Start/Stop"], onClick: () => pluginToggleStream() },
+            { type: "button", id: "toggleGameOrScreen", name: "Toggle Game/Screen", note: "Toggles between sharing game or screen.", children: ["Toggle"], onClick: () => pluginToggleGameOrScreen() },
+        ]} */
     ]
 };
 
@@ -42,7 +51,9 @@ const keybindModule = Webpack.getModule(m => m.ctrl === ctrl, { searchExports: t
 const TOGGLE_STREAM_KEYBIND = 3006;
 
 var console = {};
-var pluginToggleStream = () => { };
+
+/* var pluginToggleStream = () => { };
+var pluginToggleGameOrScreen = () => { }; */
 
 module.exports = class ShortcutScreenshareScreen {
     constructor(meta) {
@@ -51,9 +62,13 @@ module.exports = class ShortcutScreenshareScreen {
         console = this.BdApi.Logger;
 
         this.settings = {};
-        this.nKeybinds = 0;
-        this.screenPreviews = [];
-        pluginToggleStream = this.toggleStream.bind(this);
+        this.keyBindsIds = [];
+        this.toggleStreamHandle = this.toggleStream.bind(this);
+        this.toggleGameOrScreenHandle = this.toggleGameOrScreen.bind(this);
+        this.toggleAudiohandle = this.toggleAudio.bind(this);
+
+        /* pluginToggleStream = this.toggleStreamHandle
+        pluginToggleGameOrScreen = this.toggleGameOrScreenHandle */
     }
 
     setConfigSetting(id, newValue) {
@@ -88,16 +103,29 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     getSettingsPanel() {
-        this.updateScreenPreviews().then(() => {
-            config.settings[0].max = this.screenPreviews.length;
-        });
         return this.BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
                 this.settings[id] = value;
                 this.setConfigSetting(id, value);
-                if (id === "toggleStreamShortcut") {
-                    this.updateKeybind();
+                switch (id) {
+                    case "toggleStreamShortcut":
+                        this.updateKeybinds();
+                        break;
+                    case "toggleGameOrScreenShortcut":
+                        this.updateKeybinds();
+                        break;
+                    case "toggleAudioShortcut":
+                        this.updateKeybinds();
+                        break;
+                    case "disablePreview":
+                        this.streamOptions.previewDisabled = value;
+                        this.updateStream();
+                        break;
+                    case "shareAudio":
+                        this.streamOptions.sound = value;
+                        this.updateStream();
+                        break;
                 }
             }
         });
@@ -105,82 +133,52 @@ module.exports = class ShortcutScreenshareScreen {
 
     start() {
         this.initSettingsValues();
-        this.updateKeybind();
-        this.updateScreenPreviews();
+        this.updateKeybinds();
     }
 
     stop() {
-        this.unregisterKeybind();
+        this.unregisterKeybinds();
     }
 
-    async updateScreenPreviews(width = 100, height = 100) {
+    isStreamingWindow() {
+        let streamkey = StreamRTCConnectionStore.getActiveStreamKey();
+        if(streamkey === null) return false;
+        let streamSource = StreamRTCConnectionStore.getStreamSourceId(streamkey);
+        return streamSource === null || streamSource.startsWith("window");
+    }
+
+    async getPreviews(functionName, width = 0, height = 0) {
         const mediaEngine = MediaEngineStore.getMediaEngine();
-        this.screenPreviews = await mediaEngine.getScreenPreviews(width, height);
+        let previews = mediaEngine[functionName](width, height);
+        if (functionName === "getScreenPreviews") {
+            config.settings[0].max = previews.length;
+        }
+        return previews;
     }
 
-    updateKeybind() {
-        this.unregisterKeybind();
-        if (this.settings.toggleStreamShortcut.length == 0) return;
-        // Create all possible key combinations based on special keys like shift and ctrl
-        const mappedKeybinds = [];
-        const specialKeys = [];
-        const normalKeys = [];
-
-        // First identify special keys and regular keys
-        this.settings.toggleStreamShortcut.forEach((key) => {
-            key = key.toLowerCase();
-            if (key === "control") key = "ctrl";
-            if (key.startsWith("arrow")) key = key.replace("arrow", "");
-            if (key.startsWith("page")) key = key.replace("page", "page ");
-
-            if (key === "ctrl" || key === "shift" || key === "alt" || key === "meta") {
-                specialKeys.push(key);
-            } else {
-                normalKeys.push(key);
-            }
-        });
-
-        // Create all permutations
-        let numberOfCombinations = Math.pow(2, specialKeys.length);
-        this.nKeybinds = numberOfCombinations;
-        for (let i = 0; i < numberOfCombinations; i++) {
-            let combination = [];
-            for (let j = 0; j < specialKeys.length; j++) {
-                if ((i & Math.pow(2, j)) > 0) {
-                    combination.push([0, keybindModule[specialKeys[j]]]);
-                }
-                else {
-                    combination.push([0, keybindModule["right " + specialKeys[j]]]);
-                }
-            }
-            mappedKeybinds.push(combination);
-        }
-
-        // Append to all combinations all normal keys
-        for (const mappedKeybind of mappedKeybinds) {
-            for (const key of normalKeys) {
-                mappedKeybind.push([0, keybindModule[key]]);
-            }
-        }
-
-        for (let i = 0; i < mappedKeybinds.length; i++) {
-            this.registerKeybind(mappedKeybinds[i], TOGGLE_STREAM_KEYBIND+i);
-        }
+    async startStream() {
+        await this.initializeStreamSetting();
+        streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
     }
 
-    registerKeybind(keybind, id) {
-        DiscordNative.nativeModules.requireModule("discord_utils").inputEventRegister(
-            id, 
-            keybind,
-            (isDown) => { if (isDown) this.toggleStream() },
-            { blurred: true, focused: true, keydown: true, keyup: true }
-        );
+    async toggleGameOrScreen() {
+        await this.updateStreamSetting();
+        this.updateStream();
     }
 
-    unregisterKeybind() {
-        for (let i = 0; i < this.nKeybinds; i++){
-            DiscordNative.nativeModules.requireModule("discord_utils").inputEventUnregister(TOGGLE_STREAM_KEYBIND+i);
-        }
+    toggleAudio() {
+        this.settings.shareAudio = !this.settings.shareAudio;
+        this.setConfigSetting("shareAudio", this.settings.shareAudio);
+        this.streamOptions.sound = this.settings.shareAudio;
+        this.updateStream();
+    }
+
+    stopStream() {
+        let streamkey = StreamRTCConnectionStore.getActiveStreamKey();
+        streamStop(streamkey);
+        this.streamChannelId = null;
+        this.streamGuildId = null;
+        this.streamOptions = null;
     }
 
     toggleStream() {
@@ -191,37 +189,93 @@ module.exports = class ShortcutScreenshareScreen {
         }
     }
 
-    startStream() {
-        let game = RunningGameStore.getVisibleGame();
-        let streamGame = !this.settings.shareAlwaysScreen && game;
-        let displayIndex = this.settings.displayNumber - 1;
-
-        if (!streamGame && game && this.screenPreviews.length === 0) return;
-        if (displayIndex >= this.screenPreviews.length) {
-            this.settings.displayNumber = 1;
-            this.setConfigSetting("displayNumber", 1);
-            displayIndex = this.settings.displayNumber - 1;
-        }
-
-        let windowPreview = this.screenPreviews[displayIndex];
-        let channelId = RTCConnectionStore.getChannelId();
-        let guildId = RTCConnectionStore.getGuildId(channelId);
-        let options = {
+    getStreamOptions(surce) {
+        return {
             audioSourceId: null,
-            goLiveModalDurationMs: 8132,
+            goLiveModalDurationMs: 1858,
             nativePickerStyleUsed: undefined,
-            pid: streamGame ? game.pid : null,
+            pid: surce?.pid ? surce.pid : null,
             previewDisabled: this.settings.disablePreview,
             sound: this.settings.shareAudio,
-            sourceId: streamGame ? game.id : windowPreview.id,
-            sourceName: streamGame ? game.name : windowPreview.name,
+            sourceId: surce?.id ? surce.id : null,
+            sourceName: surce?.name ? surce.name : null,
         };
-
-        streamStart(guildId, channelId, options);
     }
 
-    stopStream() {
-        let streamkey = StreamRTCConnectionStore.getActiveStreamKey();
-        streamStop(streamkey);
+    async initializeStreamSetting() {
+        await this.updateStreamSetting(true);
+    }
+
+    async updateStreamSetting(firstInit = false) {
+        let game = RunningGameStore.getVisibleGame();
+        let streamGame = firstInit ? !this.settings.shareAlwaysScreen && game !== null : !this.isStreamingWindow() && game !== null;
+        let displayIndex = this.settings.displayNumber - 1;
+        let screenPreviews = await this.getPreviews("getScreenPreviews");
+        let windowPreviews = await this.getPreviews("getWindowPreviews");
+
+        if (!streamGame && game && screenPreviews.length === 0) return;
+        if (displayIndex >= screenPreviews.length) {
+            this.settings.displayNumber = 1;
+            this.setConfigSetting("displayNumber", 1);
+            displayIndex = 1;
+        }
+
+        let screenPreview = screenPreviews[displayIndex];
+        let windowPreview = windowPreviews.find(window => window.id.endsWith(game.windowHandle));
+
+        this.streamChannelId = RTCConnectionStore.getChannelId();
+        this.streamGuildId = RTCConnectionStore.getGuildId(this.streamChannelId);
+
+        this.streamOptions = this.getStreamOptions(windowPreview && streamGame ? windowPreview : screenPreview);
+    }
+
+    updateStream() {
+        if (ApplicationStreamingStore.getCurrentUserActiveStream()) {
+            streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
+        }
+    }
+
+    updateKeybinds() {
+        this.unregisterKeybinds();
+        let shortcuts = { toggleStreamShortcut: this.toggleStreamHandle, toggleGameOrScreenShortcut: this.toggleGameOrScreenHandle, toggleAudioShortcut: this.toggleAudiohandle };
+
+        let i = 0;
+
+        for (const [shortcutName, shortcutFunction] of Object.entries(shortcuts)) {
+            if (this.settings[shortcutName]?.length > 0) {
+                this.registerKeybind(TOGGLE_STREAM_KEYBIND+i, this.mapKeybind(this.settings[shortcutName]), shortcutFunction);
+                i++;
+            }
+        }
+    }
+
+    mapKeybind(keybind) {
+        let mappedKeybind = [];
+        keybind.forEach((key) => {
+            key = key.toLowerCase();
+            if (key === "control") key = "ctrl";
+            if (key.startsWith("arrow")) key = key.replace("arrow", "");
+            if (key.startsWith("page")) key = key.replace("page", "page ");
+
+            mappedKeybind.push([0, keybindModule[key]]);
+        });
+        return mappedKeybind;
+    }
+
+    registerKeybind(id, keybind, toCall) {
+        DiscordNative.nativeModules.requireModule("discord_utils").inputEventRegister(
+            id, 
+            keybind,
+            (isDown) => { if (isDown) toCall() },
+            { blurred: true, focused: true, keydown: true, keyup: true }
+        );
+        this.keyBindsIds.push(id);
+    }
+
+    unregisterKeybinds() {
+        for (const id of this.keyBindsIds) {
+            DiscordNative.nativeModules.requireModule("discord_utils").inputEventUnregister(id);
+        }
+        this.keyBindsIds = [];
     }
 };
