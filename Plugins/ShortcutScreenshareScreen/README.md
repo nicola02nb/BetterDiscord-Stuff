@@ -2,8 +2,11 @@
 A BetterDiscord(BD) plugin that let you screenshare screen from keyboard shortcut when no game is running.
 ## Features:
 - Select which screen should be screen shared
+- Set shortcut to Start/Stop screen sharing
+- Set shortcut to toggle Game/Screen sharing
+- Set shortcut to toggle On/Off audio sharing
 - Enable/Disable Preview
 - Enable/Disable Audio sharing
 - Always share the screen instead of a game
 ## Settings:
-![Screenshot 2025-02-28 150217](https://github.com/user-attachments/assets/6717c99d-0892-453b-939a-ed454d947e55)
+![Screenshot 2025-03-04 142705](https://github.com/user-attachments/assets/e725ae43-5757-4520-a7ae-616de8b22832)
