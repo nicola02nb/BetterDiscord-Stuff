@@ -4,6 +4,7 @@ A bunch of stuff for [BetterDiscord](https://github.com/BetterDiscord/BetterDisc
 - [AutoSwitchStatus](https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus)
 - [BetterTTS](https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BetterTTS)
 - [BiggerStreamPreview](https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview)
+- [BypassBlockedOrIgnored](https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BypassBlockedOrIgnored)
 - [NotifyWhenMuted](https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted)
 - [ShortcutScreenshareScreen](https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShortcutScreenshareScreen)
 - [ShowPing](https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing)
