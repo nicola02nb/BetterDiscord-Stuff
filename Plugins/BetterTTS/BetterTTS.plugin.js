@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.11.0
+ * @version 2.12.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,9 +9,9 @@
 */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added Speak Announcement into user context menu"] },
-        { title: "Bug Fix", type: "fixed", items: ["Settings menu entry for adding regex"] },
-        //{ title: "Improvements", type: "improved", items: [""] },
+        //{ title: "New Features", type: "added", items: [""] },
+        //{ title: "Bug Fix", type: "fixed", items: [""] },
+        { title: "Improvements", type: "improved", items: ["Suscribed Channels or Servers form source dropdown", "Now Suscribed Channels or Servers are always read"] },
     ],
     settings: [
         { type: "switch", id: "enableTTS", name: "Enable TTS", note: "Enables/Disables the TTS.", value: true },
@@ -36,7 +36,6 @@ const config = {
             { type: "dropdown", id: "messagesChannelsToRead", name: "Channels where TTS should Read", note: "Choose the channels you want messages to be read.", value: "never", options: [
                 { label: "Never", value: "never" },
                 { label: "All Channels", value: "allChannels" },
-                { label: "Suscribed Channels or Servers", value: "subscribedChannelOrGuild" },
                 { label: "Focused Channel", value: "focusedChannel" },
                 { label: "Connected Channel", value: "connectedChannel" },
                 { label: "Focused Server Channels", value: "focusedGuildChannels" },
@@ -607,14 +606,15 @@ module.exports = class BetterTTS {
         if (messageAuthorId === userId) {
             return false;
         }
+        if (this.ttsSubscribedChannels.has(messageChannelId) || this.ttsSubscribedGuilds.has(messageGuildId)){
+            return true;
+        }
 
         switch (this.settings.messagesChannelsToRead) {
             case "never":
                 return false;
             case "allChannels":
                 return true;
-            case "subscribedChannelOrGuild":
-                return this.ttsSubscribedChannels.has(messageChannelId) || this.ttsSubscribedGuilds.has(messageGuildId);
             case "focusedChannel":
                 return messageChannelId === focusedChannel;
             case "connectedChannel":
