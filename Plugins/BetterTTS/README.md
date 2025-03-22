@@ -5,6 +5,8 @@ A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message
 - Enable/Disable Announce Client join/left channel
 - Enable/Disable Read Messages from channels when recieved
 ### Mesage Reading:
+- Prepend/Not Prepend Server name before reading messages
+- Prepend/Not Prepend Channel name before reading messages
 - Prepend/Not Prepend Usernames before reading messages
 - Set which name should be read for users
 - Set how URLs should be read
