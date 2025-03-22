@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.12.0
+ * @version 2.13.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,17 +9,32 @@
 */
 const config = {
     changelog: [
-        //{ title: "New Features", type: "added", items: [""] },
+        { title: "New Features", type: "added", items: ["Added prepending og server and channel name option"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
-        { title: "Improvements", type: "improved", items: ["Suscribed Channels or Servers form source dropdown", "Now Suscribed Channels or Servers are always read"] },
+        { title: "Improvements", type: "improved", items: ["Reorganized settings"] },
     ],
     settings: [
         { type: "switch", id: "enableTTS", name: "Enable TTS", note: "Enables/Disables the TTS.", value: true },
         { type: "switch", id: "enableTTSCommand", name: "Enable /tts Command", note: "Allow playback and usage of /tts command.", value: true },
         { type: "switch", id: "enableUserAnnouncement", name: "Enable User Announcement", note: "Enables/Disables the User Announcement when join/leaves the channel.", value: true },
         { type: "switch", id: "enableMessageReading", name: "Enable Message Reading", note: "Enables/Disables the message reading from channels.", value: true },
+        { type: "category", id: "ttsMessageSources", name: "TTS Message Sources", collapsible: true, shown: false, settings: [
+            { type: "dropdown", id: "messagesChannelsToRead", name: "Channels where TTS should Read", note: "Choose the channels you want messages to be read.", value: "never", options: [
+                { label: "Never", value: "never" },
+                { label: "All Channels", value: "allChannels" },
+                { label: "Focused Channel", value: "focusedChannel" },
+                { label: "Connected Channel", value: "connectedChannel" },
+                { label: "Focused Server Channels", value: "focusedGuildChannels" },
+                { label: "Connected Server Channels", value: "connectedGuildChannels" },
+            ]},
+            { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS.", children: [] },
+            { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS.", children: [] },
+        ]},
         { type: "category", id: "messageReadingSettings", name: "Message Reading Settings", collapsible: true, shown: false, settings: [
-            { type: "switch", id: "messagePrependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name ot the user of the message that will be read by TTS.", value: true },
+            
+            { type: "switch", id: "messagePrependGuild", name: "Enables Prepending Server Name Before Messages Reading", note: "Reads also the name of the server where the message comes from.", value: false },
+            { type: "switch", id: "messagePrependChannel", name: "Enables Prepending Channel Name Before Messages Reading", note: "Reads also the name of the channel where the message comes from.", value: false },
+            { type: "switch", id: "messagePrependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name of the user that sent the message.", value: true },
             { type: "dropdown", id: "messageNamesReading", name: "Usernames Reading", note: "Sets which of the names of a user used by tts.", value: "default", options: [
                 { label: "Default", value: "default" },
                 { label: "Username", value: "userName" },
@@ -32,24 +47,14 @@ const config = {
                 { label: "Read Only Domain", value: "domain" },
                 { label: "Sobstitute With word URL", value: "sobstitute" },
                 { label: "Keep URL", value: "keep" },
-            ] },
-            { type: "dropdown", id: "messagesChannelsToRead", name: "Channels where TTS should Read", note: "Choose the channels you want messages to be read.", value: "never", options: [
-                { label: "Never", value: "never" },
-                { label: "All Channels", value: "allChannels" },
-                { label: "Focused Channel", value: "focusedChannel" },
-                { label: "Connected Channel", value: "connectedChannel" },
-                { label: "Focused Server Channels", value: "focusedGuildChannels" },
-                { label: "Connected Server Channels", value: "connectedGuildChannels" },
-            ]},
-            { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS.", children: [] },
-            { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS.", children: [] },
+            ]},            
         ]},
         { type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
             { type: "dropdown", id: "ttsSource", name: "TTS Source", note: "Choose the channel you want to play the TTS.", value: "streamlabs", options: [
-                    { label: "Streamlabs", value: "streamlabs" },
+                { label: "Streamlabs", value: "streamlabs" },
             ]},
             { type: "dropdown", id: "ttsVoice", name: "Voice for TTS", note: "Changes voice used for TTS.", value: "Brian", options: [
-                    { label: "Brian", value: "Brian" },
+                { label: "Brian", value: "Brian" },
             ]}
         ]},
         { type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
@@ -249,7 +254,7 @@ module.exports = class BetterTTS {
         const [replacement, setReplacement] = React.useState("");
 
         const disabled = regex === "" || replacement === "";
-
+        
         return React.createElement(
             React.Fragment,
             null,
@@ -280,14 +285,14 @@ module.exports = class BetterTTS {
     };
 
     getSettingsPanel() {
-        config.settings[4].settings[4].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
-        config.settings[4].settings[5].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
-        config.settings[5].settings[0].options = getTTSSources();
-        config.settings[5].settings[1].options = getTTSVoices(this.settings.ttsSource);
-        config.settings[6].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
-        config.settings[9].children = [React.createElement(this.PreviewTTS)];
-        config.settings[12].settings[0].children = [React.createElement(this.TextReplaceDropdown, {})];
-        config.settings[12].settings[1].children = [React.createElement(this.TextReplaceAdd)];
+        config.settings[4].settings[1].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
+        config.settings[4].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
+        config.settings[6].settings[0].options = getTTSSources();
+        config.settings[6].settings[1].options = getTTSVoices(this.settings.ttsSource);
+        config.settings[7].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
+        config.settings[10].children = [React.createElement(this.PreviewTTS)];
+        config.settings[13].settings[0].children = [React.createElement(this.TextReplaceDropdown, {})];
+        config.settings[13].settings[1].children = [React.createElement(this.TextReplaceAdd)];
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
@@ -321,7 +326,7 @@ module.exports = class BetterTTS {
                 break;
             case "ttsSource":
                 this.AudioPlayer.updateSource(value);
-                config.settings[5].settings[1].options = getTTSVoices(value);
+                config.settings[6].settings[1].options = getTTSVoices(value);
                 break;
             case "ttsVoice":
                 this.AudioPlayer.updateVoice(value);
@@ -679,11 +684,28 @@ module.exports = class BetterTTS {
             text = text.replace(regex, rule.replacement);
         });
         if (text === "") return;
-        if (this.settings.messagePrependNames) {
-            let username = this.getUserName(message.author.id, guildId);
-            text = `${username} said ${text}`;
+        let toRead = "";
+        if (this.settings.messagePrependChannel || this.settings.messagePrependGuild || this.settings.messagePrependNames) {
+            if (this.settings.messagePrependNames) {
+                let username = this.getUserName(message.author.id, guildId);
+                toRead += `${username} `;
+            }
+            if (this.settings.messagePrependGuild || this.settings.messagePrependChannel) {
+                toRead += "in ";
+                if (this.settings.messagePrependGuild) {
+                    let guild = GuildStore.getGuild(guildId);
+                    toRead += `${guild?.name} `;
+                }
+                if (this.settings.messagePrependChannel) {
+                    let channel = ChannelStore.getChannel(message.channel_id);
+                    toRead += `${channel?.name} `;
+                }
+            }
+            toRead += `said ${text}`;
+        } else {
+            toRead += text;
         }
-        return text;
+        return toRead;
     }
 
     // TTS Toggle
