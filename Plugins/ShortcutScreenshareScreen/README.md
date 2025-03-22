@@ -9,4 +9,4 @@ A BetterDiscord(BD) plugin that let you screenshare screen from keyboard shortcu
 - Enable/Disable Audio sharing
 - Always share the screen instead of a game
 ## Settings:
-![Screenshot 2025-03-04 142705](https://github.com/user-attachments/assets/e725ae43-5757-4520-a7ae-616de8b22832)
+![Settings](https://github.com/user-attachments/assets/e725ae43-5757-4520-a7ae-616de8b22832)
