@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.13.0
+ * @version 2.13.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,9 +9,9 @@
 */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added prepending og server and channel name option"] },
+        { title: "New Features", type: "added", items: ["Button to selec which channel prepend its server and/or channel name"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
-        { title: "Improvements", type: "improved", items: ["Reorganized settings"] },
+        //{ title: "Improvements", type: "improved", items: [""] },
     ],
     settings: [
         { type: "switch", id: "enableTTS", name: "Enable TTS", note: "Enables/Disables the TTS.", value: true },
@@ -31,7 +31,12 @@ const config = {
             { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS.", children: [] },
         ]},
         { type: "category", id: "messageReadingSettings", name: "Message Reading Settings", collapsible: true, shown: false, settings: [
-            
+            { type: "dropdown", id: "channelInfoReading", name: "Channel Info Reading", note: "Sets which of the channel should prepend server and/or channel name.", value: "none", options: [
+                { label: "None", value: "none" },
+                { label: "Subscribed", value: "subscribed" },
+                { label: "Focused/Connected", value: "focusedConnected" },
+                { label: "All", value: "all" },
+            ]},
             { type: "switch", id: "messagePrependGuild", name: "Enables Prepending Server Name Before Messages Reading", note: "Reads also the name of the server where the message comes from.", value: false },
             { type: "switch", id: "messagePrependChannel", name: "Enables Prepending Channel Name Before Messages Reading", note: "Reads also the name of the channel where the message comes from.", value: false },
             { type: "switch", id: "messagePrependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name of the user that sent the message.", value: true },
@@ -605,16 +610,15 @@ module.exports = class BetterTTS {
             || this.settings.blockMutedGuilds && this.mutedGuild) {
             return false;
         }
-        if (message.tts) {
+        if (message.tts) { // command /tts
+            message.prependGuildChannel = false;
             return true;
         }
         if (messageAuthorId === userId) {
             return false;
         }
-        if (this.ttsSubscribedChannels.has(messageChannelId) || this.ttsSubscribedGuilds.has(messageGuildId)){
-            return true;
-        }
 
+        message.prependGuildChannel = this.settings.channelInfoReading === "focusedConnected" || this.settings.channelInfoReading === "all";
         switch (this.settings.messagesChannelsToRead) {
             case "never":
                 return false;
@@ -629,7 +633,12 @@ module.exports = class BetterTTS {
             case "connectedGuildChannels":
                 return messageGuildId === connectedGuild;
             default:
-                return false;
+                if (this.ttsSubscribedChannels.has(messageChannelId) || this.ttsSubscribedGuilds.has(messageGuildId)){
+                    message.prependGuildChannel = this.settings.channelInfoReading === "subscribed" || this.settings.channelInfoReading === "all";
+                    return true;
+                } else {
+                    return false;
+                }
         }
     }
 
@@ -690,7 +699,7 @@ module.exports = class BetterTTS {
                 let username = this.getUserName(message.author.id, guildId);
                 toRead += `${username} `;
             }
-            if (this.settings.messagePrependGuild || this.settings.messagePrependChannel) {
+            if ((this.settings.messagePrependGuild || this.settings.messagePrependChannel) && message.prependGuildChannel) {
                 toRead += "in ";
                 if (this.settings.messagePrependGuild) {
                     let guild = GuildStore.getGuild(guildId);
