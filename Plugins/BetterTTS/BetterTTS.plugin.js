@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.13.3
+ * @version 2.14.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,7 +9,7 @@
 */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Button to selec which channel prepend its server and/or channel name"] },
+        { title: "New Features", type: "added", items: ["Button to select which channel prepend its server and/or channel name", "Settings to ignore some channels when connected into voice channel"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         { title: "Improvements", type: "improved", items: ["Settings Refactor"] },
     ],
@@ -26,6 +26,12 @@ const config = {
                 { label: "Connected Channel", value: "connectedChannel" },
                 { label: "Focused Server Channels", value: "focusedGuildChannels" },
                 { label: "Connected Server Channels", value: "connectedGuildChannels" },
+            ]},
+            { type: "dropdown", id: "ingnoreWhenConnected", name: "Ignore TTS when in Voice Channel", note: "Choose the channels you want messages to be ignored while in a voice channel.", value: "never", options: [
+                { label: "None", value: "none" },
+                { label: "Subscribed", value: "subscribed" },
+                { label: "Focused/Connected", value: "focusedConnected" },
+                { label: "All", value: "all" },
             ]},
             { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS.", children: [] },
             { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS.", children: [] },
@@ -83,11 +89,10 @@ const config = {
         { type: "category", id: "keybinds", name: "Keybinds", collapsible: true, shown: false, settings: [
             { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", value: [] },
         ]},
-        
     ]
 };
 
-const { Webpack, Patcher, Data, React, ContextMenu, Utils, Components } = BdApi;
+const { Webpack, Patcher, React, ContextMenu, Utils, Components } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ChannelStore = Webpack.getStore("ChannelStore");
 const GuildStore = Webpack.getStore("GuildStore");
@@ -295,8 +300,8 @@ module.exports = class BetterTTS {
     };
 
     getSettingsPanel() {
-        config.settings[4].settings[1].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
-        config.settings[4].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
+        config.settings[4].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
+        config.settings[4].settings[3].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
         config.settings[6].settings[0].options = getTTSSources();
         config.settings[6].settings[1].options = getTTSVoices(this.settings.ttsSource);
         config.settings[7].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
@@ -588,6 +593,28 @@ module.exports = class BetterTTS {
             buttonParent.push(ttsGroup);
     }
 
+    isConnected() {
+        let channelId = SelectedChannelStore.getVoiceChannelId();
+        return channelId !== null;
+    }
+
+    shouldIngnoreWhenConnected(source) {
+        if (!this.isConnected()) return false;
+        switch (this.settings.ingnoreWhenConnected) {
+            case "none":
+                return false;
+            case "subscribed":
+                return this.settings.ingnoreWhenConnected === source;
+            case "focusedConnected":
+                return this.settings.ingnoreWhenConnected === source;
+            case "all":
+                return true;
+            default:
+                break;
+        }
+        return false;
+    }
+
     // Message evaluation
     shouldPlayMessage(message) {
         let isSelfDeaf = MediaEngineStore.isSelfDeaf();
@@ -626,25 +653,26 @@ module.exports = class BetterTTS {
         message.prependGuildChannel = this.settings.channelInfoReading === "focusedConnected" || this.settings.channelInfoReading === "all";
         switch (this.settings.messagesChannelsToRead) {
             case "never":
-                return false;
+                break;
             case "allChannels":
                 return true;
             case "focusedChannel":
-                return messageChannelId === focusedChannel;
+                return messageChannelId === focusedChannel && !this.shouldIngnoreWhenConnected("focusedConnected");
             case "connectedChannel":
-                return messageChannelId === connectedChannel;
+                return messageChannelId === connectedChannel && !this.shouldIngnoreWhenConnected("focusedConnected");
             case "focusedGuildChannels":
-                return messageGuildId === focusedGuild;
+                return messageGuildId === focusedGuild && !this.shouldIngnoreWhenConnected("focusedConnected");
             case "connectedGuildChannels":
-                return messageGuildId === connectedGuild;
+                return messageGuildId === connectedGuild && !this.shouldIngnoreWhenConnected("focusedConnected");
             default:
-                if (this.ttsSubscribedChannels.has(messageChannelId) || this.ttsSubscribedGuilds.has(messageGuildId)){
-                    message.prependGuildChannel = this.settings.channelInfoReading === "subscribed" || this.settings.channelInfoReading === "all";
-                    return true;
-                } else {
-                    return false;
-                }
+                break;
         }
+        if(this.ttsSubscribedChannels.has(messageChannelId) || this.ttsSubscribedGuilds.has(messageGuildId)){
+            message.prependGuildChannel = this.settings.channelInfoReading === "subscribed" || this.settings.channelInfoReading === "all";
+            return true && !this.shouldIngnoreWhenConnected("subscribed");
+        }
+
+        return false;
     }
 
     getUserName(userId, guildId) {
