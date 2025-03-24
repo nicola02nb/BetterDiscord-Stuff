@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.13.2
+ * @version 2.13.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -87,23 +87,6 @@ const config = {
     ]
 };
 
-function setConfigSetting(id, newValue) {
-    for (const setting of config.settings) {
-        if (setting.id === id) {
-            Data.save("BetterTTS", id, newValue);
-            return setting.value = newValue;
-        }
-        if (setting.settings) {
-            for (const settingInt of setting.settings) {
-                if (settingInt.id === id) {
-                    Data.save("BetterTTS", id, newValue);
-                    settingInt.value = newValue;
-                }
-            }
-        }
-    }
-}
-
 const { Webpack, Patcher, Data, React, ContextMenu, Utils, Components } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ChannelStore = Webpack.getStore("ChannelStore");
@@ -137,6 +120,23 @@ module.exports = class BetterTTS {
     }
 
     // Settings
+    setConfigSetting(id, newValue) {
+        for (const setting of config.settings) {
+            if (setting.id === id) {
+                this.BdApi.Data.save(id, newValue);
+                return setting.value = newValue;
+            }
+            if (setting.settings) {
+                for (const settingInt of setting.settings) {
+                    if (settingInt.id === id) {
+                        this.BdApi.Data.save(id, newValue);
+                        settingInt.value = newValue;
+                    }
+                }
+            }
+        }
+    }
+
     initSettingsValues() {
         for (const setting of config.settings) {
             if (setting.type === "category") {
@@ -358,7 +358,7 @@ module.exports = class BetterTTS {
                 break;
         }
         this.settings[id] = value;
-        setConfigSetting(id, value);
+        this.setConfigSetting(id, value);
     }
 
     // Plugin start/stop
