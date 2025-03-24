@@ -5,6 +5,7 @@ A bunch of stuff for [BetterDiscord](https://github.com/BetterDiscord/BetterDisc
 - [BetterTTS](Plugins/BetterTTS)
 - [BiggerStreamPreview](Plugins/BiggerStreamPreview)
 - [BypassBlockedOrIgnored](Plugins/BypassBlockedOrIgnored)
+- [NoSpotifyPause](Plugins/NoSpotifyPause)
 - [NotifyWhenMuted](Plugins/NotifyWhenMuted)
 - [ShortcutScreenshareScreen](Plugins/ShortcutScreenshareScreen)
 - [ShowPing](Plugins/ShowPing)
