@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.13.1
+ * @version 2.13.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -11,7 +11,7 @@ const config = {
     changelog: [
         { title: "New Features", type: "added", items: ["Button to selec which channel prepend its server and/or channel name"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
-        //{ title: "Improvements", type: "improved", items: [""] },
+        { title: "Improvements", type: "improved", items: ["Settings Refactor"] },
     ],
     settings: [
         { type: "switch", id: "enableTTS", name: "Enable TTS", note: "Enables/Disables the TTS.", value: true },
@@ -70,15 +70,20 @@ const config = {
             { type: "switch", id: "blockMutedChannels", name: "Block Muted Channels", note: "Blocks muteds channels from TTS.", value: true },
             { type: "switch", id: "blockMutedGuilds", name: "Block Muted Guilds", note: "Blocks muteds server/guilds from TTS.", value: false },
         ]},
-        { type: "slider", id: "ttsVolume", name: "TTS Volume", note: "Changes the volume of the TTS.", step: 0.1, value: 100, min: 0, max: 100, units: "%", markers: [0, 25, 50, 75, 100], inline: false },
-        { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS.", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
-        { type: "custom", id: "ttsPreview", name: "Play TTS Preview", note: "Plays a default test message.", children: [] },
-        { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages.", value: 1000 },
-        { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", value: [] },
+        { type: "category", id: "ttsAudioSettings", name: "TTS Audio Settings", collapsible: true, shown: false, settings: [
+            { type: "slider", id: "ttsVolume", name: "TTS Volume", note: "Changes the volume of the TTS.", step: 0.1, value: 100, min: 0, max: 100, units: "%", markers: [0, 25, 50, 75, 100], inline: false },
+            { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS.", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
+            { type: "custom", id: "ttsPreview", name: "Play TTS Preview", note: "Plays a default test message.", children: [] },
+            { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages.", value: 1000 },
+        ]},
         { type: "category", id: "textReplacer", name: "Text Replacer", collapsible: true, shown: false, settings: [
             { type: "custom", id: "textReplacerRules", name: "Rules", note: "Sobstitute Texts that matches your regex before reading it.", children: [] },
             { type: "custom", id: "textReplacerAdd", name: "Add Rule", note: "Adds a regex rule to sobstitute matches with a custom text.", children: [] },
         ]},
+        { type: "category", id: "keybinds", name: "Keybinds", collapsible: true, shown: false, settings: [
+            { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", value: [] },
+        ]},
+        
     ]
 };
 
@@ -295,9 +300,9 @@ module.exports = class BetterTTS {
         config.settings[6].settings[0].options = getTTSSources();
         config.settings[6].settings[1].options = getTTSVoices(this.settings.ttsSource);
         config.settings[7].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
-        config.settings[10].children = [React.createElement(this.PreviewTTS)];
-        config.settings[13].settings[0].children = [React.createElement(this.TextReplaceDropdown, {})];
-        config.settings[13].settings[1].children = [React.createElement(this.TextReplaceAdd)];
+        config.settings[8].settings[2].children = [React.createElement(this.PreviewTTS)];
+        config.settings[9].settings[0].children = [React.createElement(this.TextReplaceDropdown, {})];
+        config.settings[9].settings[1].children = [React.createElement(this.TextReplaceAdd)];
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
@@ -367,7 +372,7 @@ module.exports = class BetterTTS {
         this.handleKeyDown = this.onKeyDown.bind(this);
 
         this.initSettingsValues();
-        this.updateToggleKeys(this.settings.toggleTTS);
+        this.updateToggleKeys(this.settings.ttsToggle);
 
         this.AudioPlayer = new AudioPlayer(this.settings.ttsSource,
             this.settings.ttsVoice,
