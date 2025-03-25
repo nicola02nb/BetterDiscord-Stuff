@@ -14,7 +14,7 @@ const config = {
   ]
 };
 
-const { Webpack } = BdApi;
+const { Webpack, Patcher } = BdApi;
 
 const SpotifyStore = Webpack.getStore("SpotifyStore");
 
@@ -23,17 +23,14 @@ const [ SpotifyModule, PauseFunction ] = [...Webpack.getWithKey(Webpack.Filters.
 module.exports = class NoSpotifyPause {
   constructor(meta) {
     this.meta = meta;
-    this.BdApi = new BdApi(this.meta.name);
   }
   start() {    
-    this.BdApi.Patcher.instead(SpotifyModule, PauseFunction, (e, t) => {
-      this.BdApi.Logger.log("Preventing Spotify from pausing");
-    });
-    this.BdApi.Patcher.instead(SpotifyStore, "wasAutoPaused", (context) => {
+    Patcher.instead(this.meta.name, SpotifyModule, PauseFunction, (originalFunc, args) => { });
+    Patcher.instead(SpotifyStore, "wasAutoPaused", (originalFunc, args) => {
       return false;
     });
   }
   stop() {
-    this.BdApi.Patcher.unpatchAll();
+    Patcher.unpatchAll(this.meta.name);
   }
 };
