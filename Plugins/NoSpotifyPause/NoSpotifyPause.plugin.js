@@ -26,7 +26,7 @@ module.exports = class NoSpotifyPause {
   }
   start() {    
     Patcher.instead(this.meta.name, SpotifyModule, PauseFunction, (originalFunc, args) => { });
-    Patcher.instead(SpotifyStore, "wasAutoPaused", (originalFunc, args) => {
+    Patcher.instead(this.meta.name, SpotifyStore, "wasAutoPaused", (originalFunc, args) => {
       return false;
     });
   }
