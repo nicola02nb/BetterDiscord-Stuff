@@ -1,7 +1,7 @@
 /**
  * @name BypassBlockedOrIgnored
  * @description Bypass the blocked or ignored user modal if is present in voice channels
- * @version 1.0.0
+ * @version 1.0.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -89,7 +89,7 @@ module.exports = class BypassBlockedOrIgnored {
             if (!this.settings.bypassWhenJoining) return;
 
             const channlId = args[0].channel.id;
-            args[0].bypassBlockedWarningModal = shouldBypass(channlId);
+            args[0].bypassBlockedWarningModal = this.shouldBypass(channlId);
         });
 
         Patcher.instead(this.meta.name, handleBoIJoined, "handleBlockedOrIgnoredUserVoiceChannelJoin", (thisObject, args, originalFunction) => {
