@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping. For Bugs or Feature Requests open an issue on my Github.
- * @version 2.5.4
+ * @version 2.5.5
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -26,6 +26,8 @@ const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
 
 const { labelWrapper, rtcConnectionStatus, rtcConnectionStatusConnected } = Webpack.getByKeys("labelWrapper", "rtcConnectionStatus", "rtcConnectionStatusConnected");
 const { voiceButtonsContainer } = Webpack.getByKeys("voiceButtonsContainer");
+const labelClasses = Webpack.getModule(m => m["hovered"] && m["default"]);
+const textMdMedium = BdApi.Webpack.getModule(m => m["text-md/medium"] && !m["avatar"] && !m["defaultColor"])["text-md/medium"];
 const ConnectionStatus = Webpack.getModule(Webpack.Filters.byStrings("rtcConnectionStatusWrapper")).prototype;
 
 var console = {};
@@ -65,6 +67,8 @@ module.exports = class ShowPing {
         this.BdApi.DOM.addStyle(`.${rtcConnectionStatusConnected.split(" ")[0]}{display: flex;}
             .${voiceButtonsContainer}{margin-left: 2px !important;}
             .${labelWrapper} > button {width: 100%; display: inline;}
+            .${labelClasses["hovered"]} > div {text-overflow: ellipsis; overflow: hidden;}
+            .${labelClasses["default"]} > div {text-overflow: ellipsis; overflow: hidden;}
             .pingDisplay{min-width: min-content;}`);
         this.addPingDisplay();
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
@@ -108,7 +112,7 @@ module.exports = class ShowPing {
         if (this.statusBar) {
             // Create ping display element
             this.pingElement = document.createElement('div');
-            this.pingElement.className = 'pingDisplay';
+            this.pingElement.className = `${textMdMedium} pingDisplay`;
             // Insert ping element after the status text
             this.statusBar.appendChild(this.pingElement);
 
