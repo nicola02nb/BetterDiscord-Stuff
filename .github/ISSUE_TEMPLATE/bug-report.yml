@@ -29,13 +29,15 @@ body:
     id: screenshots
     attributes:
       label: Screenshots
-      description: If applicable, add screenshots to help explain your problem.
+      description: If applicable, add screenshots to help explain your problem. You can provide error logs from DevTools Console (Ctrl+Shift+I) as well.
       placeholder: "Add screenshots"
+    validations:
+      required: false
   - type: input
     id: discord_version
     attributes:
       label: Discord Version
-      description: The version of Discord you are using.
+      description: The version of Discord you are using. You can find this by scrolling discord settings categories to the bottom and looking for the version number(Host 1.0.x).
       placeholder: "Enter your Discord version"
     validations:
       required: false
@@ -43,7 +45,7 @@ body:
     id: betterdiscord_version
     attributes:
       label: BetterDiscord Version
-      description: The version of BetterDiscord you are using.
+      description: The version of BetterDiscord you are using. You can find this by scrolling discord settings categories to the bottom and looking for the version number(Betterdiscord 1.x.x).
       placeholder: "Enter your BetterDiscord version"
     validations:
       required: false
