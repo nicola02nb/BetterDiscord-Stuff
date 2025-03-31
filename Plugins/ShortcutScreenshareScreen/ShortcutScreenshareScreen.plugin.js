@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.1
+ * @version 1.1.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -175,6 +175,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     stopStream() {
         let streamkey = StreamRTCConnectionStore.getActiveStreamKey();
+        if (streamkey === null) return;
         streamStop(streamkey);
         this.streamChannelId = null;
         this.streamGuildId = null;
