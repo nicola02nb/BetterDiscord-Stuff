@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.2
+ * @version 1.1.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -44,6 +44,7 @@ const StreamRTCConnectionStore = Webpack.getStore("StreamRTCConnectionStore");
 const streamStart = Webpack.getModule(Filters.byStrings("STREAM_START", "GUILD", "CALL", "OVERLAY"), { searchExports: true });
 const streamStop = Webpack.getModule(Filters.byStrings("STREAM_STOP"), { searchExports: true });
 
+const DiscordUtils = DiscordNative.nativeModules.requireModule("discord_utils");
 const platform = process.platform;
 const ctrl = platform === "win32" ? 0xa2 : platform === "darwin" ? 0xe0 : 0x25;
 const keybindModule = Webpack.getModule(m => m.ctrl === ctrl, { searchExports: true });
@@ -147,9 +148,9 @@ module.exports = class ShortcutScreenshareScreen {
         return streamSource === null || streamSource.startsWith("window");
     }
 
-    async getPreviews(functionName, width = 0, height = 0) {
+    async getPreviews(functionName, width = 376, height = 212) {
         const mediaEngine = MediaEngineStore.getMediaEngine();
-        let previews = mediaEngine[functionName](width, height);
+        let previews = await mediaEngine[functionName](width, height);
         if (functionName === "getScreenPreviews") {
             config.settings[0].max = previews.length;
         }
@@ -264,7 +265,7 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     registerKeybind(id, keybind, toCall) {
-        DiscordNative.nativeModules.requireModule("discord_utils").inputEventRegister(
+        DiscordUtils.inputEventRegister(
             id,
             keybind,
             (isDown) => { if (isDown) toCall() },
@@ -275,7 +276,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     unregisterKeybinds() {
         for (const id of this.keyBindsIds) {
-            DiscordNative.nativeModules.requireModule("discord_utils").inputEventUnregister(id);
+            DiscordUtils.inputEventUnregister(id);
         }
         this.keyBindsIds = [];
     }
