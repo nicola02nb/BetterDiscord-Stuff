@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.3
+ * @version 1.1.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -53,9 +53,6 @@ const TOGGLE_STREAM_KEYBIND = 3006;
 
 var console = {};
 
-/* var pluginToggleStream = () => { };
-var pluginToggleGameOrScreen = () => { }; */
-
 module.exports = class ShortcutScreenshareScreen {
     constructor(meta) {
         this.meta = meta;
@@ -64,12 +61,14 @@ module.exports = class ShortcutScreenshareScreen {
 
         this.settings = {};
         this.keyBindsIds = [];
+
+        this.streamChannelId = null;
+        this.streamGuildId = null;
+        this.streamOptions = null;
+
         this.toggleStreamHandle = this.toggleStream.bind(this);
         this.toggleGameOrScreenHandle = this.toggleGameOrScreen.bind(this);
         this.toggleAudiohandle = this.toggleAudio.bind(this);
-
-        /* pluginToggleStream = this.toggleStreamHandle
-        pluginToggleGameOrScreen = this.toggleGameOrScreenHandle */
     }
 
     setConfigSetting(id, newValue) {
@@ -120,11 +119,15 @@ module.exports = class ShortcutScreenshareScreen {
                         this.updateKeybinds();
                         break;
                     case "disablePreview":
-                        this.streamOptions.previewDisabled = value;
+                        this.settings.shareAudio
+                        if (this.streamOptions)
+                            this.streamOptions.previewDisabled = value;
                         this.updateStream();
                         break;
                     case "shareAudio":
-                        this.streamOptions.sound = value;
+                        this.settings.shareAudio
+                        if (this.streamOptions)
+                            this.streamOptions.sound = value;
                         this.updateStream();
                         break;
                 }
@@ -141,8 +144,16 @@ module.exports = class ShortcutScreenshareScreen {
         this.unregisterKeybinds();
     }
 
+    getActiveStreamKey() {
+        const activeStream = ApplicationStreamingStore.getCurrentUserActiveStream();
+        if (activeStream) {
+            return activeStream.streamType+":"+activeStream.guildId+":"+activeStream.channelId+":"+activeStream.ownerId;
+        }
+        return null;
+    }
+
     isStreamingWindow() {
-        let streamkey = StreamRTCConnectionStore.getActiveStreamKey();
+        let streamkey = this.getActiveStreamKey();
         if (streamkey === null) return false;
         let streamSource = StreamRTCConnectionStore.getStreamSourceId(streamkey);
         return streamSource === null || streamSource.startsWith("window");
@@ -175,7 +186,7 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     stopStream() {
-        let streamkey = StreamRTCConnectionStore.getActiveStreamKey();
+        let streamkey = this.getActiveStreamKey();
         if (streamkey === null) return;
         streamStop(streamkey);
         this.streamChannelId = null;
