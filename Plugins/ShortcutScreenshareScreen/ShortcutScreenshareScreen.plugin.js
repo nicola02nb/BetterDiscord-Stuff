@@ -264,14 +264,14 @@ module.exports = class ShortcutScreenshareScreen {
 
     mapKeybind(keybind) {
         let mappedKeybind = [];
-        keybind.forEach((key) => {
-            key = key.toLowerCase();
+        for (const keyS of keybind) {
+            let key = keyS.toLowerCase();
             if (key === "control") key = "ctrl";
             if (key.startsWith("arrow")) key = key.replace("arrow", "");
             if (key.startsWith("page")) key = key.replace("page", "page ");
 
             mappedKeybind.push([0, keybindModule[key]]);
-        });
+        };
         return mappedKeybind;
     }
 
