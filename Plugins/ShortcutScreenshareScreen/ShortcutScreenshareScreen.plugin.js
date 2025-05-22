@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.4
+ * @version 1.1.5
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -49,7 +49,7 @@ const platform = process.platform;
 const ctrl = platform === "win32" ? 0xa2 : platform === "darwin" ? 0xe0 : 0x25;
 const keybindModule = Webpack.getModule(m => m.ctrl === ctrl, { searchExports: true });
 
-const TOGGLE_STREAM_KEYBIND = 3006;
+const TOGGLE_STREAM_KEYBIND = 3000;
 
 var console = {};
 
@@ -256,26 +256,62 @@ module.exports = class ShortcutScreenshareScreen {
 
         for (const [shortcutName, shortcutFunction] of Object.entries(shortcuts)) {
             if (this.settings[shortcutName]?.length > 0) {
-                this.registerKeybind(TOGGLE_STREAM_KEYBIND + i, this.mapKeybind(this.settings[shortcutName]), shortcutFunction);
-                i++;
+                const mappedKeybinds = this.mapKeybind(this.settings[shortcutName]);
+                for (const keybind of mappedKeybinds) {
+                    this.registerKeybind(TOGGLE_STREAM_KEYBIND + i, keybind, shortcutFunction);
+                    i++;
+                }
             }
         }
     }
 
     mapKeybind(keybind) {
-        let mappedKeybind = [];
-        for (const keyS of keybind) {
-            let key = keyS.toLowerCase();
-            if (key === "control") key = "ctrl";
-            if (key.startsWith("arrow")) key = key.replace("arrow", "");
-            if (key.startsWith("page")) key = key.replace("page", "page ");
+        const mappedKeybinds = [];
 
-            mappedKeybind.push([0, keybindModule[key]]);
+        const specialKeys = [];
+        const normalKeys = [];
+
+        for (const key of keybind) {
+            let keyL = key.toLowerCase();
+            if (keyL === "control") keyL = "ctrl";
+            if (keyL.startsWith("arrow")) keyL = keyL.replace("arrow", "");
+            if (keyL.startsWith("page")) keyL = keyL.replace("page", "page ");
+
+            if (keyL === "ctrl" || keyL === "shift" || keyL === "alt" || keyL === "meta") {
+                specialKeys.push(keyL);
+            }
+            else {
+                normalKeys.push(keyL);
+            }
         };
-        return mappedKeybind;
+
+        const numberOfCombinations = Math.pow(2, specialKeys.length);
+        for (let i = 0; i < numberOfCombinations; i++) {
+            const combination = [];
+            for (let j = 0; j < specialKeys.length; j++) {
+                if ((i & Math.pow(2, j)) > 0) {
+                    combination.push([0, keybindModule[specialKeys[j]]]);
+                }
+                else {
+                    combination.push([0, keybindModule["right " + specialKeys[j]]]);
+                }
+            }
+            mappedKeybinds.push(combination);
+        }
+        for (const mappedKeybind of mappedKeybinds) {
+            for (const key of normalKeys) {
+                mappedKeybind.push([0, keybindModule[key]]);
+            }
+        }
+
+        return mappedKeybinds;
     }
 
     registerKeybind(id, keybind, toCall) {
+        if (!Array.isArray(keybind) || keybind.length === 0) {
+            console.error("Keybind keybind is not an array or is empty. Keybind: ", keybind);
+            return;
+        }
         DiscordUtils.inputEventRegister(
             id,
             keybind,
