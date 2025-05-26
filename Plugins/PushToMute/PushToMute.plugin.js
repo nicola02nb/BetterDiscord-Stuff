@@ -32,7 +32,7 @@ const keybindModule = Webpack.getModule(m => m.ctrl === ctrl, { searchExports: t
 
 var console = {};
 
-const PUSH_TO_MUTE_KEYBIND = 3000;
+const PUSH_TO_MUTE_KEYBIND = 3100;
 
 module.exports = class BasePlugin {
     constructor(meta) {
