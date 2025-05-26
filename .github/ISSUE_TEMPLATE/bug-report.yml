@@ -13,7 +13,11 @@ body:
         - "AutoSwitchStatus"
         - "BetterTTS"
         - "BiggerStreamPreview"
+        - "BypassBlockedOrIgnored"
+        - "NoSpotifyPause"
         - "NotifyWhenMuted"
+        - "PushToMute"
+        - "ShortcutScreenshareScreen"
         - "ShowPing"
     validations:
       required: true
