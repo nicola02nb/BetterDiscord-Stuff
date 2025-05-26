@@ -7,6 +7,7 @@ A bunch of stuff for [BetterDiscord](https://github.com/BetterDiscord/BetterDisc
 - [BypassBlockedOrIgnored](Plugins/BypassBlockedOrIgnored)
 - [NoSpotifyPause](Plugins/NoSpotifyPause)
 - [NotifyWhenMuted](Plugins/NotifyWhenMuted)
+- [PushToMute](Plugins/PushToMute)
 - [ShortcutScreenshareScreen](Plugins/ShortcutScreenshareScreen)
 - [ShowPing](Plugins/ShowPing)
 ## Support/Suggestions
