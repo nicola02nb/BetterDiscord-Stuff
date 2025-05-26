@@ -1,6 +1,6 @@
 /**
  * @name PushToMute
- * @description A plugin that adds a keybind to mute while it is pressed
+ * @description A plugin that adds a keybind to mute the microphone while it is pressed.
  * @version 1.0.0
  * @author nicola02nb
  */
