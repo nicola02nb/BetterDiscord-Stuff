@@ -3,6 +3,9 @@
  * @description A plugin that adds a keybind to mute the microphone while it is pressed.
  * @version 1.0.0
  * @author nicola02nb
+ * @invite hFuY8DfDGK
+ * @authorLink https://github.com/nicola02nb
+ * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/PushToMute
  */
 const config = {
     changelog: [
