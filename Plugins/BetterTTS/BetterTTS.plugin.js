@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.14.1
+ * @version 2.14.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,9 +9,9 @@
 */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Button to select which channel prepend its server and/or channel name", "Settings to ignore some channels when connected into voice channel"] },
+        //{ title: "New Features", type: "added", items: [""] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
-        { title: "Improvements", type: "improved", items: ["Settings Refactor"] },
+        //{ title: "Improvements", type: "improved", items: [""] },
     ],
     settings: [
         { type: "switch", id: "enableTTS", name: "Enable TTS", note: "Enables/Disables the TTS.", value: true },
@@ -58,15 +58,12 @@ const config = {
                 { label: "Read Only Domain", value: "domain" },
                 { label: "Sobstitute With word URL", value: "sobstitute" },
                 { label: "Keep URL", value: "keep" },
-            ]},            
+            ]},
+            { type: "switch", id: "messageSpoilersReading", name: "Enables Reading Messages Spoilers", note: "If enabled, it will read messages spoilers content.", value: false },          
         ]},
         { type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
-            { type: "dropdown", id: "ttsSource", name: "TTS Source", note: "Choose the channel you want to play the TTS.", value: "streamlabs", options: [
-                { label: "Streamlabs", value: "streamlabs" },
-            ]},
-            { type: "dropdown", id: "ttsVoice", name: "Voice for TTS", note: "Changes voice used for TTS.", value: "Brian", options: [
-                { label: "Brian", value: "Brian" },
-            ]}
+            { type: "custom", id: "ttsSource", name: "TTS Source", note: "Choose the channel you want to play the TTS.", value:"streamlabs", children: []},
+            { type: "custom", id: "ttsVoice", name: "Voice for TTS", note: "Changes voice used for TTS.", value:"Brian", children: []}
         ]},
         { type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
             { type: "custom", id: "mutedUsers", name: "Muted Users", note: "List of users that muted to TTS.", children: [] },
@@ -161,6 +158,54 @@ module.exports = class BetterTTS {
         this.textReplacerRules = new Set(this.BdApi.Data.load("textReplacerRules")) ?? new Set();
         this.updateRelationships();
     }
+    
+    listeners = {};
+
+    subscribe = (event, callback) => {
+        this.listeners[event]=callback;
+    };
+
+    emit = (event, data) => {
+        if (this.listeners[event]) {
+            this.listeners[event](data);
+        }
+    };
+
+    DropdownSources = () => {
+        const options = getTTSSources();
+        const [selectedSource, setSelectedSource] = React.useState(this.settings.ttsSource || options[0]?.value || "");
+
+        return React.createElement(Components.DropdownInput, {
+            value: selectedSource,
+            onChange: React.useCallback((value) => {
+                setSelectedSource(value);
+                this.updateSettingValue(undefined, "ttsSource", value);
+                this.emit("sourceChanged", value);
+            }),
+            options: options
+        });
+    };
+
+    DropdownVoices = () => {
+        const [source, setSource] = React.useState(this.settings.ttsSource || "");
+        const [options, setOptions] = React.useState(getTTSVoices(source));
+        const [selectedVoice, setSelectedVoice] = React.useState(this.settings.ttsVoice || options[0]?.value || "");
+
+        this.subscribe("sourceChanged", (newSource) => {
+            setOptions(getTTSVoices(newSource));
+            setSelectedVoice(options[0]?.value || "");
+            this.updateSettingValue(undefined, "ttsVoice", selectedVoice);
+        });
+
+        return React.createElement(Components.DropdownInput, {
+            value: selectedVoice,
+            onChange: React.useCallback((value) => {
+                setSelectedVoice(value);
+                this.updateSettingValue(undefined, "ttsVoice", value);
+            }),
+            options: options
+        });
+    };
 
     DropdownButtonGroup = ({labeltext, setName, getFunction}) => {
         const [selectedOption, setSelectedOption] = React.useState("");
@@ -211,7 +256,7 @@ module.exports = class BetterTTS {
                 );
             }
             return React.createElement(React.Fragment, null, icon, "Preview");
-        }
+        };
 
         return React.createElement(
             React.Fragment,
@@ -302,8 +347,8 @@ module.exports = class BetterTTS {
     getSettingsPanel() {
         config.settings[4].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
         config.settings[4].settings[3].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
-        config.settings[6].settings[0].options = getTTSSources();
-        config.settings[6].settings[1].options = getTTSVoices(this.settings.ttsSource);
+        config.settings[6].settings[0].children = [React.createElement(this.DropdownSources)];
+        config.settings[6].settings[1].children = [React.createElement(this.DropdownVoices)];
         config.settings[7].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
         config.settings[8].settings[2].children = [React.createElement(this.PreviewTTS)];
         config.settings[9].settings[0].children = [React.createElement(this.TextReplaceDropdown, {})];
@@ -417,16 +462,16 @@ module.exports = class BetterTTS {
 
     // Event handelers
     patchOriginalTTS() {
-        Patcher.instead(this.meta.name, speakMessage[0], speakMessage[1], (_, e, t) => {
-            setTTSType[0][setTTSType[1]]("NEVER");
+        Patcher.instead(this.meta.name, speakMessage[0], speakMessage[1], (thisObject, args, originalFunction) => {
+            setTTSType[0][setTTSType[1]]("NEVER"); // Disables the original TTS
         });
-        Patcher.instead(this.meta.name, cancelSpeak[0], cancelSpeak[1], (_, e, t) => {
+        Patcher.instead(this.meta.name, cancelSpeak[0], cancelSpeak[1], (thisObject, args, originalFunction) => {
             return;
         });
     }
 
     messageRecieved(event) {
-        if(!this.settings.enableTTS) return
+        if(!this.settings.enableTTS) return;
         let message = event.message;
         if ((event.guildId || !message.member) && this.shouldPlayMessage(event.message)) {
             let text = this.getPatchedContent(message, message.guild_id);
@@ -435,7 +480,7 @@ module.exports = class BetterTTS {
     }
 
     annouceUser(event) {
-        if(!this.settings.enableTTS) return
+        if(!this.settings.enableTTS) return;
         let connectedChannelId = RTCConnectionStore.getChannelId();
         let userId = UserStore.getCurrentUser().id;
         for (const userStatus of event.voiceStates) {
@@ -453,7 +498,7 @@ module.exports = class BetterTTS {
     }
 
     speakMessage(event) {
-        if(!this.settings.enableTTS) return
+        if(!this.settings.enableTTS) return;
         let text = this.getPatchedContent(event.message, event.channel.guild_id);
         this.AudioPlayer.addToQueue(text);
     }
@@ -522,7 +567,8 @@ module.exports = class BetterTTS {
             label: "Speak Announcement",
             icon: listenIcon,
             action: () => {
-                let username = this.getUserName(userId);
+                const guildId = SelectedGuildStore.getGuildId();
+                let username = this.getUserName(userId, guildId);
                 this.AudioPlayer.addToQueue(`${username} joined`);
             }
         });
@@ -701,7 +747,7 @@ module.exports = class BetterTTS {
             .replace(/<@&?(\d+)>/g, (match, roleId) => GuildStore.getRoles(guildId)[roleId]?.name)
             .replace(/<#(\d+)>/g, (match, channelId) => ChannelStore.getChannel(channelId)?.name)
             .replace(/<a?:(\w+):(\d+)>/g, (match, emojiName) => "Emoji " + emojiName)
-            .replace(/\|\|([^|]+)\|\|/g, (match, content) => "Spoiler")
+            .replace(/\|\|([^|]+)\|\|/g, (match, content) => this.settings.messageSpoilersReading ? content : "Spoiler")
             .replace(/https?:\/\/[^\s]+/g, (url) => {
                 switch (this.settings.messageLinksReading) {
                     case 'remove':
