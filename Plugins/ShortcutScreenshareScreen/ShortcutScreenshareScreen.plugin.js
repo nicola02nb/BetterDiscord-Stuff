@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.5
+ * @version 1.1.6
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -19,12 +19,15 @@ const config = {
             { type: "keybind", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", clearable: true, value: [] },
             { type: "keybind", id: "toggleGameOrScreenShortcut", name: "Toggle Game/Screen Shortcut", note: "Set the shortcut to toggle between sharing game or screen.", clearable: true, value: [] },
             { type: "keybind", id: "toggleAudioShortcut", name: "Toggle Audio Shortcut", note: "Set the shortcut to toggle audio sharing.", clearable: true, value: [] },
+            { type: "keybind", id: "startStreamShortcut", name: "Start Stream Shortcut", note: "Set the shortcut to start the stream.", clearable: true, value: [] },
+            { type: "keybind", id: "stopStreamShortcut", name: "Stop Stream Shortcut", note: "Set the shortcut to stop the stream.", clearable: true, value: [] },
         ]},
         { type: "category", id: "streamOptions", name: "Stream Options", settings: [
             { type: "switch", id: "disablePreview", name: "Disable Preview", note: "If enabled, the preview will be disabled.", value: false },
             { type: "switch", id: "shareAudio", name: "Share Audio", note: "If enabled, the audio will be shared.", value: true },
             { type: "switch", id: "shareAlwaysScreen", name: "Share Always Screen", note: "If enabled, when you start a stream, it will always screenshare the screen instead of a game.", value: false },
         ]},
+        { type: "switch", id: "showToast", name: "Show Toasts", note: "If enabled, toasts will be shown when the stream is started or stopped.", value: true },
         /* { type: "category", id: "testButtons", name: "Test Buttons", settings: [
             { type: "button", id: "toggleStream", name: "Start/Stop Stream", note: "Starts/Stops the stream.", children: ["Start/Stop"], onClick: () => pluginToggleStream() },
             { type: "button", id: "toggleGameOrScreen", name: "Toggle Game/Screen", note: "Toggles between sharing game or screen.", children: ["Toggle"], onClick: () => pluginToggleGameOrScreen() },
@@ -69,6 +72,8 @@ module.exports = class ShortcutScreenshareScreen {
         this.toggleStreamHandle = this.toggleStream.bind(this);
         this.toggleGameOrScreenHandle = this.toggleGameOrScreen.bind(this);
         this.toggleAudiohandle = this.toggleAudio.bind(this);
+        this.startStreamHandle = this.startStream.bind(this);
+        this.stopStreamHandle = this.stopStream.bind(this);
     }
 
     setConfigSetting(id, newValue) {
@@ -118,6 +123,12 @@ module.exports = class ShortcutScreenshareScreen {
                     case "toggleAudioShortcut":
                         this.updateKeybinds();
                         break;
+                    case "startStreamShortcut":
+                        this.updateKeybinds();
+                        break;
+                    case "stopStreamShortcut":
+                        this.updateKeybinds();
+                        break;
                     case "disablePreview":
                         this.settings.shareAudio
                         if (this.streamOptions)
@@ -136,12 +147,23 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     start() {
+        this.BdApi.DOM.addStyle(`
+            .bd-toast.toast-stream-stopped.icon {background-image: none;}
+            .bd-toast.toast-stream-start.icon {background: "📺";}
+        `);
         this.initSettingsValues();
         this.updateKeybinds();
     }
 
     stop() {
         this.unregisterKeybinds();
+        this.BdApi.DOM.removeStyle();
+    }
+
+    showToast(message, type) {
+        if (this.settings.showToast) {
+            this.BdApi.UI.showToast(message, {type: type, icon: false});
+        }
     }
 
     getActiveStreamKey() {
@@ -171,18 +193,21 @@ module.exports = class ShortcutScreenshareScreen {
     async startStream() {
         await this.initializeStreamSetting();
         streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
+        this.showToast("Screenshare started!", "success");
     }
 
     async toggleGameOrScreen() {
         await this.updateStreamSetting();
         this.updateStream();
+        this.showToast(`Switched to ${this.isStreamingWindow() ? "screen" : "game"} sharing!`, "info");
     }
 
     toggleAudio() {
         this.settings.shareAudio = !this.settings.shareAudio;
         this.setConfigSetting("shareAudio", this.settings.shareAudio);
-        this.streamOptions.sound = this.settings.shareAudio;
+        this.streamOptions?.sound = this.settings.shareAudio;
         this.updateStream();
+        this.showToast(`Audio sharing ${this.settings.shareAudio ? "enabled" : "disabled"}!`, "info");
     }
 
     stopStream() {
@@ -192,6 +217,7 @@ module.exports = class ShortcutScreenshareScreen {
         this.streamChannelId = null;
         this.streamGuildId = null;
         this.streamOptions = null;
+        this.showToast("Screenshare stopped!", "error");
     }
 
     toggleStream() {
@@ -250,7 +276,13 @@ module.exports = class ShortcutScreenshareScreen {
 
     updateKeybinds() {
         this.unregisterKeybinds();
-        let shortcuts = { toggleStreamShortcut: this.toggleStreamHandle, toggleGameOrScreenShortcut: this.toggleGameOrScreenHandle, toggleAudioShortcut: this.toggleAudiohandle };
+        let shortcuts = { 
+            toggleStreamShortcut: this.toggleStreamHandle, 
+            toggleGameOrScreenShortcut: this.toggleGameOrScreenHandle, 
+            toggleAudioShortcut: this.toggleAudiohandle,
+            startStreamShortcut: this.startStreamHandle,
+            stopStreamShortcut: this.stopStreamHandle
+        };
 
         let i = 0;
 
