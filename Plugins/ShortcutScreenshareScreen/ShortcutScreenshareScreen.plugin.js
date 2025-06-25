@@ -205,7 +205,7 @@ module.exports = class ShortcutScreenshareScreen {
     toggleAudio() {
         this.settings.shareAudio = !this.settings.shareAudio;
         this.setConfigSetting("shareAudio", this.settings.shareAudio);
-        this.streamOptions?.sound = this.settings.shareAudio;
+        this.streamOptions.sound = this.settings.shareAudio;
         this.updateStream();
         this.showToast(`Audio sharing ${this.settings.shareAudio ? "enabled" : "disabled"}!`, "info");
     }
