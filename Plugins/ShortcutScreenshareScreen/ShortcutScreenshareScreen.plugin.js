@@ -147,17 +147,12 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     start() {
-        this.BdApi.DOM.addStyle(`
-            .bd-toast.toast-stream-stopped.icon {background-image: none;}
-            .bd-toast.toast-stream-start.icon {background: "📺";}
-        `);
         this.initSettingsValues();
         this.updateKeybinds();
     }
 
     stop() {
         this.unregisterKeybinds();
-        this.BdApi.DOM.removeStyle();
     }
 
     showToast(message, type) {
@@ -217,7 +212,7 @@ module.exports = class ShortcutScreenshareScreen {
         this.streamChannelId = null;
         this.streamGuildId = null;
         this.streamOptions = null;
-        this.showToast("Screenshare stopped!", "error");
+        this.showToast("Screenshare stopped!", "info");
     }
 
     toggleStream() {
