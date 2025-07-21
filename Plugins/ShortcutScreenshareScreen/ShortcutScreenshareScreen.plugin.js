@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.6
+ * @version 1.1.7
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -28,14 +28,10 @@ const config = {
             { type: "switch", id: "shareAlwaysScreen", name: "Share Always Screen", note: "If enabled, when you start a stream, it will always screenshare the screen instead of a game.", value: false },
         ]},
         { type: "switch", id: "showToast", name: "Show Toasts", note: "If enabled, toasts will be shown when the stream is started or stopped.", value: true },
-        /* { type: "category", id: "testButtons", name: "Test Buttons", settings: [
-            { type: "button", id: "toggleStream", name: "Start/Stop Stream", note: "Starts/Stops the stream.", children: ["Start/Stop"], onClick: () => pluginToggleStream() },
-            { type: "button", id: "toggleGameOrScreen", name: "Toggle Game/Screen", note: "Toggles between sharing game or screen.", children: ["Toggle"], onClick: () => pluginToggleGameOrScreen() },
-        ]} */
     ]
 };
 
-const { Webpack } = BdApi;
+const { Webpack, UI, Data } = BdApi;
 const { Filters } = Webpack;
 
 const ApplicationStreamingStore = Webpack.getStore("ApplicationStreamingStore");
@@ -54,13 +50,9 @@ const keybindModule = Webpack.getModule(m => m.ctrl === ctrl, { searchExports: t
 
 const TOGGLE_STREAM_KEYBIND = 3000;
 
-var console = {};
-
 module.exports = class ShortcutScreenshareScreen {
     constructor(meta) {
         this.meta = meta;
-        this.BdApi = new BdApi(this.meta.name);
-        console = this.BdApi.Logger;
 
         this.settings = {};
         this.keyBindsIds = [];
@@ -79,13 +71,13 @@ module.exports = class ShortcutScreenshareScreen {
     setConfigSetting(id, newValue) {
         for (const setting of config.settings) {
             if (setting.id === id) {
-                this.BdApi.Data.save(id, newValue);
+                Data.save(this.meta.name, id, newValue);
                 return setting.value = newValue;
             }
             if (setting.settings) {
                 for (const settingInt of setting.settings) {
                     if (settingInt.id === id) {
-                        this.BdApi.Data.save(id, newValue);
+                        Data.save(this.meta.name, id, newValue);
                         settingInt.value = newValue;
                     }
                 }
@@ -97,18 +89,18 @@ module.exports = class ShortcutScreenshareScreen {
         for (const setting of config.settings) {
             if (setting.type === "category") {
                 for (const settingInt of setting.settings) {
-                    settingInt.value = this.BdApi.Data.load(settingInt.id) ?? settingInt.value;
+                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
                     this.settings[settingInt.id] = settingInt.value;
                 }
             } else {
-                setting.value = this.BdApi.Data.load(setting.id) ?? setting.value;
+                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
                 this.settings[setting.id] = setting.value;
             }
         }
     }
 
     getSettingsPanel() {
-        return this.BdApi.UI.buildSettingsPanel({
+        return UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
                 this.settings[id] = value;
@@ -157,7 +149,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     showToast(message, type) {
         if (this.settings.showToast) {
-            this.BdApi.UI.showToast(message, {type: type, icon: false});
+            UI.showToast(message, {type: type, icon: false});
         }
     }
 
