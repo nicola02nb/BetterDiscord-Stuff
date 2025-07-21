@@ -1,7 +1,7 @@
 /**
  * @name BypassBlockedOrIgnored
  * @description Bypass the blocked or ignored user modal if is present in voice channels
- * @version 1.0.1
+ * @version 1.0.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -21,7 +21,7 @@ const config = {
     ]
 };
 
-const { Webpack, Patcher } = BdApi;
+const { Webpack, Patcher, UI } = BdApi;
 
 const RelationshipStore = Webpack.getStore("RelationshipStore");
 
@@ -29,13 +29,9 @@ const handleVoice = Webpack.getModule(m => m.handleVoiceConnect);
 const { getBlockedUsersForVoiceChannel, getIgnoredUsersForVoiceChannel } = Webpack.getModule(m => m.getBlockedUsersForVoiceChannel && m.getIgnoredUsersForVoiceChannel);
 const handleBoIJoined = Webpack.getModule(m => m.handleBlockedOrIgnoredUserVoiceChannelJoin);
 
-var console = {};
-
 module.exports = class BypassBlockedOrIgnored {
     constructor(meta) {
         this.meta = meta;
-        this.BdApi = new BdApi(this.meta.name);
-        console = this.BdApi.Logger;
 
         this.settings = {};
     }
@@ -43,13 +39,13 @@ module.exports = class BypassBlockedOrIgnored {
     setConfigSetting(id, newValue) {
         for (const setting of config.settings) {
             if (setting.id === id) {
-                this.BdApi.Data.save(id, newValue);
+                Data.save(this.meta.name, id, newValue);
                 return setting.value = newValue;
             }
             if (setting.settings) {
                 for (const settingInt of setting.settings) {
                     if (settingInt.id === id) {
-                        this.BdApi.Data.save(id, newValue);
+                        Data.save(this.meta.name, id, newValue);
                         settingInt.value = newValue;
                     }
                 }
@@ -61,18 +57,18 @@ module.exports = class BypassBlockedOrIgnored {
         for (const setting of config.settings) {
             if (setting.type === "category") {
                 for (const settingInt of setting.settings) {
-                    settingInt.value = this.BdApi.Data.load(settingInt.id) ?? settingInt.value;
+                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
                     this.settings[settingInt.id] = settingInt.value;
                 }
             } else {
-                setting.value = this.BdApi.Data.load(setting.id) ?? setting.value;
+                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
                 this.settings[setting.id] = setting.value;
             }
         }
     }
 
     getSettingsPanel() {
-        return this.BdApi.UI.buildSettingsPanel({
+        return UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
                 console.log(category, id, value, typeof value);
