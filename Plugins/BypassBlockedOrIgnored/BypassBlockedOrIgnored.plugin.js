@@ -21,7 +21,7 @@ const config = {
     ]
 };
 
-const { Webpack, Patcher, UI } = BdApi;
+const { Webpack, Patcher, UI, Data } = BdApi;
 
 const RelationshipStore = Webpack.getStore("RelationshipStore");
 
