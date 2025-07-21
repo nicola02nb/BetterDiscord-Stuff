@@ -3,10 +3,10 @@
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @description View bigger stream previews via the context menu.
- * @version 1.1.10
+ * @version 1.1.11
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview
  */
-const { Webpack, ContextMenu, React } = BdApi;
+const { Webpack, ContextMenu, React, DOM } = BdApi;
 const { Filters } = Webpack;
 
 const openModal = Webpack.getModule(Filters.byStrings('onCloseRequest', 'onCloseCallback', 'instant', 'backdropStyle'), { searchExports: true });
@@ -21,17 +21,13 @@ const useStateFromStores = Webpack.getModule(Filters.byStrings("useStateFromStor
 const ApplicationStreamingStore = Webpack.getStore("ApplicationStreamingStore");
 const ApplicationStreamPreviewStore = Webpack.getStore("ApplicationStreamPreviewStore");
 
-var console = {};
-
 module.exports = class BiggerStreamPreview {
   constructor(meta) {
     this.meta = meta;
-    this.BdApi = new BdApi(this.meta.name);
-    console = this.BdApi.Logger;
   }
 
   start() {
-    this.BdApi.DOM.addStyle(".bigger-stream-preview { background: transparent !important; }");
+    DOM.addStyle(".bigger-stream-preview { background: transparent !important; }");
     this.patchUserContextMenu();
     this.patchStreamContextMenu();
   }
@@ -39,7 +35,7 @@ module.exports = class BiggerStreamPreview {
   stop() {
     this.unpatchUserContextMenu();
     this.unpatchStreamContextMenu();
-    this.BdApi.DOM.removeStyle();
+    DOM.removeStyle(this.meta.name);
   }
 
   patchUserContextMenu() {
