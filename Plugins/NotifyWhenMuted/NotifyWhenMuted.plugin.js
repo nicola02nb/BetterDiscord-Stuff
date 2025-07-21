@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.2
+ * @version 1.4.3
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
@@ -14,7 +14,7 @@ const config = {
         //{ title: "Improvements", type: "improved", items: [""] },
     ],
     settings: [
-        { type: "switch", id: "enabled", name: "Enable Notify When Muted", note:"Enables/Disables the plugin audio notifications.", settings: [] },
+        { type: "switch", id: "enabled", name: "Enbable Notify When Muted", note:"Enables/Disables the plugin audio notifications.", settings: [] },
         { type: "switch", id: "notifyWhenDeafen", name: "Notify When Deafen", note: "Notify when you are self deafen.", value: true },
         { type: "switch", id: "notifyServerMuted", name: "Notify When Server Muted", note: "Notify when you get muted by server.", value: false },
         { type: "text", id: "audioUrl", name: "Custom Audio URL", note: "URL to the audio file to play when user tries to speak while muted.", value: defaultAudioUrl },
@@ -41,7 +41,7 @@ function setConfigSetting(id, newValue) {
     }
 }
 
-const { Webpack, Patcher, React, Components, Data } = BdApi;
+const { Webpack, Patcher, React, Components, Data, DOM } = BdApi;
 const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 const buttonStates = Webpack.getByKeys("enabled","button");
 const buttonLook = Webpack.getByKeys("button","lookBlank","colorBrand","grow");
@@ -49,15 +49,11 @@ const voiceButtonsContainer = Webpack.getModule((a,b) => b.id == 600164);
 //const voiceButtonsContainer = {f: Webpack.getByStrings("HORIZONTAL", "START", "STRETCH")};
 //const voiceButtonsContainer = [...Webpack.getModules(Webpack.Filters.byStrings("HORIZONTAL", "START", "STRETCH"))][0];
 
-var console = {};
-
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 module.exports = class NotifyWhenMuted {
     constructor(meta) {
         this.meta = meta;
-        this.BdApi = new BdApi(this.meta.name);
-        console = this.BdApi.Logger;
 
         this.settings = {};
     }
@@ -66,11 +62,11 @@ module.exports = class NotifyWhenMuted {
         for (const setting of config.settings) {
             if (setting.type === "category") {
                 for (const settingInt of setting.settings) {
-                    settingInt.value = this.BdApi.Data.load(settingInt.id) ?? settingInt.value;
+                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
                     this.settings[settingInt.id] = settingInt.value;
                 }
             } else {
-                setting.value = this.BdApi.Data.load(setting.id) ?? setting.value;
+                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
                 this.settings[setting.id] = setting.value;
             }
         }        
@@ -115,7 +111,7 @@ module.exports = class NotifyWhenMuted {
         this.handleSpeak = this.handleSpeaking.bind(this);
         this.addButton = this.handleAddButton.bind(this);
 
-        this.BdApi.DOM.addStyle(`.toggleNotifyMuted > svg {transition: transform 1s ease-in-out;}
+        DOM.addStyle(this.meta.name,`.toggleNotifyMuted > svg {transition: transform 1s ease-in-out;}
             .toggleNotifyMuted:hover > svg {animation: zoomOscillate 1s forwards ease-in-out;}
             @keyframes zoomOscillate {
                 0% {transform: scale(1.3) rotate(0deg);}
@@ -137,7 +133,7 @@ module.exports = class NotifyWhenMuted {
             this.audio.pause();
             this.audio = null;
         }
-        this.BdApi.DOM.removeStyle();
+        DOM.removeStyle(this.meta.name);
     }
 
     async handleSpeaking(_, args, ret) {
