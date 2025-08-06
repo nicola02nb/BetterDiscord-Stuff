@@ -5,6 +5,7 @@ A bunch of stuff for [BetterDiscord](https://github.com/BetterDiscord/BetterDisc
 - [BetterTTS](Plugins/BetterTTS)
 - [BiggerStreamPreview](Plugins/BiggerStreamPreview)
 - [BypassBlockedOrIgnored](Plugins/BypassBlockedOrIgnored)
+- [FarmQuests](Plugins/FarmQuests)
 - [NoSpotifyPause](Plugins/NoSpotifyPause)
 - [NotifyWhenMuted](Plugins/NotifyWhenMuted)
 - [PushToMute](Plugins/PushToMute)
