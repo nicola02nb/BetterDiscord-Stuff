@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.7
+ * @version 1.1.8
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,9 +9,10 @@
  */
 const config = {
     changelog: [
-        //{ title: "New Features", type: "added", items: [""] },
+        { title: "New Features", type: "added", items: ["Added changelog"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
+        //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
         { type: "number", id: "displayNumber", name: "Default Display to Screenshare", note: "Set the default display number to screenshare.", value: 1, min: 1, max: 1, step: 1 },
@@ -138,7 +139,20 @@ module.exports = class ShortcutScreenshareScreen {
         });
     }
 
+    showChangelog() {
+        const savedVersion = this.BdApi.Data.load("version");
+        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+            this.BdApi.UI.showChangelogModal({
+                title: this.meta.name,
+                subtitle: this.meta.version,
+                changes: config.changelog
+            });
+            this.BdApi.Data.save("version", this.meta.version);
+        }
+    }
+
     start() {
+        this.showChangelog();
         this.initSettingsValues();
         this.updateKeybinds();
     }

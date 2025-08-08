@@ -1,14 +1,19 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.0
+ * @version 2.6.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/ShowPing
 */
 const config = {
-    changelog: [],
+    changelog: [
+        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "Bug Fix", type: "fixed", items: [""] },
+        //{ title: "Improvements", type: "improved", items: [""] },
+        //{ title: "On-going", type: "progress", items: [""] }
+    ],
     settings: [
         {
             type: "switch",
@@ -58,7 +63,20 @@ module.exports = class ShowPing {
         });
     }
 
+    showChangelog() {
+        const savedVersion = this.BdApi.Data.load("version");
+        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+            this.BdApi.UI.showChangelogModal({
+                title: this.meta.name,
+                subtitle: this.meta.version,
+                changes: config.changelog
+            });
+            this.BdApi.Data.save("version", this.meta.version);
+        }
+    }
+
     start() {
+        this.showChangelog();
         DOM.addStyle(this.meta.name, `
             .${rtcConnectionStatusConnected.split(" ")[0]} .${labelClasses["default"]} {display: flex; !important; }
             .${voiceButtonsContainer} {margin-left: 2px !important;}

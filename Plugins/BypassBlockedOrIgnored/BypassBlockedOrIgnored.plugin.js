@@ -1,7 +1,7 @@
 /**
  * @name BypassBlockedOrIgnored
  * @description Bypass the blocked or ignored user modal if is present in voice channels
- * @version 1.0.2
+ * @version 1.0.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,9 +9,10 @@
  */
 const config = {
     changelog: [
-        //{ title: "New Stuff", type: "added", items: [""] },
-        //{ title: "Bugs Squashed", type: "fixed", items: [""] },
+        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
+        //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
         { type: "switch", id: "bypassIgnoredUsersModal", name: "Bypass Ignored Users Modal", note: "Bypass the ignored users modal", value: true },
@@ -78,7 +79,20 @@ module.exports = class BypassBlockedOrIgnored {
         });
     }
 
+    showChangelog() {
+        const savedVersion = this.BdApi.Data.load("version");
+        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+            this.BdApi.UI.showChangelogModal({
+                title: this.meta.name,
+                subtitle: this.meta.version,
+                changes: config.changelog
+            });
+            this.BdApi.Data.save("version", this.meta.version);
+        }
+    }
+
     start() {
+        this.showChangelog();
         this.initSettingsValues();
 
         Patcher.before(this.meta.name, handleVoice, "handleVoiceConnect", (thisObject, args) => {

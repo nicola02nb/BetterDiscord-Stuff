@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.14.2
+ * @version 2.14.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,9 +9,10 @@
 */
 const config = {
     changelog: [
-        //{ title: "New Features", type: "added", items: [""] },
+        { title: "New Features", type: "added", items: ["Added changelog"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
+        //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
         { type: "switch", id: "enableTTS", name: "Enable TTS", note: "Enables/Disables the TTS.", value: true },
@@ -410,9 +411,23 @@ module.exports = class BetterTTS {
         this.settings[id] = value;
         this.setConfigSetting(id, value);
     }
+    
+    showChangelog() {
+        const savedVersion = this.BdApi.Data.load("version");
+        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+            this.BdApi.UI.showChangelogModal({
+                title: this.meta.name,
+                subtitle: this.meta.version,
+                changes: config.changelog
+            });
+            this.BdApi.Data.save("version", this.meta.version);
+        }
+    }
 
     // Plugin start/stop
     start() {
+        this.showChangelog();
+
         this.BdApi.DOM.addStyle(`label[for="textReplacerAdd"] + input[type="text"]{ min-width: 100px; width: 150px;}`);
         this.handleMessage = this.messageRecieved.bind(this);
         this.handleAnnouceUsers = this.annouceUser.bind(this);

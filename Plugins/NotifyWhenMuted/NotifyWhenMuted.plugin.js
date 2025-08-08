@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.4
+ * @version 1.4.5
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
@@ -9,9 +9,10 @@
 const defaultAudioUrl = "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/NotifyWhenMuted/stop_talking.wav";
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added button nearby krisp button to toggle on/off"] },
-        //{ title: "Bug Fix", type: "fixed", items: ["Fixed enableTTS not working"] },
+        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
+        //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
         { type: "switch", id: "enabled", name: "Enable Notify When Muted", note:"Enables/Disables the plugin audio notifications.", settings: [] },
@@ -107,7 +108,20 @@ module.exports = class NotifyWhenMuted {
         }
     }
 
+    showChangelog() {
+        const savedVersion = this.BdApi.Data.load("version");
+        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+            this.BdApi.UI.showChangelogModal({
+                title: this.meta.name,
+                subtitle: this.meta.version,
+                changes: config.changelog
+            });
+            this.BdApi.Data.save("version", this.meta.version);
+        }
+    }
+
     start() {
+        this.showChangelog();
         this.handleSpeak = this.handleSpeaking.bind(this);
         this.addButton = this.handleAddButton.bind(this);
 

@@ -1,7 +1,7 @@
 /**
  * @name FarmQuests
- * @description @description A plugin that farms you multiple discord quests in background simultaneously.
- * @version 1.0.0
+ * @description A plugin that farms you multiple discord quests in background simultaneously.
+ * @version 1.0.1
  * @author nicola02nb
  */
 
@@ -9,10 +9,10 @@
 
 const config = {
     changelog: [
-        { title: "New Stuff", type: "added", items: ["Added more settings", "Added changelog"] },
-        { title: "Bugs Squashed", type: "fixed", items: ["React errors on reload"] },
-        { title: "Improvements", type: "improved", items: ["Improvements to the base plugin"] },
-        { title: "On-going", type: "progress", items: ["More modals and popouts being added", "More classes and modules being added"] }
+        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "Bug Fix", type: "fixed", items: [""] },
+        //{ title: "Improvements", type: "improved", items: [""] },
+        //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
         { type: "number", id: "checkForNewQuests", name: "Interval to check for new quests(min)", note: "The time (in minutes) to check for new quests", value: 5, min: 1, step: 1 },
@@ -93,7 +93,20 @@ module.exports = class BasePlugin {
         });
     }
 
+    showChangelog() {
+        const savedVersion = this.BdApi.Data.load("version");
+        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+            this.BdApi.UI.showChangelogModal({
+                title: this.meta.name,
+                subtitle: this.meta.version,
+                changes: config.changelog
+            });
+            this.BdApi.Data.save("version", this.meta.version);
+        }
+    }
+
     start() {
+        this.showChangelog();
         this.initSettingsValues();
 
         this.BdApi.Patcher.instead(RunningGameStore, "getRunningGames", (_, _args, originalFunction) => {
