@@ -3,7 +3,7 @@
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @description View bigger stream previews via the context menu.
- * @version 1.1.12
+ * @version 1.1.13
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview
  */
 const config = {
@@ -15,7 +15,7 @@ const config = {
 	]
 }
 
-const { Webpack, ContextMenu, React, DOM } = BdApi;
+const { Webpack, ContextMenu, React, DOM, Data, UI } = BdApi;
 const { Filters } = Webpack;
 
 const openModal = Webpack.getModule(Filters.byStrings('onCloseRequest', 'onCloseCallback', 'instant', 'backdropStyle'), { searchExports: true });
@@ -36,14 +36,14 @@ module.exports = class BiggerStreamPreview {
 	}
 
 	showChangelog() {
-		const savedVersion = this.BdApi.Data.load("version");
+		const savedVersion = Data.load(this.meta.name, "version");
 		if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-			this.BdApi.UI.showChangelogModal({
+			UI.showChangelogModal({
 				title: this.meta.name,
 				subtitle: this.meta.version,
 				changes: config.changelog
 			});
-			this.BdApi.Data.save("version", this.meta.version);
+			Data.save(this.meta.name, "version", this.meta.version);
 		}
 	}
 

@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.1
+ * @version 2.6.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -25,7 +25,7 @@ const config = {
     ]
 };
 
-const { Webpack, React, Data, DOM, Patcher } = BdApi;
+const { Webpack, React, Data, DOM, Patcher, UI } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
 
@@ -64,14 +64,14 @@ module.exports = class ShowPing {
     }
 
     showChangelog() {
-        const savedVersion = this.BdApi.Data.load("version");
+        const savedVersion = Data.load(this.meta.name, "version");
         if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-            this.BdApi.UI.showChangelogModal({
+            UI.showChangelogModal({
                 title: this.meta.name,
                 subtitle: this.meta.version,
                 changes: config.changelog
             });
-            this.BdApi.Data.save("version", this.meta.version);
+            Data.save(this.meta.name, "version", this.meta.version);
         }
     }
 

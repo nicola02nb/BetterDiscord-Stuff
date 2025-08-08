@@ -1,7 +1,7 @@
 /**
  * @name BypassBlockedOrIgnored
  * @description Bypass the blocked or ignored user modal if is present in voice channels
- * @version 1.0.3
+ * @version 1.0.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -80,14 +80,14 @@ module.exports = class BypassBlockedOrIgnored {
     }
 
     showChangelog() {
-        const savedVersion = this.BdApi.Data.load("version");
+        const savedVersion = Data.load(this.meta.name, "version");
         if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-            this.BdApi.UI.showChangelogModal({
+            UI.showChangelogModal({
                 title: this.meta.name,
                 subtitle: this.meta.version,
                 changes: config.changelog
             });
-            this.BdApi.Data.save("version", this.meta.version);
+            Data.save(this.meta.name, "version", this.meta.version);
         }
     }
 
