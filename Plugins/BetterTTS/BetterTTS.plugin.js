@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.14.4
+ * @version 2.14.5
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -90,7 +90,7 @@ const config = {
     ]
 };
 
-const { Webpack, Patcher, React, ContextMenu, Utils, Components, Data, UI, DOM } = BdApi;
+const { Webpack, Patcher, React, ContextMenu, Utils, Components, Data, DOM, UI } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ChannelStore = Webpack.getStore("ChannelStore");
 const GuildStore = Webpack.getStore("GuildStore");
@@ -114,97 +114,76 @@ module.exports = class BetterTTS {
     constructor(meta) {
         this.meta = meta;
 
-        this.settings = {};
-        this.keyShortcut = null;
-    }
+        this.settings = new Proxy({}, {
+            get: (_target, key) => {
+                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+            },
+            set: (_target, key, value) => {
+                Data.save(this.meta.name, key, value);
+                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                return true;
+            }
+        });
 
-    // Settings
-    setConfigSetting(id, newValue) {
-        for (const setting of config.settings) {
-            if (setting.id === id) {
-                Data.save(this.meta.name, id, newValue);
-                return setting.value = newValue;
-            }
-            if (setting.settings) {
-                for (const settingInt of setting.settings) {
-                    if (settingInt.id === id) {
-                        Data.save(this.meta.name, id, newValue);
-                        settingInt.value = newValue;
-                    }
-                }
-            }
-        }
-    }
-
-    initSettingsValues() {
-        for (const setting of config.settings) {
-            if (setting.type === "category") {
-                for (const settingInt of setting.settings) {
-                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
-                    this.settings[settingInt.id] = settingInt.value;
-                }
-            } else {
-                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
-                this.settings[setting.id] = setting.value;
-            }
-        }
-        //UserSettingsProtoStore.settings.textAndImages.enableTtsCommand?.value = this.settings.enableTTSCommand;
         this.ttsMutedUsers = new Set(Data.load(this.meta.name, "ttsMutedUsers")) ?? new Set();
         this.ttsSubscribedChannels = new Set(Data.load(this.meta.name, "ttsSubscribedChannels")) ?? new Set();
         this.ttsSubscribedGuilds = new Set(Data.load(this.meta.name, "ttsSubscribedGuilds")) ?? new Set();
         this.textReplacerRules = new Set(Data.load(this.meta.name, "textReplacerRules")) ?? new Set();
         this.updateRelationships();
-    }
-    
-    listeners = {};
 
+        this.keyShortcut = null;
+    }
+
+    // Settings    
+    listeners = {};
     subscribe = (event, callback) => {
         this.listeners[event]=callback;
     };
-
     emit = (event, data) => {
         if (this.listeners[event]) {
             this.listeners[event](data);
         }
     };
 
-    DropdownSources = () => {
+    DropdownSources = ({ selected = "discord" }) => {
         const options = getTTSSources();
-        const [selectedSource, setSelectedSource] = React.useState(this.settings.ttsSource || options[0]?.value || "");
+        const [selectedSource, setSelectedSource] = React.useState(selected || options[0]?.value);
 
         return React.createElement(Components.DropdownInput, {
             value: selectedSource,
-            onChange: React.useCallback((value) => {
-                setSelectedSource(value);
-                this.updateSettingValue(undefined, "ttsSource", value);
-                this.emit("sourceChanged", value);
+            onChange: React.useCallback((newSource) => {
+                setSelectedSource(newSource);
+                this.updateSettingValue(undefined, "ttsSource", newSource);
+                this.emit("sourceChanged", newSource);
             }),
             options: options
         });
     };
 
-    DropdownVoices = () => {
-        const [source, setSource] = React.useState(this.settings.ttsSource || "");
-        const [options, setOptions] = React.useState(getTTSVoices(source));
-        const [selectedVoice, setSelectedVoice] = React.useState(this.settings.ttsVoice || options[0]?.value || "");
+    DropdownVoices = ({ source = "discord", selected }) => {
+        const [selectedSource, setSelectedSource] = React.useState(source);
+        const [options, setOptions] = React.useState(getTTSVoices(selectedSource));
+        const [selectedVoice, setSelectedVoice] = React.useState(selected || getDefaultVoice(source) || options[0]?.value);
 
         this.subscribe("sourceChanged", (newSource) => {
+            setSelectedSource(newSource);
             setOptions(getTTSVoices(newSource));
-            setSelectedVoice(options[0]?.value || "");
-            this.updateSettingValue(undefined, "ttsVoice", selectedVoice);
+            const newVoice = getDefaultVoice(newSource) || options[0]?.value;
+            setSelectedVoice(newVoice);
+            this.updateSettingValue(undefined, "ttsVoice", newVoice);
         });
 
         return React.createElement(Components.DropdownInput, {
             value: selectedVoice,
-            onChange: React.useCallback((value) => {
-                setSelectedVoice(value);
-                this.updateSettingValue(undefined, "ttsVoice", value);
+            onChange: React.useCallback((newVoice) => {
+                setSelectedVoice(newVoice);
+                this.updateSettingValue(undefined, "ttsVoice", newVoice);
             }),
             options: options
         });
     };
 
-    DropdownButtonGroup = ({labeltext, setName, getFunction}) => {
+    DropdownButtonGroup = ({ labeltext, setName, getFunction }) => {
         const [selectedOption, setSelectedOption] = React.useState("");
 
         const options = Array.from(this[setName]);
@@ -229,7 +208,7 @@ module.exports = class BetterTTS {
                     options.splice(options.indexOf(selectedOption), 1);
                     setSelectedOption("");
                     this[setName].delete(selectedOption);
-                    Data.save(this.meta.name, setName, this[setName]);
+                    this.settings[setName] = this[setName];
                 }
             }, labeltext),          
         );
@@ -269,7 +248,7 @@ module.exports = class BetterTTS {
                 onClick: () => {
                     this.AudioPlayer.stopTTS();
                     if (!isPlaying) {
-                        this.AudioPlayer.addToQueue(text);
+                        this.AudioPlayer.startTTS(text, true);
                     }              
                     setIsPlaying(!isPlaying);
                 }
@@ -300,7 +279,7 @@ module.exports = class BetterTTS {
                     let deleted = options.splice(selectedOption-1, 1);
                     setSelectedOption(0);
                     this.textReplacerRules.delete(deleted[0]);
-                    Data.save(this.meta.name, "textReplacerRules", this.textReplacerRules);
+                    this.settings.textReplacerRules = this.textReplacerRules;
                 }
             }, "Remove Regex"),          
         );
@@ -333,7 +312,7 @@ module.exports = class BetterTTS {
                 disabled: disabled,
                 onClick: () => {
                     this.textReplacerRules.add({regex: regex, replacement: replacement});
-                    Data.save(this.meta.name, "textReplacerRules", this.textReplacerRules);
+                    this.settings.textReplacerRules = this.textReplacerRules;
                     setRegex("");
                     setReplacement("");
                 }
@@ -344,8 +323,8 @@ module.exports = class BetterTTS {
     getSettingsPanel() {
         config.settings[4].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
         config.settings[4].settings[3].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
-        config.settings[6].settings[0].children = [React.createElement(this.DropdownSources)];
-        config.settings[6].settings[1].children = [React.createElement(this.DropdownVoices)];
+        config.settings[6].settings[0].children = [React.createElement(this.DropdownSources, { selected: this.settings.ttsSource })];
+        config.settings[6].settings[1].children = [React.createElement(this.DropdownVoices, { source: this.settings.ttsSource, selected: this.settings.ttsVoice })];
         config.settings[7].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
         config.settings[8].settings[2].children = [React.createElement(this.PreviewTTS)];
         config.settings[9].settings[0].children = [React.createElement(this.TextReplaceDropdown, {})];
@@ -405,7 +384,6 @@ module.exports = class BetterTTS {
                 break;
         }
         this.settings[id] = value;
-        this.setConfigSetting(id, value);
     }
     
     showChangelog() {
@@ -430,8 +408,7 @@ module.exports = class BetterTTS {
         this.handleSpeakMessage = this.speakMessage.bind(this);
         this.handleStopTTS = this.stopTTS.bind(this);
         this.handleKeyDown = this.onKeyDown.bind(this);
-
-        this.initSettingsValues();
+        
         this.updateToggleKeys(this.settings.ttsToggle);
 
         this.AudioPlayer = new AudioPlayer(this.settings.ttsSource,
@@ -485,7 +462,7 @@ module.exports = class BetterTTS {
         let message = event.message;
         if ((event.guildId || !message.member) && this.shouldPlayMessage(event.message)) {
             let text = this.getPatchedContent(message, message.guild_id);
-            this.AudioPlayer.addToQueue(text);
+            this.AudioPlayer.startTTS(text);
         }
     }
 
@@ -498,9 +475,9 @@ module.exports = class BetterTTS {
                 if (userStatus.channelId !== userStatus.oldChannelId) {
                     let username = this.getUserName(userStatus.userId, userStatus.guildId);
                     if (userStatus.channelId === connectedChannelId) {
-                        this.AudioPlayer.addToQueue(`${username} joined`);
+                        this.AudioPlayer.startTTS(`${username} joined`, true);
                     } else if (userStatus.oldChannelId === connectedChannelId) {
-                        this.AudioPlayer.addToQueue(`${username} left`);
+                        this.AudioPlayer.startTTS(`${username} left`, true);
                     }
                 }
             }
@@ -510,7 +487,7 @@ module.exports = class BetterTTS {
     speakMessage(event) {
         if(!this.settings.enableTTS) return;
         let text = this.getPatchedContent(event.message, event.channel.guild_id);
-        this.AudioPlayer.addToQueue(text);
+        this.AudioPlayer.startTTS(text);
     }
 
     stopTTS() {
@@ -569,7 +546,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsMutedUsers.delete(userId);
                 }
-                Data.save(this.meta.name, "ttsMutedUsers", this.ttsMutedUsers);
+                this.settings.ttsMutedUsers = this.ttsMutedUsers;
             }
         });
         let ttsTestAnnouceUser = ContextMenu.buildItem({
@@ -579,7 +556,7 @@ module.exports = class BetterTTS {
             action: () => {
                 const guildId = SelectedGuildStore.getGuildId();
                 let username = this.getUserName(userId, guildId);
-                this.AudioPlayer.addToQueue(`${username} joined`);
+                this.AudioPlayer.startTTS(`${username} joined`, true);
             }
         });
         let ttsToggleChat = ContextMenu.buildItem({
@@ -593,7 +570,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsSubscribedChannels.delete(channelId);
                 }
-                Data.save(this.meta.name, "ttsSubscribedChannels", this.ttsSubscribedChannels);
+                this.settings.ttsSubscribedChannels = this.ttsSubscribedChannels;
             }
         });
         if (Array.isArray(buttonParent1)){
@@ -619,7 +596,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsSubscribedChannels.delete(channelId);
                 }
-                Data.save(this.meta.name, "ttsSubscribedChannels", this.ttsSubscribedChannels);
+                this.settings.ttsSubscribedChannels = this.ttsSubscribedChannels;
             }
         });
         if (Array.isArray(buttonParent))
@@ -642,7 +619,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsSubscribedGuilds.delete(guildId);
                 }
-                Data.save(this.meta.name, "ttsSubscribedGuilds", this.ttsSubscribedGuilds);
+                this.settings.ttsSubscribedGuilds = this.ttsSubscribedGuilds;
             }
         });
         if (Array.isArray(buttonParent))
@@ -852,16 +829,16 @@ function clamp(number, min, max) {
     return Math.max(min, Math.min(number, max));
 }
 
-const delay = ms => new Promise(res => setTimeout(res, ms));
-
 class AudioPlayer {
     constructor(source, voice, rate, delay, volume) {
         this.updateConfig(source, voice, rate, delay, volume);
 
         this.isPlaying = false;
-        this.playingText = undefined;
+        this.isPriority = false;
+        this.playingText = "";
         this.media = null;
-        this.messagesToPlay = [];
+        this.priorityMessages = [];
+        this.normalMessages = [];
     }
 
     updateConfig(source, voice, rate, delay, volume) {
@@ -872,12 +849,37 @@ class AudioPlayer {
         this.volume = volume;
     }
 
-    addToQueue(text) {
-        if (text === "") return;
-        this.messagesToPlay.push(text);
-        if (this.playingText === undefined) {
-            this.startTTS();
+    startTTS(text, priority) {
+        if (!text) return;
+        if (priority) {
+            this.priorityMessages.push(text);
+            /* if (!this.isPriority) {
+                this.stopCurrentTTS();
+            } */
+        } else {
+            this.normalMessages.push(text);
         }
+        if (!this.isPlaying) {
+            this.isPlaying = true;
+            this.playTTS();
+        }
+    }
+
+    stopCurrentTTS() {
+        if (this.media instanceof Audio)
+            this.media.pause();
+        else if (this.media instanceof SpeechSynthesisUtterance)
+            speechSynthesis.cancel();
+        this.playingText = "";
+        this.media = null;
+        this.playNextTTS();
+    }
+
+    stopTTS() {
+        this.isPlaying = false;
+        this.priorityMessages = [];
+        this.normalMessages = [];
+        this.stopCurrentTTS();
     }
 
     updateSource(source) {
@@ -890,45 +892,52 @@ class AudioPlayer {
 
     updateRate(rate) {
         this.rate = rate;
-        if (this.media) {
-            if(this.media instanceof Audio)
-                this.media.playbackRate = rate;
-            else if(this.media instanceof SpeechSynthesisUtterance)
-                this.media.rate = rate;
-        }        
+        if(this.media instanceof Audio)
+            this.media.playbackRate = rate;
+        else if(this.media instanceof SpeechSynthesisUtterance)
+            this.media.rate = rate;
     }
 
     updateVolume(volume) {
         this.volume = volume;
-        if (this.media) {
-            if(this.media instanceof Audio)
-                this.media.volume = clamp(volume, 0, 1);
-            else if(this.media instanceof SpeechSynthesisUtterance)
-                this.media.volume = clamp(volume, 0, 1);
-        }            
+        if(this.media instanceof Audio)
+            this.media.volume = clamp(volume, 0, 1);
+        else if(this.media instanceof SpeechSynthesisUtterance)
+            this.media.volume = clamp(volume, 0, 1);
     }
 
     updateDelay(delay) {
         this.delay = delay;
     }
 
-    stopTTS() {
-        if (this.media){
-            if(this.media instanceof Audio)
-                this.media.pause();
-            else if(this.media instanceof SpeechSynthesisUtterance)
-                speechSynthesis.cancel();
-        }
-        this.isPlaying = false;
-        this.playingText = undefined;
+    playNextTTS() {
+        this.playingText = "";
         this.media = null;
-        this.messagesToPlay = [];
+        if (this.priorityMessages.length > 0 || this.normalMessages.length > 0) {
+            this.playTTS();
+        } else {
+            this.isPlaying = false;
+        }
     }
 
-    // Play TTS
-    async startTTS() {
-        this.playingText = this.messagesToPlay.shift();
-        if (this.playingText !== undefined) {
+    playAudio() {
+        if (this.media instanceof Audio) {
+            this.media.playbackRate = this.rate;
+            this.media.volume = clamp(this.volume, 0, 1);
+            this.media.addEventListener('ended', () => this.playNextTTS());
+            this.media.play();
+        } else if (this.media instanceof SpeechSynthesisUtterance) {
+            this.media.rate = this.rate;
+            this.media.volume = clamp(this.volume, 0, 1);
+            this.media.onend = () => this.playNextTTS;
+            speechSynthesis.speak(this.media);
+        }
+    }
+
+    playTTS() {
+        this.isPriority = this.priorityMessages.length > 0;
+        this.playingText = this.isPriority ? this.priorityMessages.shift() : this.normalMessages.shift() || "";
+        if (this.playingText) {
             switch (this.source) {
                 case "discord":
                     this.media = DiscordTTS.getUtterance(this.playingText, this.voice);
@@ -937,44 +946,21 @@ class AudioPlayer {
                     this.media = StreamElementsTTS.getAudio(this.playingText, this.voice);
                     break;
             }
-            if (this.media instanceof Audio) {
-                this.media.playbackRate = this.rate;
-                this.media.volume = clamp(this.volume, 0, 1);
-                this.media.addEventListener('ended', async () => {
-                    await delay(this.delay);
-                    if (this.messagesToPlay.length === 0) {
-                        this.playingText = undefined;
-                        this.media = null;
-                    } else {
-                        this.startTTS();
-                    }
-                });
-                this.media.play();
-            } else if (this.media instanceof SpeechSynthesisUtterance) {
-                this.media.rate = this.rate;
-                this.media.volume = clamp(this.volume, 0, 1);
-                this.media.onend = async () => {
-                    await delay(this.delay);
-                    if (this.messagesToPlay.length === 0) {
-                        this.playingText = undefined;
-                        this.media = null;
-                    } else {
-                        this.startTTS();
-                    }
-                };
-                speechSynthesis.speak(this.media);
-            }
+            setTimeout(() => this.playAudio(), this.delay);
         }
     }
 }
 
 // TTS Sources
 function getTTSSources() {
-    const soucrcesLabels = [
-        {label:"Discord", value: "discord"},
-        {label:"Streamlabs", value: "streamlabs"},
+    const Sources = [
+        {label:"Discord", value: "discord", default: ""},
+        {label:"Streamlabs", value: "streamlabs", default: "Brian"},
     ];
-    return soucrcesLabels;
+    return Sources;
+}
+function getDefaultVoice(source) {
+    return getTTSSources().find(s => s.value === source)?.default;
 }
 function getTTSVoices(source){
     switch (source) {
@@ -1028,7 +1014,7 @@ class StreamElementsTTS {
         return StreamElementsTTS.voicesLables;
     }
 
-    static getAudio(text, voice = 'Brian') {
+    static getAudio(text, voice) {
         text = encodeURIComponent(text);
         let url = `https://api.streamelements.com/kappa/v2/speech?voice=${voice}&text=${text}`;
         return new Audio(url);
