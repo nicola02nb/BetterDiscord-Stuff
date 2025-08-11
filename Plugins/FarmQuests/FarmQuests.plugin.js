@@ -1,7 +1,7 @@
 /**
  * @name FarmQuests
  * @description A plugin that farms you multiple discord quests in background simultaneously.
- * @version 1.0.1
+ * @version 1.0.2
  * @author nicola02nb
  */
 
