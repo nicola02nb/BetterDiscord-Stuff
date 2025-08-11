@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.7.4
+ * @version 1.7.6
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -23,7 +23,7 @@ const config = {
     settings: [
         {
             type: "category",
-            id: "statuseSettings",
+            id: "statusSettings",
             name: "Status Settings",
             collapsible: true,
             shown: true,
@@ -37,23 +37,6 @@ const config = {
         { type: "switch", id: "showToast", name: "Show Toast", note: "If enabled, displays a toast message when the status changes", value: true }
     ]
 };
-
-function setConfigSetting(id, newValue) {
-    for (const setting of config.settings) {
-        if (setting.id === id) {
-            Data.save("AutoSwitchStatus", id, newValue);
-            return setting.value = newValue;
-        }
-        if (setting.settings) {
-            for (const settingInt of setting.settings) {
-                if (settingInt.id === id) {
-                    Data.save("AutoSwitchStatus", id, newValue);
-                    settingInt.value = newValue;
-                }
-            }
-        }
-    }
-}
 
 const { Webpack, Data, DOM, UI } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
@@ -71,7 +54,20 @@ module.exports = class AutoSwitchStatus {
     constructor(meta) {
         this.meta = meta;
 
-        this.settings = {};
+        this.settings = new Proxy({}, {
+            get: (_target, key) => {
+                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+            },
+            set: (_target, key, value) => {
+                Data.save(this.meta.name, key, value);
+                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                return true;
+            }
+        });
+
+        this.handleConnection = this.handleConnectionStateChange.bind(this);
+        this.handleMute = this.handleMuteStateChange.bind(this);
+
         this.locales = {
             online: "Online",
             idle: "Idle",
@@ -80,49 +76,29 @@ module.exports = class AutoSwitchStatus {
         }
     }
 
-    initSettingsValues() {
-        for (const setting of config.settings) {
-            if (setting.type === "category") {
-                for (const settingInt of setting.settings) {
-                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
-                    this.settings[settingInt.id] = settingInt.value;
-                }
-            } else {
-                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
-                this.settings[setting.id] = setting.value;
-            }
-        }
-    }
-
     getSettingsPanel() {
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
                 this.settings[id] = value;
-                setConfigSetting(id, value);
             },
         });
     }
 
     showChangelog() {
-        const savedVersion = Data.load(this.meta.name, "version");
-        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+        if (this.settings.version !== this.meta.version && config.changelog.length > 0) {
             UI.showChangelogModal({
                 title: this.meta.name,
                 subtitle: this.meta.version,
                 changes: config.changelog
             });
-            Data.save(this.meta.name, "version", this.meta.version);
+            this.settings.version = this.meta.version;
         }
     }
 
     start() {
         this.showChangelog();
 
-        this.handleConnection = this.handleConnectionStateChange.bind(this);
-        this.handleMute = this.handleMuteStateChange.bind(this);
-        
-        this.initSettingsValues();
         DOM.addStyle(this.meta.name,`.bd-toast.toast-online.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='12.5' y='10' width='0' height='0' rx='0' ry='0' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%2323a55a' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-idle.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='6.25' y='3.75' width='7.5' height='7.5' rx='3.75' ry='3.75' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%23f0b232' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-invisible.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='10' y='7.5' width='5' height='5' rx='2.5' ry='2.5' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%2380848e' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}

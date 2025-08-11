@@ -1,7 +1,7 @@
 /**
  * @name FarmQuests
  * @description A plugin that farms you multiple discord quests in background simultaneously.
- * @version 1.0.2
+ * @version 1.0.3
  * @author nicola02nb
  */
 
@@ -32,7 +32,16 @@ module.exports = class BasePlugin {
     constructor(meta) {
         this.meta = meta;
 
-        this.settings = {};
+        this.settings = new Proxy({}, {
+            get: (_target, key) => {
+                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+            },
+            set: (_target, key, value) => {
+                Data.save(this.meta.name, key, value);
+                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                return true;
+            }
+        });
         this.updateInterval = null;
 
         this.availableQuests = [];
@@ -43,43 +52,11 @@ module.exports = class BasePlugin {
         this.fakeApplications = new Map();
     }
 
-    setConfigSetting(id, newValue) {
-        for (const setting of config.settings) {
-            if (setting.id === id) {
-                Data.save(this.meta.name, id, newValue);
-                return setting.value = newValue;
-            }
-            if (setting.settings) {
-                for (const settingInt of setting.settings) {
-                    if (settingInt.id === id) {
-                        Data.save(this.meta.name, id, newValue);
-                        settingInt.value = newValue;
-                    }
-                }
-            }
-        }
-    }
-
-    initSettingsValues() {
-        for (const setting of config.settings) {
-            if (setting.type === "category") {
-                for (const settingInt of setting.settings) {
-                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
-                    this.settings[settingInt.id] = settingInt.value;
-                }
-            } else {
-                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
-                this.settings[setting.id] = setting.value;
-            }
-        }
-    }
-
     getSettingsPanel() {
         return UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
-                console.log(category, id, value, typeof value);
-                this.setConfigSetting(id, value);
+                this.settings[id] = value;
                 switch (id) {
                     case "checkForNewQuests":
                         this.startInterval();
@@ -90,20 +67,18 @@ module.exports = class BasePlugin {
     }
 
     showChangelog() {
-        const savedVersion = Data.load(this.meta.name, "version");
-        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+        if (this.settings.version !== this.meta.version && config.changelog.length > 0) {
             UI.showChangelogModal({
                 title: this.meta.name,
                 subtitle: this.meta.version,
                 changes: config.changelog
             });
-            Data.save(this.meta.name, "version", this.meta.version);
+            this.settings.version = this.meta.version;
         }
     }
 
     start() {
         this.showChangelog();
-        this.initSettingsValues();
 
         Patcher.instead(this.meta.name, RunningGameStore, "getRunningGames", (_, _args, originalFunction) => {
             if (this.fakeGames.size > 0) {

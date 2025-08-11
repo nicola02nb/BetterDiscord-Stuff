@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.6
+ * @version 1.4.7
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
@@ -25,23 +25,6 @@ const config = {
     ]
 };
 
-function setConfigSetting(id, newValue) {
-    for (const setting of config.settings) {
-        if (setting.id === id) {
-            Data.save("NotifyWhenMuted", id, newValue);
-            return setting.value = newValue;
-        }
-        if (setting.settings) {
-            for (const settingInt of setting.settings) {
-                if (settingInt.id === id) {
-                    Data.save("NotifyWhenMuted", id, newValue);
-                    settingInt.value = newValue;
-                }
-            }
-        }
-    }
-}
-
 const { Webpack, Patcher, React, Components, Data, DOM, UI } = BdApi;
 const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 const buttonStates = Webpack.getByKeys("enabled","button");
@@ -56,21 +39,16 @@ module.exports = class NotifyWhenMuted {
     constructor(meta) {
         this.meta = meta;
 
-        this.settings = {};
-    }
-
-    initSettingsValues() {
-        for (const setting of config.settings) {
-            if (setting.type === "category") {
-                for (const settingInt of setting.settings) {
-                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
-                    this.settings[settingInt.id] = settingInt.value;
-                }
-            } else {
-                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
-                this.settings[setting.id] = setting.value;
+        this.settings = new Proxy({}, {
+            get: (_target, key) => {
+                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+            },
+            set: (_target, key, value) => {
+                Data.save(this.meta.name, key, value);
+                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                return true;
             }
-        }        
+        });
     }
 
     getSettingsPanel() {
@@ -96,7 +74,6 @@ module.exports = class NotifyWhenMuted {
                 break;
         }
         this.settings[id] = value;
-        setConfigSetting(id, value);
     }
 
     isValidURL(string) {
@@ -109,14 +86,13 @@ module.exports = class NotifyWhenMuted {
     }
 
     showChangelog() {
-        const savedVersion = Data.load(this.meta.name, "version");
-        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+        if (this.settings.version !== this.meta.version && config.changelog.length > 0) {
             UI.showChangelogModal({
                 title: this.meta.name,
                 subtitle: this.meta.version,
                 changes: config.changelog
             });
-            Data.save(this.meta.name, "version", this.meta.version);
+            this.settings.version = this.meta.version;
         }
     }
 
@@ -134,7 +110,6 @@ module.exports = class NotifyWhenMuted {
                 100% {transform: scale(1) rotate(0deg);}
             }`);
         
-        this.initSettingsValues();
         this.isPlaying = false;
 
         Patcher.after(this.meta.name, MediaEngineStore, "getSpeakingWhileMuted", this.handleSpeak);

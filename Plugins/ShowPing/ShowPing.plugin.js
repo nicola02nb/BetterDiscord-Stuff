@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.2
+ * @version 2.6.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -37,7 +37,17 @@ const ConnectionStatus = Webpack.getModule((exports, module, id) => id === "4235
 module.exports = class ShowPing {
     constructor(meta) {
         this.meta = meta;
-        this.initSettingsValues();
+        
+        this.settings = new Proxy({}, {
+            get: (_target, key) => {
+                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+            },
+            set: (_target, key, value) => {
+                Data.save(this.meta.name, key, value);
+                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                return true;
+            }
+        });
 
         this.statusBar = null;
         this.pingElement = null;
@@ -46,37 +56,32 @@ module.exports = class ShowPing {
         this.updatePing = null;
     }
 
-    initSettingsValues() {
-        config.settings[0].value = Data.load(this.meta.name, "hideKrispButton") ?? config.settings[0].value;
-    }
-
     getSettingsPanel() {
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
                 if (id === "hideKrispButton") {
-                    config.settings[0].value = value;
                     this.displayKrispButton(!value);
                 }
-                Data.save(this.meta.name, id, value);
+                this.settings[id] = value;
             },
         });
     }
 
     showChangelog() {
-        const savedVersion = Data.load(this.meta.name, "version");
-        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+        if (this.settings.version !== this.meta.version && config.changelog.length > 0) {
             UI.showChangelogModal({
                 title: this.meta.name,
                 subtitle: this.meta.version,
                 changes: config.changelog
             });
-            Data.save(this.meta.name, "version", this.meta.version);
+            this.settings.version = this.meta.version;
         }
     }
 
     start() {
         this.showChangelog();
+
         DOM.addStyle(this.meta.name, `
             .${rtcConnectionStatusConnected.split(" ")[0]} .${labelClasses["default"]} {display: flex; !important; }
             .${voiceButtonsContainer} {margin-left: 2px !important;}

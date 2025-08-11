@@ -1,7 +1,7 @@
 /**
  * @name PushToMute
  * @description A plugin that adds a keybind to mute the microphone while it is pressed.
- * @version 1.0.2
+ * @version 1.0.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -38,53 +38,27 @@ module.exports = class BasePlugin {
     constructor(meta) {
         this.meta = meta;
 
-        this.settings = {};
+        this.settings = new Proxy({}, {
+            get: (_target, key) => {
+                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+            },
+            set: (_target, key, value) => {
+                Data.save(this.meta.name, key, value);
+                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                return true;
+            }
+        });
         this.keyBindsIds = [];
 
         this.handleKeyUp = this.keyUp.bind(this);
         this.handleKeyDown = this.keyDown.bind(this);
     }
 
-    setConfigSetting(id, newValue) {
-        for (const setting of config.settings) {
-            if (setting.id === id) {
-                Data.save(this.meta.name, id, newValue);
-                this.settings[id] = newValue;
-                setting.value = newValue;
-                return;
-            }
-            if (setting.settings) {
-                for (const settingInt of setting.settings) {
-                    if (settingInt.id === id) {
-                        Data.save(this.meta.name, id, newValue);
-                        this.settings[id] = newValue;
-                        settingInt.value = newValue;
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
-    initSettingsValues() {
-        for (const setting of config.settings) {
-            if (setting.type === "category") {
-                for (const settingInt of setting.settings) {
-                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
-                    this.settings[settingInt.id] = settingInt.value;
-                }
-            } else {
-                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
-                this.settings[setting.id] = setting.value;
-            }
-        }
-    }
-
     getSettingsPanel() {
         return UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
-                this.setConfigSetting(id, value);
+                this.settings[id] = value;
                 switch (id) {
                     case "pushToMute":
                         this.updateKeybind();
@@ -97,20 +71,19 @@ module.exports = class BasePlugin {
     }
 
     showChangelog() {
-        const savedVersion = Data.load(this.meta.name, "version");
-        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+        if (this.settings.version !== this.meta.version && config.changelog.length > 0) {
             UI.showChangelogModal({
                 title: this.meta.name,
                 subtitle: this.meta.version,
                 changes: config.changelog
             });
-            Data.save(this.meta.name, "version", this.meta.version);
+            this.settings.version = this.meta.version;
         }
     }
 
     start() {
         this.showChangelog();
-        this.initSettingsValues();
+
         this.updateKeybind();
     }
 
