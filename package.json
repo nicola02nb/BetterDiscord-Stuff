@@ -1,0 +1,15 @@
+{
+  "name": "betterdiscord-stuff",
+  "module": "index.ts",
+  "scripts": {
+    "dev": "bun run live-dev"
+  },
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
