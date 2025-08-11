@@ -90,7 +90,7 @@ const config = {
     ]
 };
 
-const { Webpack, Patcher, React, ContextMenu, Utils, Components } = BdApi;
+const { Webpack, Patcher, React, ContextMenu, Utils, Components, Data, UI, DOM } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const ChannelStore = Webpack.getStore("ChannelStore");
 const GuildStore = Webpack.getStore("GuildStore");
@@ -110,13 +110,9 @@ const setTTSType = [...Webpack.getWithKey(Webpack.Filters.byStrings("setTTSType"
 
 const listenIcon = Webpack.getModule(Webpack.Filters.byStrings("evenodd", "M12 22a10 10 0 1"), { searchExports: true });
 
-var console = {};
-
 module.exports = class BetterTTS {
     constructor(meta) {
         this.meta = meta;
-        this.BdApi = new BdApi(this.meta.name);
-        console = this.BdApi.Logger;
 
         this.settings = {};
         this.keyShortcut = null;
@@ -126,13 +122,13 @@ module.exports = class BetterTTS {
     setConfigSetting(id, newValue) {
         for (const setting of config.settings) {
             if (setting.id === id) {
-                this.BdApi.Data.save(id, newValue);
+                Data.save(this.meta.name, id, newValue);
                 return setting.value = newValue;
             }
             if (setting.settings) {
                 for (const settingInt of setting.settings) {
                     if (settingInt.id === id) {
-                        this.BdApi.Data.save(id, newValue);
+                        Data.save(this.meta.name, id, newValue);
                         settingInt.value = newValue;
                     }
                 }
@@ -144,19 +140,19 @@ module.exports = class BetterTTS {
         for (const setting of config.settings) {
             if (setting.type === "category") {
                 for (const settingInt of setting.settings) {
-                    settingInt.value = this.BdApi.Data.load(settingInt.id) ?? settingInt.value;
+                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
                     this.settings[settingInt.id] = settingInt.value;
                 }
             } else {
-                setting.value = this.BdApi.Data.load(setting.id) ?? setting.value;
+                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
                 this.settings[setting.id] = setting.value;
             }
         }
         //UserSettingsProtoStore.settings.textAndImages.enableTtsCommand?.value = this.settings.enableTTSCommand;
-        this.ttsMutedUsers = new Set(this.BdApi.Data.load("ttsMutedUsers")) ?? new Set();
-        this.ttsSubscribedChannels = new Set(this.BdApi.Data.load("ttsSubscribedChannels")) ?? new Set();
-        this.ttsSubscribedGuilds = new Set(this.BdApi.Data.load("ttsSubscribedGuilds")) ?? new Set();
-        this.textReplacerRules = new Set(this.BdApi.Data.load("textReplacerRules")) ?? new Set();
+        this.ttsMutedUsers = new Set(Data.load(this.meta.name, "ttsMutedUsers")) ?? new Set();
+        this.ttsSubscribedChannels = new Set(Data.load(this.meta.name, "ttsSubscribedChannels")) ?? new Set();
+        this.ttsSubscribedGuilds = new Set(Data.load(this.meta.name, "ttsSubscribedGuilds")) ?? new Set();
+        this.textReplacerRules = new Set(Data.load(this.meta.name, "textReplacerRules")) ?? new Set();
         this.updateRelationships();
     }
     
@@ -233,7 +229,7 @@ module.exports = class BetterTTS {
                     options.splice(options.indexOf(selectedOption), 1);
                     setSelectedOption("");
                     this[setName].delete(selectedOption);
-                    this.BdApi.Data.save(setName, this[setName]);
+                    Data.save(this.meta.name, setName, this[setName]);
                 }
             }, labeltext),          
         );
@@ -304,7 +300,7 @@ module.exports = class BetterTTS {
                     let deleted = options.splice(selectedOption-1, 1);
                     setSelectedOption(0);
                     this.textReplacerRules.delete(deleted[0]);
-                    this.BdApi.Data.save("textReplacerRules", this.textReplacerRules);
+                    Data.save(this.meta.name, "textReplacerRules", this.textReplacerRules);
                 }
             }, "Remove Regex"),          
         );
@@ -337,7 +333,7 @@ module.exports = class BetterTTS {
                 disabled: disabled,
                 onClick: () => {
                     this.textReplacerRules.add({regex: regex, replacement: replacement});
-                    this.BdApi.Data.save("textReplacerRules", this.textReplacerRules);
+                    Data.save(this.meta.name, "textReplacerRules", this.textReplacerRules);
                     setRegex("");
                     setReplacement("");
                 }
@@ -413,14 +409,14 @@ module.exports = class BetterTTS {
     }
     
     showChangelog() {
-        const savedVersion = this.BdApi.Data.load("version");
+        const savedVersion = Data.load(this.meta.name, "version");
         if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-            this.BdApi.UI.showChangelogModal({
+            UI.showChangelogModal({
                 title: this.meta.name,
                 subtitle: this.meta.version,
                 changes: config.changelog
             });
-            this.BdApi.Data.save("version", this.meta.version);
+            Data.save(this.meta.name, "version", this.meta.version);
         }
     }
 
@@ -428,7 +424,7 @@ module.exports = class BetterTTS {
     start() {
         this.showChangelog();
 
-        this.BdApi.DOM.addStyle(`label[for="textReplacerAdd"] + input[type="text"]{ min-width: 100px; width: 150px;}`);
+        DOM.addStyle(this.meta.name, `label[for="textReplacerAdd"] + input[type="text"]{ min-width: 100px; width: 150px;}`);
         this.handleMessage = this.messageRecieved.bind(this);
         this.handleAnnouceUsers = this.annouceUser.bind(this);
         this.handleUpdateRelations = this.updateRelationships.bind(this);
@@ -472,7 +468,7 @@ module.exports = class BetterTTS {
         DiscordModules.unsubscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
         document.removeEventListener("keydown", this.handleKeyDown);
         this.AudioPlayer.stopTTS();
-        this.BdApi.DOM.removeStyle();
+        DOM.removeStyle(this.meta.name);
     }
 
     // Event handelers
@@ -574,7 +570,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsMutedUsers.delete(userId);
                 }
-                this.BdApi.Data.save("ttsMutedUsers", this.ttsMutedUsers);
+                Data.save(this.meta.name, "ttsMutedUsers", this.ttsMutedUsers);
             }
         });
         let ttsTestAnnouceUser = ContextMenu.buildItem({
@@ -598,7 +594,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsSubscribedChannels.delete(channelId);
                 }
-                this.BdApi.Data.save("ttsSubscribedChannels", this.ttsSubscribedChannels);
+                Data.save(this.meta.name, "ttsSubscribedChannels", this.ttsSubscribedChannels);
             }
         });
         if (Array.isArray(buttonParent1)){
@@ -624,7 +620,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsSubscribedChannels.delete(channelId);
                 }
-                this.BdApi.Data.save("ttsSubscribedChannels", this.ttsSubscribedChannels);
+                Data.save(this.meta.name, "ttsSubscribedChannels", this.ttsSubscribedChannels);
             }
         });
         if (Array.isArray(buttonParent))
@@ -647,7 +643,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsSubscribedGuilds.delete(guildId);
                 }
-                this.BdApi.Data.save("ttsSubscribedGuilds", this.ttsSubscribedGuilds);
+                Data.save(this.meta.name, "ttsSubscribedGuilds", this.ttsSubscribedGuilds);
             }
         });
         if (Array.isArray(buttonParent))
@@ -815,9 +811,9 @@ module.exports = class BetterTTS {
     toggleTTS() {
         let isEnabled = this.settings.enableTTS;
         if (isEnabled) {
-            this.BdApi.UI.showToast("TTS Muted 🔇");
+            UI.showToast("TTS Muted 🔇");
         } else {
-            this.BdApi.UI.showToast("TTS Enabled 🔊");
+            UI.showToast("TTS Enabled 🔊");
         }
         this.updateSettingValue(null, "enableTTS", !isEnabled);
     }

@@ -20,7 +20,7 @@ const config = {
     ]
 };
 
-const { Webpack  } = BdApi;
+const { Webpack, Data, UI } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 
 const MediaEngineStore = Webpack.getStore("MediaEngineStore");
@@ -37,8 +37,6 @@ const PUSH_TO_MUTE_KEYBIND = 3100;
 module.exports = class BasePlugin {
     constructor(meta) {
         this.meta = meta;
-        this.BdApi = new BdApi(this.meta.name);
-        console = this.BdApi.Logger;
 
         this.settings = {};
         this.keyBindsIds = [];
@@ -50,7 +48,7 @@ module.exports = class BasePlugin {
     setConfigSetting(id, newValue) {
         for (const setting of config.settings) {
             if (setting.id === id) {
-                this.BdApi.Data.save(id, newValue);
+                Data.save(this.meta.name, id, newValue);
                 this.settings[id] = newValue;
                 setting.value = newValue;
                 return;
@@ -58,7 +56,7 @@ module.exports = class BasePlugin {
             if (setting.settings) {
                 for (const settingInt of setting.settings) {
                     if (settingInt.id === id) {
-                        this.BdApi.Data.save(id, newValue);
+                        Data.save(this.meta.name, id, newValue);
                         this.settings[id] = newValue;
                         settingInt.value = newValue;
                         return;
@@ -72,18 +70,18 @@ module.exports = class BasePlugin {
         for (const setting of config.settings) {
             if (setting.type === "category") {
                 for (const settingInt of setting.settings) {
-                    settingInt.value = this.BdApi.Data.load(settingInt.id) ?? settingInt.value;
+                    settingInt.value = Data.load(this.meta.name, settingInt.id) ?? settingInt.value;
                     this.settings[settingInt.id] = settingInt.value;
                 }
             } else {
-                setting.value = this.BdApi.Data.load(setting.id) ?? setting.value;
+                setting.value = Data.load(this.meta.name, setting.id) ?? setting.value;
                 this.settings[setting.id] = setting.value;
             }
         }
     }
 
     getSettingsPanel() {
-        return this.BdApi.UI.buildSettingsPanel({
+        return UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
                 this.setConfigSetting(id, value);
@@ -99,14 +97,14 @@ module.exports = class BasePlugin {
     }
 
     showChangelog() {
-        const savedVersion = this.BdApi.Data.load("version");
+        const savedVersion = Data.load(this.meta.name, "version");
         if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-            this.BdApi.UI.showChangelogModal({
+            UI.showChangelogModal({
                 title: this.meta.name,
                 subtitle: this.meta.version,
                 changes: config.changelog
             });
-            this.BdApi.Data.save("version", this.meta.version);
+            Data.save(this.meta.name, "version", this.meta.version);
         }
     }
 
