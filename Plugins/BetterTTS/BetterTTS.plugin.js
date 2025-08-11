@@ -387,14 +387,15 @@ module.exports = class BetterTTS {
     }
     
     showChangelog() {
-        if (this.settings.version !== this.meta.version && config.changelog.length > 0) {
-            UI.showChangelogModal({
-                title: this.meta.name,
-                subtitle: this.meta.version,
-                changes: config.changelog
-            });
-            this.settings.version = this.meta.version;
-        }
+        const savedVersion = Data.load(this.meta.name, "version");
+		if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+			UI.showChangelogModal({
+				title: this.meta.name,
+				subtitle: this.meta.version,
+				changes: config.changelog
+			});
+			Data.save(this.meta.name, "version", this.meta.version);
+		}
     }
 
     // Plugin start/stop
