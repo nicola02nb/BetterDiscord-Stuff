@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.10
+ * @version 1.1.11
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -31,6 +31,9 @@ const config = {
         { type: "switch", id: "showToast", name: "Show Toasts", note: "If enabled, toasts will be shown when the stream is started or stopped.", value: true },
     ]
 };
+function getSetting(key) {
+    return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
+}
 
 const { Webpack, UI, Data } = BdApi;
 const { Filters } = Webpack;
@@ -59,11 +62,11 @@ module.exports = class ShortcutScreenshareScreen {
 
         this.settings = new Proxy({}, {
             get: (_target, key) => {
-                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+                return Data.load(this.meta.name, key) ?? getSetting(key)?.value;
             },
             set: (_target, key, value) => {
                 Data.save(this.meta.name, key, value);
-                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                getSetting(key).value = value;
                 return true;
             }
         });

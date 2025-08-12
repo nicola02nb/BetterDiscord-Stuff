@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.4
+ * @version 2.6.5
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -24,6 +24,9 @@ const config = {
         },
     ]
 };
+function getSetting(key) {
+    return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
+}
 
 const { Webpack, React, Data, DOM, Patcher, UI } = BdApi;
 const { Filters } = Webpack;
@@ -43,11 +46,11 @@ module.exports = class ShowPing {
         
         this.settings = new Proxy({}, {
             get: (_target, key) => {
-                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+                return Data.load(this.meta.name, key) ?? getSetting(key)?.value;
             },
             set: (_target, key, value) => {
                 Data.save(this.meta.name, key, value);
-                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                getSetting(key).value = value;
                 return true;
             }
         });

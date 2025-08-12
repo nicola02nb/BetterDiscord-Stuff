@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.14.6
+ * @version 2.14.7
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -21,74 +21,77 @@ const config = {
         { type: "switch", id: "enableMessageReading", name: "Enable Message Reading", note: "Enables/Disables the message reading from channels.", value: true },
         { type: "category", id: "ttsMessageSources", name: "TTS Message Sources", collapsible: true, shown: false, settings: [
             { type: "dropdown", id: "messagesChannelsToRead", name: "Channels where TTS should Read", note: "Choose the channels you want messages to be read.", value: "never", options: [
-                        { label: "Never", value: "never" },
-                        { label: "All Channels", value: "allChannels" },
-                        { label: "Focused Channel", value: "focusedChannel" },
-                        { label: "Connected Channel", value: "connectedChannel" },
-                        { label: "Focused Server Channels", value: "focusedGuildChannels" },
-                        { label: "Connected Server Channels", value: "connectedGuildChannels" },
+                { label: "Never", value: "never" },
+                { label: "All Channels", value: "allChannels" },
+                { label: "Focused Channel", value: "focusedChannel" },
+                { label: "Connected Channel", value: "connectedChannel" },
+                { label: "Focused Server Channels", value: "focusedGuildChannels" },
+                { label: "Connected Server Channels", value: "connectedGuildChannels" },
             ]},
             { type: "dropdown", id: "ingnoreWhenConnected", name: "Ignore TTS when in Voice Channel", note: "Choose the channels you want messages to be ignored while in a voice channel.", value: "never", options: [
-                        { label: "None", value: "none" },
-                        { label: "Subscribed", value: "subscribed" },
-                        { label: "Focused/Connected", value: "focusedConnected" },
-                        { label: "All", value: "all" },
+                { label: "None", value: "none" },
+                { label: "Subscribed", value: "subscribed" },
+                { label: "Focused/Connected", value: "focusedConnected" },
+                { label: "All", value: "all" },
             ]},
-                { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS.", children: [] },
-                { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS.", children: [] },
+            { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS.", children: [] },
+            { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS.", children: [] },
         ]},
         { type: "category", id: "messageReadingSettings", name: "Message Reading Settings", collapsible: true, shown: false, settings: [
             { type: "dropdown", id: "channelInfoReading", name: "Channel Info Reading", note: "Sets which of the channel should prepend server and/or channel name.", value: "none", options: [
-                        { label: "None", value: "none" },
-                        { label: "Subscribed", value: "subscribed" },
-                        { label: "Focused/Connected", value: "focusedConnected" },
-                        { label: "All", value: "all" },
+                { label: "None", value: "none" },
+                { label: "Subscribed", value: "subscribed" },
+                { label: "Focused/Connected", value: "focusedConnected" },
+                { label: "All", value: "all" },
             ]},
-                { type: "switch", id: "messagePrependGuild", name: "Enables Prepending Server Name Before Messages Reading", note: "Reads also the name of the server where the message comes from.", value: false },
-                { type: "switch", id: "messagePrependChannel", name: "Enables Prepending Channel Name Before Messages Reading", note: "Reads also the name of the channel where the message comes from.", value: false },
-                { type: "switch", id: "messagePrependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name of the user that sent the message.", value: true },
+            { type: "switch", id: "messagePrependGuild", name: "Enables Prepending Server Name Before Messages Reading", note: "Reads also the name of the server where the message comes from.", value: false },
+            { type: "switch", id: "messagePrependChannel", name: "Enables Prepending Channel Name Before Messages Reading", note: "Reads also the name of the channel where the message comes from.", value: false },
+            { type: "switch", id: "messagePrependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name of the user that sent the message.", value: true },
             { type: "dropdown", id: "messageNamesReading", name: "Usernames Reading", note: "Sets which of the names of a user used by tts.", value: "default", options: [
-                        { label: "Default", value: "default" },
-                        { label: "Username", value: "userName" },
-                        { label: "Display Name", value: "globalName" },
-                        { label: "Friend Name", value: "friendName" },
-                        { label: "Server Name", value: "serverName" },
+                { label: "Default", value: "default" },
+                { label: "Username", value: "userName" },
+                { label: "Display Name", value: "globalName" },
+                { label: "Friend Name", value: "friendName" },
+                { label: "Server Name", value: "serverName" },
             ]},
             { type: "dropdown", id: "messageLinksReading", name: "Message Links Reading", note: "Select how links should be read by TTS.", value: "domain", options: [
-                        { label: "Remove Links", value: "remove" },
-                        { label: "Read Only Domain", value: "domain" },
-                        { label: "Sobstitute With word URL", value: "sobstitute" },
-                        { label: "Keep URL", value: "keep" },
+                { label: "Remove Links", value: "remove" },
+                { label: "Read Only Domain", value: "domain" },
+                { label: "Sobstitute With word URL", value: "sobstitute" },
+                { label: "Keep URL", value: "keep" },
             ]},
-                { type: "switch", id: "messageSpoilersReading", name: "Enables Reading Messages Spoilers", note: "If enabled, it will read messages spoilers content.", value: false },
+            { type: "switch", id: "messageSpoilersReading", name: "Enables Reading Messages Spoilers", note: "If enabled, it will read messages spoilers content.", value: false },
         ]},
         { type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
             { type: "custom", id: "ttsSource", name: "TTS Source", note: "Choose the channel you want to play the TTS.", value:"streamlabs", children: []},
             { type: "custom", id: "ttsVoice", name: "Voice for TTS", note: "Changes voice used for TTS.", value:"Brian", children: []}
         ]},
         { type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
-                { type: "custom", id: "mutedUsers", name: "Muted Users", note: "List of users that muted to TTS.", children: [] },
-                { type: "switch", id: "blockBlockedUsers", name: "Block Blocked Users", note: "Blocks blocked users from TTS.", value: true },
-                { type: "switch", id: "blockIgnoredUsers", name: "Block Ignored Users", note: "Blocks ignored users from TTS.", value: true },
-                { type: "switch", id: "blockNotFriendusers", name: "Block Not Friend Users", note: "Blocks not friends users from TTS.", value: false },
-                { type: "switch", id: "blockMutedChannels", name: "Block Muted Channels", note: "Blocks muteds channels from TTS.", value: true },
-                { type: "switch", id: "blockMutedGuilds", name: "Block Muted Guilds", note: "Blocks muteds server/guilds from TTS.", value: false },
+            { type: "custom", id: "mutedUsers", name: "Muted Users", note: "List of users that muted to TTS.", children: [] },
+            { type: "switch", id: "blockBlockedUsers", name: "Block Blocked Users", note: "Blocks blocked users from TTS.", value: true },
+            { type: "switch", id: "blockIgnoredUsers", name: "Block Ignored Users", note: "Blocks ignored users from TTS.", value: true },
+            { type: "switch", id: "blockNotFriendusers", name: "Block Not Friend Users", note: "Blocks not friends users from TTS.", value: false },
+            { type: "switch", id: "blockMutedChannels", name: "Block Muted Channels", note: "Blocks muteds channels from TTS.", value: true },
+            { type: "switch", id: "blockMutedGuilds", name: "Block Muted Guilds", note: "Blocks muteds server/guilds from TTS.", value: false },
         ]},
         { type: "category", id: "ttsAudioSettings", name: "TTS Audio Settings", collapsible: true, shown: false, settings: [
-                { type: "slider", id: "ttsVolume", name: "TTS Volume", note: "Changes the volume of the TTS.", step: 0.1, value: 100, min: 0, max: 100, units: "%", markers: [0, 25, 50, 75, 100], inline: false },
-                { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS.", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
-                { type: "custom", id: "ttsPreview", name: "Play TTS Preview", note: "Plays a default test message.", children: [] },
-                { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages.", value: 1000 },
+            { type: "slider", id: "ttsVolume", name: "TTS Volume", note: "Changes the volume of the TTS.", step: 0.1, value: 100, min: 0, max: 100, units: "%", markers: [0, 25, 50, 75, 100], inline: false },
+            { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS.", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
+            { type: "custom", id: "ttsPreview", name: "Play TTS Preview", note: "Plays a default test message.", children: [] },
+            { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages.", value: 1000 },
         ]},
         { type: "category", id: "textReplacer", name: "Text Replacer", collapsible: true, shown: false, settings: [
-                { type: "custom", id: "textReplacerRules", name: "Rules", note: "Sobstitute Texts that matches your regex before reading it.", children: [] },
-                { type: "custom", id: "textReplacerAdd", name: "Add Rule", note: "Adds a regex rule to sobstitute matches with a custom text.", children: [] },
+            { type: "custom", id: "textReplacerRules", name: "Rules", note: "Sobstitute Texts that matches your regex before reading it.", children: [] },
+            { type: "custom", id: "textReplacerAdd", name: "Add Rule", note: "Adds a regex rule to sobstitute matches with a custom text.", children: [] },
         ]},
         { type: "category", id: "keybinds", name: "Keybinds", collapsible: true, shown: false, settings: [
-                { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", clearable: true, value: [] },
+            { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", clearable: true, value: [] },
         ]},
     ]
 };
+function getSetting(key) {
+    return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
+}
 
 const { Webpack, Patcher, React, ContextMenu, Utils, Components, Data, DOM, UI } = BdApi;
 const { Filters } = Webpack;
@@ -121,11 +124,11 @@ module.exports = class BetterTTS {
 
         this.settings = new Proxy({}, {
             get: (_target, key) => {
-                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+                return Data.load(this.meta.name, key) ?? getSetting(key)?.value;
             },
             set: (_target, key, value) => {
                 Data.save(this.meta.name, key, value);
-                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                getSetting(key).value = value;
                 return true;
             }
         });
@@ -284,7 +287,7 @@ module.exports = class BetterTTS {
                     let deleted = options.splice(selectedOption - 1, 1);
                     setSelectedOption(0);
                     this.textReplacerRules.delete(deleted[0]);
-                    this.settings.textReplacerRules = this.textReplacerRules;
+                    Data.save(this.meta.name, "textReplacerRules", this.textReplacerRules);
                 }
             }, "Remove Regex"),
         );
@@ -317,7 +320,7 @@ module.exports = class BetterTTS {
                 disabled: disabled,
                 onClick: () => {
                     this.textReplacerRules.add({ regex: regex, replacement: replacement });
-                    this.settings.textReplacerRules = this.textReplacerRules;
+                    Data.save(this.meta.name, "textReplacerRules", this.textReplacerRules);
                     setRegex("");
                     setReplacement("");
                 }
@@ -552,7 +555,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsMutedUsers.delete(userId);
                 }
-                this.settings.ttsMutedUsers = this.ttsMutedUsers;
+                Data.save(this.meta.name, "ttsMutedUsers", this.ttsMutedUsers);
             }
         });
         let ttsTestAnnouceUser = ContextMenu.buildItem({
@@ -576,7 +579,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsSubscribedChannels.delete(channelId);
                 }
-                this.settings.ttsSubscribedChannels = this.ttsSubscribedChannels;
+                Data.save(this.meta.name, "ttsSubscribedChannels", this.ttsSubscribedChannels);
             }
         });
         if (Array.isArray(buttonParent1)) {
@@ -602,7 +605,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsSubscribedChannels.delete(channelId);
                 }
-                this.settings.ttsSubscribedChannels = this.ttsSubscribedChannels;
+                Data.save(this.meta.name, "ttsSubscribedChannels", this.ttsSubscribedChannels);
             }
         });
         if (Array.isArray(buttonParent))
@@ -625,7 +628,7 @@ module.exports = class BetterTTS {
                 } else {
                     this.ttsSubscribedGuilds.delete(guildId);
                 }
-                this.settings.ttsSubscribedGuilds = this.ttsSubscribedGuilds;
+                Data.save(this.meta.name, "ttsSubscribedGuilds", this.ttsSubscribedGuilds);
             }
         });
         if (Array.isArray(buttonParent))

@@ -1,7 +1,7 @@
 /**
  * @name FarmQuests
  * @description A plugin that farms you multiple discord quests in background simultaneously.
- * @version 1.0.4
+ * @version 1.0.5
  * @author nicola02nb
  */
 
@@ -18,6 +18,9 @@ const config = {
         { type: "number", id: "checkForNewQuests", name: "Interval to check for new quests(min)", note: "The time (in minutes) to check for new quests", value: 5, min: 1, step: 1 },
     ]
 };
+function getSetting(key) {
+    return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
+}
 
 const { Webpack, Data, UI, Patcher } = BdApi;
 const { Filters } = Webpack;
@@ -39,11 +42,11 @@ module.exports = class BasePlugin {
 
         this.settings = new Proxy({}, {
             get: (_target, key) => {
-                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+                return Data.load(this.meta.name, key) ?? getSetting(key)?.value;
             },
             set: (_target, key, value) => {
                 Data.save(this.meta.name, key, value);
-                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                getSetting(key).value = value;
                 return true;
             }
         });

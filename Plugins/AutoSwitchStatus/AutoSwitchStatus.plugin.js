@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.7.6
+ * @version 1.7.7
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -37,6 +37,9 @@ const config = {
         { type: "switch", id: "showToast", name: "Show Toast", note: "If enabled, displays a toast message when the status changes", value: true }
     ]
 };
+function getSetting(key) {
+    return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
+}
 
 const { Webpack, Data, DOM, UI } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
@@ -56,11 +59,11 @@ module.exports = class AutoSwitchStatus {
 
         this.settings = new Proxy({}, {
             get: (_target, key) => {
-                return Data.load(this.meta.name, key) ?? config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key))?.value;
+                return Data.load(this.meta.name, key) ?? getSetting(key)?.value;
             },
             set: (_target, key, value) => {
                 Data.save(this.meta.name, key, value);
-                config.settings.find(setting => setting.id === key || setting.settings?.find(s => s.id === key)).value = value;
+                getSetting(key).value = value;
                 return true;
             }
         });
