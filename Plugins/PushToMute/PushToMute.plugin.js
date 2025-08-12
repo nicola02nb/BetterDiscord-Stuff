@@ -9,7 +9,7 @@
  */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "New Features", type: "added", items: ["Added changelog"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }

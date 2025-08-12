@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.8
+ * @version 1.4.9
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
@@ -26,12 +26,14 @@ const config = {
 };
 
 const { Webpack, Patcher, React, Components, Data, DOM, UI } = BdApi;
-const MediaEngineStore = Webpack.getStore("MediaEngineStore");
-const buttonStates = Webpack.getByKeys("enabled","button");
-const buttonLook = Webpack.getByKeys("button","lookBlank","colorBrand","grow");
-const voiceButtonsContainer = Webpack.getBySource("wrap:", "=E.NO_WRAP", "shrink");
-//const voiceButtonsContainer = {f: Webpack.getByStrings("HORIZONTAL", "START", "STRETCH")};
-//const voiceButtonsContainer = [...Webpack.getModules(Webpack.Filters.byStrings("HORIZONTAL", "START", "STRETCH"))][0];
+const { Filters } = Webpack;
+
+const [ MediaEngineStore, buttonStates, buttonLook, voiceButtonsContainer ] = Webpack.getBulk(
+    { filter: Filters.byStoreName("MediaEngineStore") },
+    { filter: Filters.byKeys("enabled","button") },
+    { filter: Filters.byKeys("button","lookBlank","colorBrand","grow") },
+    { filter: Filters.bySource("wrap:", "=E.NO_WRAP", "shrink") }
+);
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 

@@ -1,7 +1,7 @@
 /**
  * @name FarmQuests
  * @description A plugin that farms you multiple discord quests in background simultaneously.
- * @version 1.0.3
+ * @version 1.0.4
  * @author nicola02nb
  */
 
@@ -9,7 +9,7 @@
 
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "New Features", type: "added", items: ["Added changelog"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -20,12 +20,17 @@ const config = {
 };
 
 const { Webpack, Data, UI, Patcher } = BdApi;
-const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
-const ApplicationStreamingStore = Webpack.getStore("ApplicationStreamingStore");
-const RunningGameStore = Webpack.getStore("RunningGameStore");
-const QuestsStore = Webpack.getStore("QuestsStore");
-const ChannelStore = Webpack.getStore("ChannelStore");
-const GuildChannelStore = Webpack.getStore("GuildChannelStore");
+const { Filters } = Webpack;
+
+const [ DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore ] = Webpack.getBulk(
+    { filter: Filters.byProps("dispatch", "subscribe") },
+    { filter: Filters.byStoreName("ApplicationStreamingStore") },
+    { filter: Filters.byStoreName("RunningGameStore") },
+    { filter: Filters.byStoreName("QuestsStore") },
+    { filter: Filters.byStoreName("ChannelStore") },
+    { filter: Filters.byStoreName("GuildChannelStore") },
+    { filter: Filters.bySource("bind(null,\"get\")") }
+);
 const api = Webpack.getBySource('bind(null,"get")')?.tn;
 
 module.exports = class BasePlugin {

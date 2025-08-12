@@ -9,7 +9,7 @@
  */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "New Features", type: "added", items: ["Added changelog"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -35,14 +35,16 @@ const config = {
 const { Webpack, UI, Data } = BdApi;
 const { Filters } = Webpack;
 
-const ApplicationStreamingStore = Webpack.getStore("ApplicationStreamingStore");
-const MediaEngineStore = Webpack.getStore("MediaEngineStore");
-const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
-const RunningGameStore = Webpack.getStore("RunningGameStore");
-const StreamRTCConnectionStore = Webpack.getStore("StreamRTCConnectionStore");
-
-const streamStart = Webpack.getModule(Filters.byStrings("STREAM_START", "GUILD", "CALL", "OVERLAY"), { searchExports: true });
-const streamStop = Webpack.getModule(Filters.byStrings("STREAM_STOP"), { searchExports: true });
+const [ ApplicationStreamingStore, StreamRTCConnectionStore, MediaEngineStore, RunningGameStore, RTCConnectionStore,
+    streamStart, streamStop ] = Webpack.getBulk(
+    { filter: Filters.byStoreName("ApplicationStreamingStore") },
+    { filter: Filters.byStoreName("StreamRTCConnectionStore") },
+    { filter: Filters.byStoreName("MediaEngineStore") },
+    { filter: Filters.byStoreName("RunningGameStore") },
+    { filter: Filters.byStoreName("RTCConnectionStore") },
+    { filter: Filters.byStrings("STREAM_START", "GUILD", "CALL", "OVERLAY"), searchExports: true },
+    { filter: Filters.byStrings("STREAM_STOP"), searchExports: true }
+);
 
 const DiscordUtils = DiscordNative.nativeModules.requireModule("discord_utils");
 const platform = process.platform;

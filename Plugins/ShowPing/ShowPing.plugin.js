@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.3
+ * @version 2.6.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,7 +9,7 @@
 */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "New Features", type: "added", items: ["Added changelog"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -26,14 +26,17 @@ const config = {
 };
 
 const { Webpack, React, Data, DOM, Patcher, UI } = BdApi;
-const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
-const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
-
-const { labelWrapper, rtcConnectionStatusConnected } = Webpack.getByKeys("labelWrapper", "rtcConnectionStatusConnected");
-const { voiceButtonsContainer } = Webpack.getByKeys("voiceButtonsContainer");
-const labelClasses = Webpack.getModule(m => m["hovered"] && m["default"]);
-const textMdMedium = Webpack.getModule(m => m["text-md/medium"] && !m["avatar"] && !m["defaultColor"])["text-md/medium"];
-const ConnectionStatus = Webpack.getModule((exports, module, id) => id === "423516");
+const { Filters } = Webpack;
+const [ DiscordModules, RTCConnectionStore, { labelWrapper, rtcConnectionStatusConnected }, { voiceButtonsContainer }, labelClasses, textMdMedium, ConnectionStatus ] =
+    Webpack.getBulk(
+        { filter: Filters.byProps("dispatch", "subscribe") },
+        { filter: Filters.byStoreName("RTCConnectionStore") },
+        { filter: Filters.byKeys("labelWrapper", "rtcConnectionStatusConnected") },
+        { filter: Filters.byKeys("voiceButtonsContainer") },
+        { filter: Filters.byKeys("hovered", "default") },
+        { filter: Filters.byKeys("container", "text-md/medium", "wrapper") },
+        { filter: Filters.bySource("hasVideo", "hasConnectedChannel", "textVariant") }
+    );
 module.exports = class ShowPing {
     constructor(meta) {
         this.meta = meta;
@@ -118,7 +121,7 @@ module.exports = class ShowPing {
         DiscordModules.subscribe("RTC_CONNECTION_PING", updatePing);
 
         return React.createElement("div", {
-            className: `${textMdMedium} pingDisplay`,
+            className: `${textMdMedium["text-md/medium"]} pingDisplay`,
             children: "\u00A0" + (ping !== undefined ? `${ping} ms` : "N/A")
         });
     }

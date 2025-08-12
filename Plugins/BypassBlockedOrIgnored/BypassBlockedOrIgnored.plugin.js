@@ -1,7 +1,7 @@
 /**
  * @name BypassBlockedOrIgnored
  * @description Bypass the blocked or ignored user modal if is present in voice channels
- * @version 1.0.5
+ * @version 1.0.6
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,7 +9,7 @@
  */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "New Features", type: "added", items: ["Added changelog"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -23,12 +23,14 @@ const config = {
 };
 
 const { Webpack, Patcher, UI, Data } = BdApi;
+const { Filters } = Webpack;
 
-const RelationshipStore = Webpack.getStore("RelationshipStore");
-
-const handleVoice = Webpack.getModule(m => m.handleVoiceConnect);
-const { getBlockedUsersForVoiceChannel, getIgnoredUsersForVoiceChannel } = Webpack.getModule(m => m.getBlockedUsersForVoiceChannel && m.getIgnoredUsersForVoiceChannel);
-const handleBoIJoined = Webpack.getModule(m => m.handleBlockedOrIgnoredUserVoiceChannelJoin);
+const [ RelationshipStore, handleVoice, { getBlockedUsersForVoiceChannel, getIgnoredUsersForVoiceChannel }, handleBoIJoined ] = Webpack.getBulk(
+    { filter: Filters.byStoreName("RelationshipStore") },
+    { filter: Filters.byProps("handleVoiceConnect") },
+    { filter: Filters.byProps("getBlockedUsersForVoiceChannel", "getIgnoredUsersForVoiceChannel") },
+    { filter: Filters.byProps("handleBlockedOrIgnoredUserVoiceChannelJoin") }
+);
 
 module.exports = class BypassBlockedOrIgnored {
     constructor(meta) {

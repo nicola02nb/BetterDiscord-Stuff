@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.14.5
+ * @version 2.14.6
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,7 +9,7 @@
 */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "New Features", type: "added", items: ["Added changelog"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -21,94 +21,99 @@ const config = {
         { type: "switch", id: "enableMessageReading", name: "Enable Message Reading", note: "Enables/Disables the message reading from channels.", value: true },
         { type: "category", id: "ttsMessageSources", name: "TTS Message Sources", collapsible: true, shown: false, settings: [
             { type: "dropdown", id: "messagesChannelsToRead", name: "Channels where TTS should Read", note: "Choose the channels you want messages to be read.", value: "never", options: [
-                { label: "Never", value: "never" },
-                { label: "All Channels", value: "allChannels" },
-                { label: "Focused Channel", value: "focusedChannel" },
-                { label: "Connected Channel", value: "connectedChannel" },
-                { label: "Focused Server Channels", value: "focusedGuildChannels" },
-                { label: "Connected Server Channels", value: "connectedGuildChannels" },
+                        { label: "Never", value: "never" },
+                        { label: "All Channels", value: "allChannels" },
+                        { label: "Focused Channel", value: "focusedChannel" },
+                        { label: "Connected Channel", value: "connectedChannel" },
+                        { label: "Focused Server Channels", value: "focusedGuildChannels" },
+                        { label: "Connected Server Channels", value: "connectedGuildChannels" },
             ]},
             { type: "dropdown", id: "ingnoreWhenConnected", name: "Ignore TTS when in Voice Channel", note: "Choose the channels you want messages to be ignored while in a voice channel.", value: "never", options: [
-                { label: "None", value: "none" },
-                { label: "Subscribed", value: "subscribed" },
-                { label: "Focused/Connected", value: "focusedConnected" },
-                { label: "All", value: "all" },
+                        { label: "None", value: "none" },
+                        { label: "Subscribed", value: "subscribed" },
+                        { label: "Focused/Connected", value: "focusedConnected" },
+                        { label: "All", value: "all" },
             ]},
-            { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS.", children: [] },
-            { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS.", children: [] },
+                { type: "custom", id: "subscribedChannels", name: "Subscribed Channels", note: "List of channels that are subscribed to TTS.", children: [] },
+                { type: "custom", id: "subscribedGuild", name: "Subscribed Servers", note: "List of servers that are subscribed to TTS.", children: [] },
         ]},
         { type: "category", id: "messageReadingSettings", name: "Message Reading Settings", collapsible: true, shown: false, settings: [
             { type: "dropdown", id: "channelInfoReading", name: "Channel Info Reading", note: "Sets which of the channel should prepend server and/or channel name.", value: "none", options: [
-                { label: "None", value: "none" },
-                { label: "Subscribed", value: "subscribed" },
-                { label: "Focused/Connected", value: "focusedConnected" },
-                { label: "All", value: "all" },
+                        { label: "None", value: "none" },
+                        { label: "Subscribed", value: "subscribed" },
+                        { label: "Focused/Connected", value: "focusedConnected" },
+                        { label: "All", value: "all" },
             ]},
-            { type: "switch", id: "messagePrependGuild", name: "Enables Prepending Server Name Before Messages Reading", note: "Reads also the name of the server where the message comes from.", value: false },
-            { type: "switch", id: "messagePrependChannel", name: "Enables Prepending Channel Name Before Messages Reading", note: "Reads also the name of the channel where the message comes from.", value: false },
-            { type: "switch", id: "messagePrependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name of the user that sent the message.", value: true },
+                { type: "switch", id: "messagePrependGuild", name: "Enables Prepending Server Name Before Messages Reading", note: "Reads also the name of the server where the message comes from.", value: false },
+                { type: "switch", id: "messagePrependChannel", name: "Enables Prepending Channel Name Before Messages Reading", note: "Reads also the name of the channel where the message comes from.", value: false },
+                { type: "switch", id: "messagePrependNames", name: "Enables Prepending Usernames Before Messages Reading", note: "Reads also the name of the user that sent the message.", value: true },
             { type: "dropdown", id: "messageNamesReading", name: "Usernames Reading", note: "Sets which of the names of a user used by tts.", value: "default", options: [
-                { label: "Default", value: "default" },
-                { label: "Username", value: "userName" },
-                { label: "Display Name", value: "globalName" },
-                { label: "Friend Name", value: "friendName" },
-                { label: "Server Name", value: "serverName" },
+                        { label: "Default", value: "default" },
+                        { label: "Username", value: "userName" },
+                        { label: "Display Name", value: "globalName" },
+                        { label: "Friend Name", value: "friendName" },
+                        { label: "Server Name", value: "serverName" },
             ]},
             { type: "dropdown", id: "messageLinksReading", name: "Message Links Reading", note: "Select how links should be read by TTS.", value: "domain", options: [
-                { label: "Remove Links", value: "remove" },
-                { label: "Read Only Domain", value: "domain" },
-                { label: "Sobstitute With word URL", value: "sobstitute" },
-                { label: "Keep URL", value: "keep" },
+                        { label: "Remove Links", value: "remove" },
+                        { label: "Read Only Domain", value: "domain" },
+                        { label: "Sobstitute With word URL", value: "sobstitute" },
+                        { label: "Keep URL", value: "keep" },
             ]},
-            { type: "switch", id: "messageSpoilersReading", name: "Enables Reading Messages Spoilers", note: "If enabled, it will read messages spoilers content.", value: false },          
+                { type: "switch", id: "messageSpoilersReading", name: "Enables Reading Messages Spoilers", note: "If enabled, it will read messages spoilers content.", value: false },
         ]},
         { type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
             { type: "custom", id: "ttsSource", name: "TTS Source", note: "Choose the channel you want to play the TTS.", value:"streamlabs", children: []},
             { type: "custom", id: "ttsVoice", name: "Voice for TTS", note: "Changes voice used for TTS.", value:"Brian", children: []}
         ]},
         { type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
-            { type: "custom", id: "mutedUsers", name: "Muted Users", note: "List of users that muted to TTS.", children: [] },
-            { type: "switch", id: "blockBlockedUsers", name: "Block Blocked Users", note: "Blocks blocked users from TTS.", value: true },
-            { type: "switch", id: "blockIgnoredUsers", name: "Block Ignored Users", note: "Blocks ignored users from TTS.", value: true },
-            { type: "switch", id: "blockNotFriendusers", name: "Block Not Friend Users", note: "Blocks not friends users from TTS.", value: false },
-            { type: "switch", id: "blockMutedChannels", name: "Block Muted Channels", note: "Blocks muteds channels from TTS.", value: true },
-            { type: "switch", id: "blockMutedGuilds", name: "Block Muted Guilds", note: "Blocks muteds server/guilds from TTS.", value: false },
+                { type: "custom", id: "mutedUsers", name: "Muted Users", note: "List of users that muted to TTS.", children: [] },
+                { type: "switch", id: "blockBlockedUsers", name: "Block Blocked Users", note: "Blocks blocked users from TTS.", value: true },
+                { type: "switch", id: "blockIgnoredUsers", name: "Block Ignored Users", note: "Blocks ignored users from TTS.", value: true },
+                { type: "switch", id: "blockNotFriendusers", name: "Block Not Friend Users", note: "Blocks not friends users from TTS.", value: false },
+                { type: "switch", id: "blockMutedChannels", name: "Block Muted Channels", note: "Blocks muteds channels from TTS.", value: true },
+                { type: "switch", id: "blockMutedGuilds", name: "Block Muted Guilds", note: "Blocks muteds server/guilds from TTS.", value: false },
         ]},
         { type: "category", id: "ttsAudioSettings", name: "TTS Audio Settings", collapsible: true, shown: false, settings: [
-            { type: "slider", id: "ttsVolume", name: "TTS Volume", note: "Changes the volume of the TTS.", step: 0.1, value: 100, min: 0, max: 100, units: "%", markers: [0, 25, 50, 75, 100], inline: false },
-            { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS.", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
-            { type: "custom", id: "ttsPreview", name: "Play TTS Preview", note: "Plays a default test message.", children: [] },
-            { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages.", value: 1000 },
+                { type: "slider", id: "ttsVolume", name: "TTS Volume", note: "Changes the volume of the TTS.", step: 0.1, value: 100, min: 0, max: 100, units: "%", markers: [0, 25, 50, 75, 100], inline: false },
+                { type: "slider", id: "ttsSpeechRate", name: "TTS Speech Rate", note: "Changes the speed of the TTS.", step: 0.05, value: 1, min: 0.1, max: 2, units: "x", markers: [0.1, 1, 1.25, 1.5, 1.75, 2], inline: false },
+                { type: "custom", id: "ttsPreview", name: "Play TTS Preview", note: "Plays a default test message.", children: [] },
+                { type: "number", id: "ttsDelayBetweenMessages", name: "Delay Between messages (ms)", note: "Only works for Syncronous messages.", value: 1000 },
         ]},
         { type: "category", id: "textReplacer", name: "Text Replacer", collapsible: true, shown: false, settings: [
-            { type: "custom", id: "textReplacerRules", name: "Rules", note: "Sobstitute Texts that matches your regex before reading it.", children: [] },
-            { type: "custom", id: "textReplacerAdd", name: "Add Rule", note: "Adds a regex rule to sobstitute matches with a custom text.", children: [] },
+                { type: "custom", id: "textReplacerRules", name: "Rules", note: "Sobstitute Texts that matches your regex before reading it.", children: [] },
+                { type: "custom", id: "textReplacerAdd", name: "Add Rule", note: "Adds a regex rule to sobstitute matches with a custom text.", children: [] },
         ]},
         { type: "category", id: "keybinds", name: "Keybinds", collapsible: true, shown: false, settings: [
-            { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", clearable: true, value: [] },
+                { type: "keybind", id: "ttsToggle", name: "Toggle TTS", note: "Shortcut to toggle the TTS.", clearable: true, value: [] },
         ]},
     ]
 };
 
 const { Webpack, Patcher, React, ContextMenu, Utils, Components, Data, DOM, UI } = BdApi;
-const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
-const ChannelStore = Webpack.getStore("ChannelStore");
-const GuildStore = Webpack.getStore("GuildStore");
-const GuildMemberStore = Webpack.getStore("GuildMemberStore");
-const MediaEngineStore = Webpack.getStore("MediaEngineStore");
-const RelationshipStore = Webpack.getStore("RelationshipStore");
-const RTCConnectionStore = Webpack.getStore("RTCConnectionStore");
-const SelectedChannelStore = Webpack.getStore("SelectedChannelStore");
-const SelectedGuildStore = Webpack.getStore("SelectedGuildStore");
-const UserGuildSettingsStore = Webpack.getStore("UserGuildSettingsStore");
-const UserSettingsProtoStore = Webpack.getStore("UserSettingsProtoStore");
-const UserStore = Webpack.getStore("UserStore");
+const { Filters } = Webpack;
+const [
+    DiscordModules, ChannelStore, GuildStore, GuildMemberStore, MediaEngineStore, RelationshipStore,
+    RTCConnectionStore, SelectedChannelStore, SelectedGuildStore, UserGuildSettingsStore, UserSettingsProtoStore, UserStore,
+    listenIcon] = Webpack.getBulk(
+        { filter: Filters.byProps("dispatch", "subscribe") },
+        { filter: Filters.byStoreName('ChannelStore') },
+        { filter: Filters.byStoreName('GuildStore') },
+        { filter: Filters.byStoreName('GuildMemberStore') },
+        { filter: Filters.byStoreName('MediaEngineStore') },
+        { filter: Filters.byStoreName('RelationshipStore') },
+        { filter: Filters.byStoreName('RTCConnectionStore') },
+        { filter: Filters.byStoreName('SelectedChannelStore') },
+        { filter: Filters.byStoreName('SelectedGuildStore') },
+        { filter: Filters.byStoreName('UserGuildSettingsStore') },
+        { filter: Filters.byStoreName('UserSettingsProtoStore') },
+        { filter: Filters.byStoreName('UserStore') },
+        { filter: Filters.byStrings("evenodd", "M12 22a10 10 0 1"), searchExports: true}
+    );
 
 const speakMessage = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.speak"))];
 const cancelSpeak = [...Webpack.getWithKey(Webpack.Filters.byStrings("speechSynthesis.cancel"))];
 const setTTSType = [...Webpack.getWithKey(Webpack.Filters.byStrings("setTTSType"))];
-
-const listenIcon = Webpack.getModule(Webpack.Filters.byStrings("evenodd", "M12 22a10 10 0 1"), { searchExports: true });
 
 module.exports = class BetterTTS {
     constructor(meta) {
@@ -137,7 +142,7 @@ module.exports = class BetterTTS {
     // Settings    
     listeners = {};
     subscribe = (event, callback) => {
-        this.listeners[event]=callback;
+        this.listeners[event] = callback;
     };
     emit = (event, data) => {
         if (this.listeners[event]) {
@@ -199,10 +204,10 @@ module.exports = class BetterTTS {
                 options: [{ label: "Select", value: "" }, ...options.map((option, index) => {
                     let obj = getFunction(option);
                     let name = obj?.name ?? obj?.username;
-                    return { label: name, value: option }; 
+                    return { label: name, value: option };
                 })]
-            },),            
-            React.createElement( Components.Button, {
+            },),
+            React.createElement(Components.Button, {
                 onClick: () => {
                     if (selectedOption === "") return;
                     options.splice(options.indexOf(selectedOption), 1);
@@ -210,7 +215,7 @@ module.exports = class BetterTTS {
                     this[setName].delete(selectedOption);
                     this.settings[setName] = this[setName];
                 }
-            }, labeltext),          
+            }, labeltext),
         );
     };
 
@@ -221,14 +226,14 @@ module.exports = class BetterTTS {
         const getLabel = (play) => {
             let icon;
             if (play) {
-                icon = React.createElement("svg", 
-                    {xmlns:"http://www.w3.org/2000/svg", width:"24", height:"24", fill:"currentColor", class:"bi bi-pause-fill", viewBox:"0 0 16 16"}, 
-                    React.createElement("path", {d: "M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"})
+                icon = React.createElement("svg",
+                    { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", fill: "currentColor", class: "bi bi-pause-fill", viewBox: "0 0 16 16" },
+                    React.createElement("path", { d: "M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5" })
                 );
             } else {
-                icon = React.createElement("svg", 
-                    {xmlns:"http://www.w3.org/2000/svg", width:"24", height:"24", fill:"currentColor", class:"bi bi-play-fill", viewBox:"0 0 16 16"}, 
-                    React.createElement("path", {d: "m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"})
+                icon = React.createElement("svg",
+                    { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", fill: "currentColor", class: "bi bi-play-fill", viewBox: "0 0 16 16" },
+                    React.createElement("path", { d: "m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393" })
                 );
             }
             return React.createElement(React.Fragment, null, icon, "Preview");
@@ -244,19 +249,19 @@ module.exports = class BetterTTS {
                     setText(event);
                 }
             }),
-            React.createElement(Components.Button,{ 
+            React.createElement(Components.Button, {
                 onClick: () => {
                     this.AudioPlayer.stopTTS();
                     if (!isPlaying) {
                         this.AudioPlayer.startTTS(text, true);
-                    }              
+                    }
                     setIsPlaying(!isPlaying);
                 }
             }, getLabel(isPlaying))
         );
     };
 
-    TextReplaceDropdown = ({}) => {
+    TextReplaceDropdown = ({ }) => {
         const [selectedOption, setSelectedOption] = React.useState(0);
 
         const options = Array.from(this.textReplacerRules);
@@ -270,18 +275,18 @@ module.exports = class BetterTTS {
                     setSelectedOption(event);
                 },
                 options: [{ label: "Select", value: 0 }, ...options.map((option, index) => {
-                    return {label: option.regex + " - " + option.replacement, value: index + 1 };
+                    return { label: option.regex + " - " + option.replacement, value: index + 1 };
                 })]
-            },),            
-            React.createElement( Components.Button, {
+            },),
+            React.createElement(Components.Button, {
                 onClick: () => {
                     if (selectedOption === 0) return;
-                    let deleted = options.splice(selectedOption-1, 1);
+                    let deleted = options.splice(selectedOption - 1, 1);
                     setSelectedOption(0);
                     this.textReplacerRules.delete(deleted[0]);
                     this.settings.textReplacerRules = this.textReplacerRules;
                 }
-            }, "Remove Regex"),          
+            }, "Remove Regex"),
         );
     };
 
@@ -290,7 +295,7 @@ module.exports = class BetterTTS {
         const [replacement, setReplacement] = React.useState("");
 
         const disabled = regex === "" || replacement === "";
-        
+
         return React.createElement(
             React.Fragment,
             null,
@@ -311,12 +316,12 @@ module.exports = class BetterTTS {
             React.createElement(Components.Button, {
                 disabled: disabled,
                 onClick: () => {
-                    this.textReplacerRules.add({regex: regex, replacement: replacement});
+                    this.textReplacerRules.add({ regex: regex, replacement: replacement });
                     this.settings.textReplacerRules = this.textReplacerRules;
                     setRegex("");
                     setReplacement("");
                 }
-            },"Add Regex")
+            }, "Add Regex")
         );
     };
 
@@ -371,7 +376,7 @@ module.exports = class BetterTTS {
                 this.AudioPlayer.updateRate(value);
                 break;
             case "ttsVolume":
-                this.AudioPlayer.updateVolume(value/100);
+                this.AudioPlayer.updateVolume(value / 100);
                 break;
             case "ttsDelayBetweenMessages":
                 value = parseInt(value);
@@ -385,17 +390,17 @@ module.exports = class BetterTTS {
         }
         this.settings[id] = value;
     }
-    
+
     showChangelog() {
         const savedVersion = Data.load(this.meta.name, "version");
-		if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-			UI.showChangelogModal({
-				title: this.meta.name,
-				subtitle: this.meta.version,
-				changes: config.changelog
-			});
-			Data.save(this.meta.name, "version", this.meta.version);
-		}
+        if (savedVersion !== this.meta.version && config.changelog.length > 0) {
+            UI.showChangelogModal({
+                title: this.meta.name,
+                subtitle: this.meta.version,
+                changes: config.changelog
+            });
+            Data.save(this.meta.name, "version", this.meta.version);
+        }
     }
 
     // Plugin start/stop
@@ -409,14 +414,14 @@ module.exports = class BetterTTS {
         this.handleSpeakMessage = this.speakMessage.bind(this);
         this.handleStopTTS = this.stopTTS.bind(this);
         this.handleKeyDown = this.onKeyDown.bind(this);
-        
+
         this.updateToggleKeys(this.settings.ttsToggle);
 
         this.AudioPlayer = new AudioPlayer(this.settings.ttsSource,
             this.settings.ttsVoice,
             this.settings.ttsSpeechRate,
             this.settings.ttsDelayBetweenMessages,
-            this.settings.ttsVolume/100);
+            this.settings.ttsVolume / 100);
 
         document.addEventListener("keydown", this.handleKeyDown);
         DiscordModules.subscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
@@ -459,7 +464,7 @@ module.exports = class BetterTTS {
     }
 
     messageRecieved(event) {
-        if(!this.settings.enableTTS) return;
+        if (!this.settings.enableTTS) return;
         let message = event.message;
         if ((event.guildId || !message.member) && this.shouldPlayMessage(event.message)) {
             let text = this.getPatchedContent(message, message.guild_id);
@@ -468,7 +473,7 @@ module.exports = class BetterTTS {
     }
 
     annouceUser(event) {
-        if(!this.settings.enableTTS) return;
+        if (!this.settings.enableTTS) return;
         let connectedChannelId = RTCConnectionStore.getChannelId();
         let userId = UserStore.getCurrentUser().id;
         for (const userStatus of event.voiceStates) {
@@ -486,7 +491,7 @@ module.exports = class BetterTTS {
     }
 
     speakMessage(event) {
-        if(!this.settings.enableTTS) return;
+        if (!this.settings.enableTTS) return;
         let text = this.getPatchedContent(event.message, event.channel.guild_id);
         this.AudioPlayer.startTTS(text);
     }
@@ -574,7 +579,7 @@ module.exports = class BetterTTS {
                 this.settings.ttsSubscribedChannels = this.ttsSubscribedChannels;
             }
         });
-        if (Array.isArray(buttonParent1)){
+        if (Array.isArray(buttonParent1)) {
             buttonParent1.push(ttsToggleUser);
             buttonParent1.push(ttsTestAnnouceUser);
         }
@@ -605,7 +610,7 @@ module.exports = class BetterTTS {
     }
 
     patchGuildContextMenu(returnValue, props) {
-        if(!props.guild) return;
+        if (!props.guild) return;
         let guildId = props.guild.id;
         const buttonFilter = button => button?.props?.id === "guild-notifications";
         let buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
@@ -701,7 +706,7 @@ module.exports = class BetterTTS {
             default:
                 break;
         }
-        if(this.ttsSubscribedChannels.has(messageChannelId) || this.ttsSubscribedGuilds.has(messageGuildId)){
+        if (this.ttsSubscribedChannels.has(messageChannelId) || this.ttsSubscribedGuilds.has(messageGuildId)) {
             message.prependGuildChannel = this.settings.channelInfoReading === "subscribed" || this.settings.channelInfoReading === "all";
             return true && !this.shouldIngnoreWhenConnected("subscribed");
         }
@@ -721,7 +726,7 @@ module.exports = class BetterTTS {
             case "serverName":
                 return GuildMemberStore.getNick(guildId, userId) ?? user.globalName ?? user.username;
             default:
-                if(guildId) {
+                if (guildId) {
                     return GuildMemberStore.getNick(guildId, userId) ?? user.globalName ?? user.username;
                 } else {
                     return RelationshipStore.getNickname(userId) ?? user.globalName ?? user.username;
@@ -749,13 +754,14 @@ module.exports = class BetterTTS {
                         return url;
                     default:
                         return url;
-            }});
+                }
+            });
         this.textReplacerRules.forEach(rule => {
             let parts = /\/(.*)\/(.*)/.exec(rule.regex);
             let regex;
-            if (regex == null) 
+            if (regex == null)
                 regex = new RegExp(rule.regex);
-            else 
+            else
                 regex = new RegExp(parts[1], parts[2]);
             text = text.replace(regex, rule.replacement);
         });
@@ -893,17 +899,17 @@ class AudioPlayer {
 
     updateRate(rate) {
         this.rate = rate;
-        if(this.media instanceof Audio)
+        if (this.media instanceof Audio)
             this.media.playbackRate = rate;
-        else if(this.media instanceof SpeechSynthesisUtterance)
+        else if (this.media instanceof SpeechSynthesisUtterance)
             this.media.rate = rate;
     }
 
     updateVolume(volume) {
         this.volume = volume;
-        if(this.media instanceof Audio)
+        if (this.media instanceof Audio)
             this.media.volume = clamp(volume, 0, 1);
-        else if(this.media instanceof SpeechSynthesisUtterance)
+        else if (this.media instanceof SpeechSynthesisUtterance)
             this.media.volume = clamp(volume, 0, 1);
     }
 
@@ -955,27 +961,27 @@ class AudioPlayer {
 // TTS Sources
 function getTTSSources() {
     const Sources = [
-        {label:"Discord", value: "discord", default: ""},
-        {label:"Streamlabs", value: "streamlabs", default: "Brian"},
+        { label: "Discord", value: "discord", default: "" },
+        { label: "Streamlabs", value: "streamlabs", default: "Brian" },
     ];
     return Sources;
 }
 function getDefaultVoice(source) {
     return getTTSSources().find(s => s.value === source)?.default;
 }
-function getTTSVoices(source){
+function getTTSVoices(source) {
     switch (source) {
         case "discord":
             return DiscordTTS.getVoices();
         case "streamlabs":
             return StreamElementsTTS.getVoices();
         default:
-            return [{label: "No voices available", value: "none"}];
+            return [{ label: "No voices available", value: "none" }];
     }
 }
 
 class DiscordTTS {
-    static voicesLables = [{label: "No voices available", value: "none"}];
+    static voicesLables = [{ label: "No voices available", value: "none" }];
     static getVoices() {
         let voices = speechSynthesis.getVoices();
         DiscordTTS.voicesLables = voices
@@ -994,12 +1000,12 @@ class DiscordTTS {
     }
 }
 class StreamElementsTTS {
-    static voicesLables = [{label: "No voices available", value: "none"}];
+    static voicesLables = [{ label: "No voices available", value: "none" }];
     static getVoices() {
         const request = new XMLHttpRequest();
         request.open('GET', 'https://api.streamelements.com/kappa/v2/speech/voices', false);
         request.send(null);
-    
+
         if (request.status === 200) {
             const data = JSON.parse(request.responseText);
             let voices = data.voices;

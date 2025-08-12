@@ -3,12 +3,12 @@
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @description View bigger stream previews via the context menu.
- * @version 1.1.13
+ * @version 1.1.14
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview
  */
 const config = {
 	changelog: [
-		{ title: "New Features", type: "added", items: ["Added changelog"] },
+		//{ title: "New Features", type: "added", items: ["Added changelog"] },
 		//{ title: "Bug Fix", type: "fixed", items: [""] },
 		//{ title: "Improvements", type: "improved", items: [""] },
 		//{ title: "On-going", type: "progress", items: [""] }
@@ -18,17 +18,18 @@ const config = {
 const { Webpack, ContextMenu, React, DOM, Data, UI } = BdApi;
 const { Filters } = Webpack;
 
-const openModal = Webpack.getModule(Filters.byStrings('onCloseRequest', 'onCloseCallback', 'instant', 'backdropStyle'), { searchExports: true });
+const [ ApplicationStreamingStore, ApplicationStreamPreviewStore, useStateFromStores, openModal, ModalRoot, ModalSize ] = Webpack.getBulk(
+    { filter: Filters.byStoreName("ApplicationStreamingStore") },
+    { filter: Filters.byStoreName("ApplicationStreamPreviewStore") },
+	{ filter: Filters.byStrings("useStateFromStores"), searchExports: true },
+	{ filter: Filters.byStrings('onCloseRequest', 'onCloseCallback', 'instant', 'backdropStyle'), searchExports: true },
+	{ filter: Filters.byStrings('.ImpressionTypes.MODAL,"aria-labelledby":'), searchExports: true },
+	{ filter: Filters.byProps("DYNAMIC"), searchExports: true },
+);
 
-const ModalRoot = Webpack.getModule(Filters.byStrings('.ImpressionTypes.MODAL,"aria-labelledby":'), { searchExports: true });
-const ModalSize = Webpack.getModule(m => m?.DYNAMIC, { searchExports: true });
 const RenderLinkComponent = Webpack.getModule(m => m.type?.toString?.().includes("MASKED_LINK"), { searchExports: false });
-const ImageModal = Webpack.getModule(m => m.type?.toString?.().includes("ZOOM_OUT_IMAGE_PRESSED"), { searchExports: true });
+const ImageModal = Webpack.getModule(m => m.type?.toString?.().includes("ZOOM_OUT_IMAGE_PRESSED"), { searchExports: true }); // Webpack.getAllByStrings("onZoom", "shouldLink", "zoomThumbnailPlaceholder")
 
-const useStateFromStores = Webpack.getModule(Filters.byStrings("useStateFromStores"), { searchExports: true });
-
-const ApplicationStreamingStore = Webpack.getStore("ApplicationStreamingStore");
-const ApplicationStreamPreviewStore = Webpack.getStore("ApplicationStreamPreviewStore");
 
 module.exports = class BiggerStreamPreview {
 	constructor(meta) {
