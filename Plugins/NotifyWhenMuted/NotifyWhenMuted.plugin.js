@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.7
+ * @version 1.4.8
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
@@ -9,7 +9,7 @@
 const defaultAudioUrl = "https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/NotifyWhenMuted/stop_talking.wav";
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "New Features", type: "added", items: [""] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -29,7 +29,7 @@ const { Webpack, Patcher, React, Components, Data, DOM, UI } = BdApi;
 const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 const buttonStates = Webpack.getByKeys("enabled","button");
 const buttonLook = Webpack.getByKeys("button","lookBlank","colorBrand","grow");
-const voiceButtonsContainer = Webpack.getModule((a,b) => b.id == 600164);
+const voiceButtonsContainer = Webpack.getBySource("wrap:", "=E.NO_WRAP", "shrink");
 //const voiceButtonsContainer = {f: Webpack.getByStrings("HORIZONTAL", "START", "STRETCH")};
 //const voiceButtonsContainer = [...Webpack.getModules(Webpack.Filters.byStrings("HORIZONTAL", "START", "STRETCH"))][0];
 
