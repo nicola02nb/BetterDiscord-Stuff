@@ -1,4 +1,3 @@
-⚠️ Already present on discord ⚠️
 # ShowPing for BetterDiscord
 A BetterDiscord(BD) plugin that displays your current ping.
 ## Features:

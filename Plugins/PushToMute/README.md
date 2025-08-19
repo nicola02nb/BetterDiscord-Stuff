@@ -1,3 +1,4 @@
+⚠️ Already present on discord ⚠️
 # PushToMute for BetterDiscord
 A BetterDiscord(BD) plugin that adds a keybind to mute the microphone while it is pressed.
 ## Features:
