@@ -27,6 +27,7 @@ You can select:
 Sources Available:
 - Discord Default TTS
 - Streamelements API (About 206 Voices)
+- Some TikTok voices
 ### Block Filters:
 Block messages from:
 - Blocked users
