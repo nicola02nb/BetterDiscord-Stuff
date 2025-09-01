@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.15.0
+ * @version 2.15.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,7 +9,7 @@
 */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added some TikTok TTS voices"] },
+        //{ title: "New Features", type: "added", items: [""] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -328,6 +328,16 @@ module.exports = class BetterTTS {
         );
     };
 
+    initSettings(settings = config.settings) {
+        settings.forEach(setting => {
+            if (setting.settings) {
+                this.initSettings(setting.settings);
+            } else if (setting.id) {
+                this.settings[setting.id] = Data.load(this.meta.name, setting.id) ?? setting.value;
+            }
+        });
+    }
+
     getSettingsPanel() {
         config.settings[4].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
         config.settings[4].settings[3].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
@@ -408,6 +418,7 @@ module.exports = class BetterTTS {
 
     // Plugin start/stop
     start() {
+        this.initSettings();
         this.showChangelog();
 
         DOM.addStyle(this.meta.name, `label[for="textReplacerAdd"] + input[type="text"]{ min-width: 100px; width: 150px;}`);

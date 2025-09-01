@@ -1,7 +1,7 @@
 /**
  * @name BypassBlockedOrIgnored
  * @description Bypass the blocked or ignored user modal if is present in voice channels
- * @version 1.0.7
+ * @version 1.0.8
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -51,6 +51,16 @@ module.exports = class BypassBlockedOrIgnored {
         });
     }
 
+    initSettings(settings = config.settings) {
+        settings.forEach(setting => {
+            if (setting.settings) {
+                this.initSettings(setting.settings);
+            } else if (setting.id) {
+                this.settings[setting.id] = Data.load(this.meta.name, setting.id) ?? setting.value;
+            }
+        });
+    }
+
     getSettingsPanel() {
         return UI.buildSettingsPanel({
             settings: config.settings,
@@ -73,6 +83,7 @@ module.exports = class BypassBlockedOrIgnored {
     }
 
     start() {
+        this.initSettings();
         this.showChangelog();
 
         Patcher.before(this.meta.name, handleVoice, "handleVoiceConnect", (thisObject, args) => {

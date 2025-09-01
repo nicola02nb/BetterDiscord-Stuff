@@ -1,7 +1,7 @@
 /**
  * @name PushToMute
  * @description A plugin that adds a keybind to mute the microphone while it is pressed.
- * @version 1.0.4
+ * @version 1.0.5
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -57,6 +57,16 @@ module.exports = class BasePlugin {
         this.handleKeyDown = this.keyDown.bind(this);
     }
 
+    initSettings(settings = config.settings) {
+        settings.forEach(setting => {
+            if (setting.settings) {
+                this.initSettings(setting.settings);
+            } else if (setting.id) {
+                this.settings[setting.id] = Data.load(this.meta.name, setting.id) ?? setting.value;
+            }
+        });
+    }
+
     getSettingsPanel() {
         return UI.buildSettingsPanel({
             settings: config.settings,
@@ -86,6 +96,7 @@ module.exports = class BasePlugin {
     }
 
     start() {
+        this.initSettings();
         this.showChangelog();
 
         this.updateKeybind();

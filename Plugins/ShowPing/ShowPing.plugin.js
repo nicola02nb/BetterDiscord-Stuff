@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.5
+ * @version 2.6.6
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,7 +9,7 @@
 */
 const config = {
     changelog: [
-        //{ title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "New Features", type: "added", items: [""] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -62,6 +62,16 @@ module.exports = class ShowPing {
         this.updatePing = null;
     }
 
+    initSettings(settings = config.settings) {
+        settings.forEach(setting => {
+            if (setting.settings) {
+                this.initSettings(setting.settings);
+            } else if (setting.id) {
+                this.settings[setting.id] = Data.load(this.meta.name, setting.id) ?? setting.value;
+            }
+        });
+    }
+
     getSettingsPanel() {
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
@@ -87,6 +97,7 @@ module.exports = class ShowPing {
     }
 
     start() {
+        this.initSettings();
         this.showChangelog();
 
         DOM.addStyle(this.meta.name, `

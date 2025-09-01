@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.11
+ * @version 1.1.12
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -84,6 +84,16 @@ module.exports = class ShortcutScreenshareScreen {
         this.stopStreamHandle = this.stopStream.bind(this);
     }
 
+    initSettings(settings = config.settings) {
+        settings.forEach(setting => {
+            if (setting.settings) {
+                this.initSettings(setting.settings);
+            } else if (setting.id) {
+                this.settings[setting.id] = Data.load(this.meta.name, setting.id) ?? setting.value;
+            }
+        });
+    }
+
     getSettingsPanel() {
         return UI.buildSettingsPanel({
             settings: config.settings,
@@ -135,6 +145,7 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     start() {
+        this.initSettings();
         this.showChangelog();
 
         this.updateKeybinds();
