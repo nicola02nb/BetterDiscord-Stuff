@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.11
+ * @version 1.4.12
  * @author nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
@@ -102,12 +102,14 @@ module.exports = class NotifyWhenMuted {
 
     showChangelog() {
         const savedVersion = Data.load(this.meta.name, "version");
-		if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-			UI.showChangelogModal({
-				title: this.meta.name,
-				subtitle: this.meta.version,
-				changes: config.changelog
-			});
+		if (savedVersion !== this.meta.version) {
+			if(config.changelog.length > 0){
+                UI.showChangelogModal({
+                    title: this.meta.name,
+                    subtitle: this.meta.version,
+                    changes: config.changelog
+                });
+            }
 			Data.save(this.meta.name, "version", this.meta.version);
 		}
     }

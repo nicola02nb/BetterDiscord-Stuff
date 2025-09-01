@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.7.8
+ * @version 1.7.9
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -16,7 +16,7 @@ const dropdownStatusOptions = [
 const config = {
     changelog: [
         //{ title: "New Features", type: "added", items: ["Added changelog"] },
-        //{ title: "Bug Fix", type: "fixed", items: [""] },
+        { title: "Bug Fix", type: "fixed", items: ["Fixed settings menu not loading settings from file"] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
     ],
@@ -101,12 +101,14 @@ module.exports = class AutoSwitchStatus {
 
     showChangelog() {
         const savedVersion = Data.load(this.meta.name, "version");
-		if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-			UI.showChangelogModal({
-				title: this.meta.name,
-				subtitle: this.meta.version,
-				changes: config.changelog
-			});
+		if (savedVersion !== this.meta.version) {
+			if(config.changelog.length > 0){
+                UI.showChangelogModal({
+                    title: this.meta.name,
+                    subtitle: this.meta.version,
+                    changes: config.changelog
+                });
+            }
 			Data.save(this.meta.name, "version", this.meta.version);
 		}
     }

@@ -1,7 +1,7 @@
 /**
  * @name FarmQuests
  * @description A plugin that farms you multiple discord quests in background simultaneously.
- * @version 1.0.6
+ * @version 1.0.7
  * @author nicola02nb
  */
 
@@ -86,12 +86,14 @@ module.exports = class BasePlugin {
 
     showChangelog() {
         const savedVersion = Data.load(this.meta.name, "version");
-		if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-			UI.showChangelogModal({
-				title: this.meta.name,
-				subtitle: this.meta.version,
-				changes: config.changelog
-			});
+		if (savedVersion !== this.meta.version) {
+			if(config.changelog.length > 0){
+                UI.showChangelogModal({
+                    title: this.meta.name,
+                    subtitle: this.meta.version,
+                    changes: config.changelog
+                });
+            }
 			Data.save(this.meta.name, "version", this.meta.version);
 		}
     }

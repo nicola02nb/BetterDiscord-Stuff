@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.6
+ * @version 2.6.7
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -86,12 +86,14 @@ module.exports = class ShowPing {
 
     showChangelog() {
         const savedVersion = Data.load(this.meta.name, "version");
-		if (savedVersion !== this.meta.version && config.changelog.length > 0) {
-			UI.showChangelogModal({
-				title: this.meta.name,
-				subtitle: this.meta.version,
-				changes: config.changelog
-			});
+		if (savedVersion !== this.meta.version) {
+			if(config.changelog.length > 0){
+                UI.showChangelogModal({
+                    title: this.meta.name,
+                    subtitle: this.meta.version,
+                    changes: config.changelog
+                });
+            }
 			Data.save(this.meta.name, "version", this.meta.version);
 		}
     }
