@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.7.7
+ * @version 1.7.8
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/AutoSwitchStatus
@@ -40,6 +40,18 @@ const config = {
 function getSetting(key) {
     return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
 }
+function initSettings() {
+    const initSetting = setting => {
+        if (setting.settings) {
+            setting.settings.forEach(initSetting);
+        } else if (setting.id) {
+            this.settings[setting.id] = setting.value;
+        }
+    };
+
+    config.settings.forEach(initSetting);
+}
+
 
 const { Webpack, Data, DOM, UI } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
@@ -79,6 +91,16 @@ module.exports = class AutoSwitchStatus {
         }
     }
 
+    initSettings(settings = config.settings) {
+        settings.forEach(setting => {
+            if (setting.settings) {
+                this.initSettings(setting.settings);
+            } else if (setting.id) {
+                this.settings[setting.id] = Data.load(this.meta.name, setting.id) ?? setting.value;
+            }
+        });
+    }
+
     getSettingsPanel() {
         return BdApi.UI.buildSettingsPanel({
             settings: config.settings,
@@ -102,6 +124,7 @@ module.exports = class AutoSwitchStatus {
 
     start() {
         this.showChangelog();
+        this.initSettings();
 
         DOM.addStyle(this.meta.name,`.bd-toast.toast-online.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='12.5' y='10' width='0' height='0' rx='0' ry='0' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%2323a55a' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-idle.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='6.25' y='3.75' width='7.5' height='7.5' rx='3.75' ry='3.75' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%23f0b232' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
