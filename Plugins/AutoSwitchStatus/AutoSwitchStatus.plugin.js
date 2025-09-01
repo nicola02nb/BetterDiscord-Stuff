@@ -40,17 +40,6 @@ const config = {
 function getSetting(key) {
     return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
 }
-function initSettings() {
-    const initSetting = setting => {
-        if (setting.settings) {
-            setting.settings.forEach(initSetting);
-        } else if (setting.id) {
-            this.settings[setting.id] = setting.value;
-        }
-    };
-
-    config.settings.forEach(initSetting);
-}
 
 
 const { Webpack, Data, DOM, UI } = BdApi;
