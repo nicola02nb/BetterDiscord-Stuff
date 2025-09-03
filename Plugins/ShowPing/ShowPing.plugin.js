@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.7
+ * @version 2.6.8
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -32,7 +32,7 @@ const { Webpack, React, Data, DOM, Patcher, UI } = BdApi;
 const { Filters } = Webpack;
 const [ DiscordModules, RTCConnectionStore, { labelWrapper, rtcConnectionStatusConnected }, { voiceButtonsContainer }, labelClasses, textMdMedium, ConnectionStatus ] =
     Webpack.getBulk(
-        { filter: Filters.byProps("dispatch", "subscribe") },
+        { filter: (m => m.dispatch && m.subscribe) },
         { filter: Filters.byStoreName("RTCConnectionStore") },
         { filter: Filters.byKeys("labelWrapper", "rtcConnectionStatusConnected") },
         { filter: Filters.byKeys("voiceButtonsContainer") },

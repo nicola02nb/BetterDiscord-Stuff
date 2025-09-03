@@ -1,7 +1,7 @@
 /**
  * @name BypassBlockedOrIgnored
  * @description Bypass the blocked or ignored user modal if is present in voice channels
- * @version 1.0.9
+* @version 1.0.10
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -30,9 +30,9 @@ const { Filters } = Webpack;
 
 const [ RelationshipStore, handleVoice, { getBlockedUsersForVoiceChannel, getIgnoredUsersForVoiceChannel }, handleBoIJoined ] = Webpack.getBulk(
     { filter: Filters.byStoreName("RelationshipStore") },
-    { filter: Filters.byProps("handleVoiceConnect") },
-    { filter: Filters.byProps("getBlockedUsersForVoiceChannel", "getIgnoredUsersForVoiceChannel") },
-    { filter: Filters.byProps("handleBlockedOrIgnoredUserVoiceChannelJoin") }
+    { filter: m => m.handleVoiceConnect },
+    { filter: m => m.getBlockedUsersForVoiceChannel && m.getIgnoredUsersForVoiceChannel },
+    { filter: m => m.handleBlockedOrIgnoredUserVoiceChannelJoin }
 );
 
 module.exports = class BypassBlockedOrIgnored {

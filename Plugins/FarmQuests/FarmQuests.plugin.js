@@ -26,7 +26,7 @@ const { Webpack, Data, UI, Patcher } = BdApi;
 const { Filters } = Webpack;
 
 const [ DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore ] = Webpack.getBulk(
-    { filter: Filters.byProps("dispatch", "subscribe") },
+    { filter: (m => m.dispatch && m.subscribe) },
     { filter: Filters.byStoreName("ApplicationStreamingStore") },
     { filter: Filters.byStoreName("RunningGameStore") },
     { filter: Filters.byStoreName("QuestsStore") },

@@ -3,7 +3,7 @@
  * @author nicola02nb
  * @authorLink https://github.com/nicola02nb
  * @description View bigger stream previews via the context menu.
- * @version 1.1.14
+ * @version 1.1.15
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview
  */
 const config = {
@@ -24,7 +24,7 @@ const [ ApplicationStreamingStore, ApplicationStreamPreviewStore, useStateFromSt
 	{ filter: Filters.byStrings("useStateFromStores"), searchExports: true },
 	{ filter: Filters.byStrings('onCloseRequest', 'onCloseCallback', 'instant', 'backdropStyle'), searchExports: true },
 	{ filter: Filters.byStrings('.ImpressionTypes.MODAL,"aria-labelledby":'), searchExports: true },
-	{ filter: Filters.byProps("DYNAMIC"), searchExports: true },
+	{ filter: Filters.byKeys("DYNAMIC"), searchExports: true },
 );
 
 const RenderLinkComponent = Webpack.getModule(m => m.type?.toString?.().includes("MASKED_LINK"), { searchExports: false });
@@ -51,7 +51,7 @@ module.exports = class BiggerStreamPreview {
 	start() {
 		this.showChangelog();
 
-		DOM.addStyle(".bigger-stream-preview { background: transparent !important; }");
+		DOM.addStyle(this.meta.name, ".bigger-stream-preview { background: transparent !important; }");
 		this.patchUserContextMenu();
 		this.patchStreamContextMenu();
 	}

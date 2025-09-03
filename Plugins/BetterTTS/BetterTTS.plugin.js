@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.15.2
+ * @version 2.15.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -99,7 +99,7 @@ const [
     DiscordModules, ChannelStore, GuildStore, GuildMemberStore, MediaEngineStore, RelationshipStore,
     RTCConnectionStore, SelectedChannelStore, SelectedGuildStore, UserGuildSettingsStore, UserSettingsProtoStore, UserStore,
     listenIcon] = Webpack.getBulk(
-        { filter: Filters.byProps("dispatch", "subscribe") },
+        { filter: (m => m.dispatch && m.subscribe) },
         { filter: Filters.byStoreName('ChannelStore') },
         { filter: Filters.byStoreName('GuildStore') },
         { filter: Filters.byStoreName('GuildMemberStore') },
