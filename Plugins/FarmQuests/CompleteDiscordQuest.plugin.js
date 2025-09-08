@@ -1,7 +1,7 @@
 /**
- * @name FarmQuests
- * @description A plugin that farms you multiple discord quests in background simultaneously.
- * @version 1.0.8
+ * @name CompleteDiscordQuest
+ * @description A plugin that comppletes you multiple discord quests in background simultaneously.
+ * @version 1.1.1
  * @author nicola02nb
  */
 
@@ -15,26 +15,28 @@ const config = {
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
-        { type: "number", id: "checkForNewQuests", name: "Interval to check for new quests(min)", note: "The time (in minutes) to check for new quests", value: 5, min: 1, step: 1 },
+        { type: "switch", id: "showQuestsButton", name: "Show Quests Button", note: "Whether to show the quests button in the top bar.", value: true },
     ]
 };
 function getSetting(key) {
     return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
 }
 
-const { Webpack, Data, UI, Patcher } = BdApi;
+const { Webpack, Data, UI, Patcher, DOM, React } = BdApi;
 const { Filters } = Webpack;
-
-const [ DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore ] = Webpack.getBulk(
+const [ DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore, TopBarRender, TopBarButton, {navigateToQuestHome}, QuestIcon, RestApi] = Webpack.getBulk(
     { filter: (m => m.dispatch && m.subscribe) },
     { filter: Filters.byStoreName("ApplicationStreamingStore") },
     { filter: Filters.byStoreName("RunningGameStore") },
     { filter: Filters.byStoreName("QuestsStore") },
     { filter: Filters.byStoreName("ChannelStore") },
     { filter: Filters.byStoreName("GuildChannelStore") },
-    { filter: Filters.bySource("bind(null,\"get\")") }
+    { filter: Filters.bySource("leading:", ",windowKey:") },
+    { filter: Filters.bySource("badgePosition:") },
+    { filter: Filters.byKeys("navigateToQuestHome") },
+    { filter: Filters.bySource("\"M7.5 21.7a8.95") },
+    { filter: m => typeof m === 'object' && m.del && m.put, searchExports: true }
 );
-const api = Webpack.getBySource('bind(null,"get")')?.tn;
 
 module.exports = class BasePlugin {
     constructor(meta) {
@@ -50,12 +52,11 @@ module.exports = class BasePlugin {
                 return true;
             }
         });
-        this.updateInterval = null;
 
         this.availableQuests = [];
-        this.farmableQuests = [];
+        this.completableQuests = [];
 
-        this.farmingQuest = new Map();
+        this.completingQuests = new Map();
         this.fakeGames = new Map();
         this.fakeApplications = new Map();
     }
@@ -75,11 +76,6 @@ module.exports = class BasePlugin {
             settings: config.settings,
             onChange: (category, id, value) => {
                 this.settings[id] = value;
-                switch (id) {
-                    case "checkForNewQuests":
-                        this.startInterval();
-                        break;
-                }
             }
         });
     }
@@ -102,6 +98,12 @@ module.exports = class BasePlugin {
         this.initSettings();
         this.showChangelog();
 
+        DOM.addStyle(this.meta.name, `.quest-button-enrollable > [class^="iconBadge"] { background-color: var(--status-danger); }
+            .quest-button-enrolled > [class^="iconBadge"] { background-color: var(--status-warning); }
+            .quest-button-claimable > [class^="iconBadge"] { background-color: var(--status-positive); }`);
+        //BdApi.UI.showConfirmationModal("title", React.createElement(this.QuestButton));
+        //BdApi.ReactDOM.createRoot(document.querySelectorAll("[class^=\"bar_\"] > [class^=\"trailing_\"")[1]).render(this.QuestButton);
+        BdApi.ReactUtils.getInternalInstance(document.querySelectorAll("[class^=\"bar_\"] > [class^=\"trailing_\"")[1])?.pendingProps?.children.unshift(this.QuestButton);
         Patcher.instead(this.meta.name, RunningGameStore, "getRunningGames", (_, _args, originalFunction) => {
             if (this.fakeGames.size > 0) {
                 return Array.from(this.fakeGames.values());
@@ -122,53 +124,91 @@ module.exports = class BasePlugin {
         });
 
         this.updateQuests();
-        this.startInterval();
+        QuestsStore.addChangeListener(this.updateQuests);
     }
 
     stop() {
-        this.stopInterval();
+        QuestsStore.removeChangeListener(this.updateQuests);
+        this.stopCompletingAll();
         Patcher.unpatchAll(this.meta.name);
+        DOM.removeStyle(this.meta.name);
     }
 
-    startInterval() {
-        this.stopInterval();
-        this.updateInterval = setInterval(() => {
-            this.updateQuests();
-        }, this.settings.checkForNewQuests * 60 * 1000);
+    questsStatus() {
+        const availableQuests = [...QuestsStore.quests.values()];
+        return availableQuests.reduce((acc, x) => {
+            if (x.id === "1248385850622869556") return acc;
+            else if (new Date(x.config.expiresAt).getTime() < Date.now()) {
+                acc.expired++;
+            } else if (x.userStatus?.claimedAt) {
+                acc.claimed++;
+            } else if (x.userStatus?.completedAt) {
+                acc.claimable++;
+            } else if (x.userStatus?.enrolledAt) {
+                acc.enrolled++;
+            } else {
+                acc.enrollable++;
+            }
+            return acc;
+        }, { enrollable: 0, enrolled: 0, claimable: 0, claimed: 0, expired: 0 });
     }
 
-    stopInterval() {
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-            this.updateInterval = null;
-        }
+    QuestButton = () => {
+        const [status, setStatus] = React.useState({ enrollable: 0, enrolled: 0, claimable: 0, claimed: 0, expired: 0 });
+
+        const checkForNewQuests = () => {
+            setStatus(this.questsStatus());
+        };
+        React.useEffect(() => {
+            QuestsStore.addChangeListener(checkForNewQuests);
+            return () => {
+                QuestsStore.removeChangeListener(checkForNewQuests);
+            };
+        }, []);
+
+        return React.createElement(TopBarButton.JO, { 
+            className:status.enrollable ? "quest-button-enrollable" : status.enrolled ? "quest-button-enrolled" : status.claimable ? "quest-button-claimable" : "",
+            iconClassName:undefined,
+            /* children={undefined} */
+            selected:undefined,
+            disabled:navigateToQuestHome === undefined,
+            showBadge:status.enrollable > 0 || status.enrolled > 0 || status.claimable > 0,
+            badgePosition:"bottom",
+            icon:QuestIcon.q,
+            iconSize:20,
+            onClick:navigateToQuestHome,
+            onContextMenu:undefined,
+            tooltip:status.enrollable ? `${status.enrollable} Enrollable Quests` : status.enrolled ? `${status.enrolled} Enrolled Quests` : status.claimable ? `${status.claimable} Claimable Quests` : "Quests",
+            tooltipPosition:"bottom",
+            hideOnClick:false
+        });
     }
 
     updateQuests() {
         this.availableQuests = [...QuestsStore.quests.values()];
-        this.farmableQuests = this.availableQuests.filter(x => x.id !== "1248385850622869556" && x.userStatus?.enrolledAt && !x.userStatus?.completedAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
-        for (const quest of this.farmableQuests) {
-            if (this.farmingQuest.has(quest.id)) {
-                if (this.farmingQuest.get(quest.id) === false) {
-                    this.farmingQuest.delete(quest.id);
+        this.completableQuests = this.availableQuests.filter(x => x.id !== "1248385850622869556" && x.userStatus?.enrolledAt && !x.userStatus?.completedAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
+        for (const quest of this.completableQuests) {
+            if (this.completingQuests.has(quest.id)) {
+                if (this.completingQuests.get(quest.id) === false) {
+                    this.completingQuests.delete(quest.id);
                 }
             } else {
-                this.farmQuest(quest);
+                this.completeQuest(quest);
             }
         }
-        console.log("Farmable quests updated:", this.farmableQuests);
+        console.log("Completable quests updated:", this.completableQuests);
     }
 
-    stopFarmingAll() {
-        for (const quest of this.farmableQuests) {
-            if (this.farmingQuest.has(quest.id)) {
-                this.farmingQuest.set(quest.id, false);
+    stopCompletingAll() {
+        for (const quest of this.completableQuests) {
+            if (this.completingQuests.has(quest.id)) {
+                this.completingQuests.set(quest.id, false);
             }
         }
-        console.log("Stopped farming all quests.");
+        console.log("Stopped completing all quests.");
     }
 
-    farmQuest(quest) {
+    completeQuest(quest) {
         let isApp = typeof DiscordNative !== "undefined";
         if (!quest) {
             console.log("You don't have any uncompleted quests!");
@@ -188,9 +228,9 @@ module.exports = class BasePlugin {
                 return;
             }
 
-            this.farmingQuest.set(quest.id, true);
+            this.completingQuests.set(quest.id, true);
 
-            console.log(`Farming quest ${questName} (${quest.id}) - ${taskName} for ${secondsNeeded} seconds.`);
+            console.log(`Completing quest ${questName} (${quest.id}) - ${taskName} for ${secondsNeeded} seconds.`);
 
             switch (taskName) {
                 case "WATCH_VIDEO":
@@ -204,26 +244,26 @@ module.exports = class BasePlugin {
                             const diff = maxAllowed - secondsDone;
                             const timestamp = secondsDone + speed;
 
-                            if (!this.farmingQuest.get(quest.id)) {
-                                console.log("Stopping farming quest:", questName);
-                                this.farmingQuest.set(quest.id, false);
+                            if (!this.completingQuests.get(quest.id)) {
+                                console.log("Stopping completing quest:", questName);
+                                this.completingQuests.set(quest.id, false);
                                 break;
                             }
 
                             if (diff >= speed) {
-                                const res = await api.post({ url: `/quests/${quest.id}/video-progress`, body: { timestamp: Math.min(secondsNeeded, timestamp + Math.random()) } });
+                                const res = await RestApi.post({ url: `/quests/${quest.id}/video-progress`, body: { timestamp: Math.min(secondsNeeded, timestamp + Math.random()) } });
                                 completed = res.body.completed_at != null;
                                 secondsDone = Math.min(secondsNeeded, timestamp);
                             }
 
                             if (timestamp >= secondsNeeded) {
-                                this.farmingQuest.set(quest.id, false);
+                                this.completingQuests.set(quest.id, false);
                                 break;
                             }
                             await new Promise(resolve => setTimeout(resolve, interval * 1000));
                         }
                         if (!completed) {
-                            await api.post({ url: `/quests/${quest.id}/video-progress`, body: { timestamp: secondsNeeded } });
+                            await RestApi.post({ url: `/quests/${quest.id}/video-progress`, body: { timestamp: secondsNeeded } });
                         }
                         console.log("Quest completed!");
                     }
@@ -232,7 +272,7 @@ module.exports = class BasePlugin {
                     break;
 
                 case "PLAY_ON_DESKTOP":
-                    api.get({ url: `/applications/public?application_ids=${applicationId}` }).then(res => {
+                    RestApi.get({ url: `/applications/public?application_ids=${applicationId}` }).then(res => {
                         const appData = res.body[0];
                         const exeName = appData.executables.find(x => x.os === "win32").name.replace(">", "");
 
@@ -259,8 +299,8 @@ module.exports = class BasePlugin {
                             let progress = quest.config.configVersion === 1 ? event.userStatus.streamProgressSeconds : Math.floor(event.userStatus.progress.PLAY_ON_DESKTOP.value);
                             console.log(`Quest progress ${questName}: ${progress}/${secondsNeeded}`);
 
-                            if (!this.farmingQuest.get(quest.id) || progress >= secondsNeeded) {
-                                console.log("Stopping farming quest:", questName);
+                            if (!this.completingQuests.get(quest.id) || progress >= secondsNeeded) {
+                                console.log("Stopping completing quest:", questName);
 
                                 this.fakeGames.delete(quest.id);
                                 const games = RunningGameStore.getRunningGames();
@@ -270,7 +310,7 @@ module.exports = class BasePlugin {
 
                                 if (progress >= secondsNeeded) {
                                     console.log("Quest completed!");
-                                    this.farmingQuest.set(quest.id, false);
+                                    this.completingQuests.set(quest.id, false);
                                 }
                             }
                         }
@@ -283,7 +323,7 @@ module.exports = class BasePlugin {
                 case "STREAM_ON_DESKTOP":
                     const fakeApp = {
                         id: applicationId,
-                        name: `FakeApp ${applicationName} (FarmQuests)`,
+                        name: `FakeApp ${applicationName} (CompleteDiscordQuest)`,
                         pid: pid,
                         sourceName: null,
                     };
@@ -294,15 +334,15 @@ module.exports = class BasePlugin {
                         let progress = quest.config.configVersion === 1 ? event.userStatus.streamProgressSeconds : Math.floor(event.userStatus.progress.STREAM_ON_DESKTOP.value);
                         console.log(`Quest progress ${questName}: ${progress}/${secondsNeeded}`);
 
-                        if (!this.farmingQuest.get(quest.id) || progress >= secondsNeeded) {
-                            console.log("Stopping farming quest:", questName);
+                        if (!this.completingQuests.get(quest.id) || progress >= secondsNeeded) {
+                            console.log("Stopping completing quest:", questName);
 
                             this.fakeApplications.delete(quest.id);
                             DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", streamOnDesktop);
 
                             if (progress >= secondsNeeded) {
                                 console.log("Quest completed!");
-                                this.farmingQuest.set(quest.id, false);
+                                this.completingQuests.set(quest.id, false);
                             }
                         }
                     }
@@ -320,19 +360,19 @@ module.exports = class BasePlugin {
                         console.log("Completing quest", questName, "-", quest.config.messages.questName);
 
                         while (true) {
-                            const res = await api.post({ url: `/quests/${quest.id}/heartbeat`, body: { stream_key: streamKey, terminal: false } });
+                            const res = await RestApi.post({ url: `/quests/${quest.id}/heartbeat`, body: { stream_key: streamKey, terminal: false } });
                             const progress = res.body.progress.PLAY_ACTIVITY.value;
                             console.log(`Quest progress ${questName}: ${progress}/${secondsNeeded}`);
 
                             await new Promise(resolve => setTimeout(resolve, 20 * 1000));
 
-                            if (!this.farmingQuest.get(quest.id) || progress >= secondsNeeded) {
-                                console.log("Stopping farming quest:", questName);
+                            if (!this.completingQuests.get(quest.id) || progress >= secondsNeeded) {
+                                console.log("Stopping completing quest:", questName);
 
                                 if (progress >= secondsNeeded) {
-                                    await api.post({ url: `/quests/${quest.id}/heartbeat`, body: { stream_key: streamKey, terminal: true } });
+                                    await RestApi.post({ url: `/quests/${quest.id}/heartbeat`, body: { stream_key: streamKey, terminal: true } });
                                     console.log("Quest completed!")
-                                    this.farmingQuest.set(quest.id, false);
+                                    this.completingQuests.set(quest.id, false);
                                 }
                                 break;
                             }
@@ -343,7 +383,7 @@ module.exports = class BasePlugin {
 
                 default:
                     console.error("Unknown task type:", taskName);
-                    this.farmingQuest.set(quest.id, false);
+                    this.completingQuests.set(quest.id, false);
                     break;
             }
         }

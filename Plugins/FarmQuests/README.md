@@ -1,6 +1,6 @@
-# FarmQuests for BetterDiscord
+# CompleteDiscordQuest for BetterDiscord
 
-A BetterDiscord(BD) plugin that farms you multiple discord quests in background simultaneously.
+A BetterDiscord(BD) plugin that completes you multiple discord quests in background simultaneously.
 
 ## Credits:
 
@@ -8,4 +8,4 @@ This is a porting for BetterDiscord of a [snippet](https://gist.github.com/aamia
 
 ## Features:
 
-- Set inteval time to check for new quests
+- Whether to show the quests button in the top bar
