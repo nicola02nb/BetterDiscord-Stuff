@@ -4,7 +4,7 @@ A BetterDiscord(BD) plugin that automatically switches your discord status when 
 
 ## ⚠️ WARNING:
 
-If you spam status changes you'll be blocked temporarly from doing calls to Discord API([Exceeded User Rate Limit](https://discord.com/developers/docs/topics/rate-limits)) and your status will not change for a while.
+If you spam status changes you might be blocked temporarly(plugin already prevents that) from doing calls to Discord API([Exceeded User Rate Limit](https://discord.com/developers/docs/topics/rate-limits)) and your status will not change for a while.
 
 ## Features:
 
