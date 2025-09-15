@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.8
+ * @version 2.6.9
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -37,7 +37,7 @@ const [ DiscordModules, RTCConnectionStore, { labelWrapper, rtcConnectionStatusC
         { filter: Filters.byKeys("labelWrapper", "rtcConnectionStatusConnected") },
         { filter: Filters.byKeys("voiceButtonsContainer") },
         { filter: Filters.byKeys("hovered", "default") },
-        { filter: Filters.byKeys("container", "text-md/medium", "wrapper") },
+        { filter: (m => m["text-md/medium"] && !m.avatar && !m.active && !m.h1) },
         { filter: Filters.bySource("hasVideo", "hasConnectedChannel", "textVariant") }
     );
 module.exports = class ShowPing {
