@@ -3,6 +3,9 @@
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
  * @version 1.1.1
  * @author nicola02nb
+ * @invite hFuY8DfDGK
+ * @authorLink https://github.com/nicola02nb
+ * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/CompleteDiscordQuest
  */
 
 // Porting of https://gist.github.com/aamiaa/204cd9d42013ded9faf646fae7f89fbb for betterdiscord
@@ -103,7 +106,7 @@ module.exports = class BasePlugin {
             .quest-button-claimable > [class^="iconBadge"] { background-color: var(--status-positive); }`);
         //BdApi.UI.showConfirmationModal("title", React.createElement(this.QuestButton));
         //BdApi.ReactDOM.createRoot(document.querySelectorAll("[class^=\"bar_\"] > [class^=\"trailing_\"")[1]).render(this.QuestButton);
-        BdApi.ReactUtils.getInternalInstance(document.querySelectorAll("[class^=\"bar_\"] > [class^=\"trailing_\"")[1])?.pendingProps?.children.unshift(this.QuestButton);
+        //BdApi.ReactUtils.getInternalInstance(document.querySelectorAll("[class^=\"bar_\"] > [class^=\"trailing_\"")[1])?.pendingProps?.children.unshift(this.QuestButton);
         Patcher.instead(this.meta.name, RunningGameStore, "getRunningGames", (_, _args, originalFunction) => {
             if (this.fakeGames.size > 0) {
                 return Array.from(this.fakeGames.values());
