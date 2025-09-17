@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.1.2
+ * @version 1.1.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -55,6 +55,8 @@ module.exports = class BasePlugin {
                 return true;
             }
         });
+
+        this.handleUpdateQuests = this.updateQuests.bind(this);
 
         this.availableQuests = [];
         this.completableQuests = [];
@@ -126,12 +128,11 @@ module.exports = class BasePlugin {
             return originalFunction();
         });
 
-        this.updateQuests();
-        QuestsStore.addChangeListener(this.updateQuests);
+        QuestsStore.addChangeListener(this.handleUpdateQuests);
     }
 
     stop() {
-        QuestsStore.removeChangeListener(this.updateQuests);
+        QuestsStore.removeChangeListener(this.handleUpdateQuests);
         this.stopCompletingAll();
         Patcher.unpatchAll(this.meta.name);
         DOM.removeStyle(this.meta.name);
