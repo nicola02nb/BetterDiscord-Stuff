@@ -13,6 +13,8 @@ body:
         - "AutoSwitchStatus"
         - "BetterTTS"
         - "BiggerStreamPreview"
+        - "CompleteDiscordQuest"
+        - "NoSpotifyPause"
         - "NotifyWhenMuted"
         - "ShortcutScreenshareScreen"
         - "ShowPing"
