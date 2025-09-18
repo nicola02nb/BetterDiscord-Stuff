@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.1.3
+ * @version 1.1.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -18,7 +18,9 @@ const config = {
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
-        { type: "switch", id: "showQuestsButton", name: "Show Quests Button", note: "Whether to show the quests button in the top bar.", value: true },
+        { type: "switch", disabled: true, id: "showQuestsButtonTopBar", name: "Show Quests Top Bar", note: "Whether to show the quests button in the top bar.", value: false },
+        { type: "switch", disabled: true, id: "showQuestsButtonSettingsBar", name: "Show Quests Settings Bar", note: "Whether to show the quests button in the settings bar.", value: false },
+        { type: "switch", disabled: true, id: "showQuestsButtonBadges", name: "Show Quests Badges", note: "Whether to show badges on the quests button.", value: false },
     ]
 };
 function getSetting(key) {
@@ -127,7 +129,7 @@ module.exports = class BasePlugin {
             }
             return originalFunction();
         });
-
+        
         QuestsStore.addChangeListener(this.handleUpdateQuests);
     }
 
