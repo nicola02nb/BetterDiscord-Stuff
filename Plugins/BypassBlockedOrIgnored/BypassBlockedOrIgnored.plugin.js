@@ -1,7 +1,7 @@
 /**
  * @name BypassBlockedOrIgnored
  * @description Bypass the blocked or ignored user modal if is present in voice channels
-* @version 1.0.10
+ * @version 1.0.11
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb

@@ -1,8 +1,10 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.12
+ * @version 1.4.13
  * @author nicola02nb
+ * @invite hFuY8DfDGK
+ * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/NotifyWhenMuted
 */
 

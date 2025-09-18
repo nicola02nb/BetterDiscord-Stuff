@@ -1,9 +1,10 @@
 /**
  * @name BiggerStreamPreview
- * @author nicola02nb
- * @authorLink https://github.com/nicola02nb
  * @description View bigger stream previews via the context menu.
- * @version 1.1.15
+ * @version 1.1.16
+ * @author nicola02nb
+ * @invite hFuY8DfDGK
+ * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/BiggerStreamPreview
  */
 const config = {
