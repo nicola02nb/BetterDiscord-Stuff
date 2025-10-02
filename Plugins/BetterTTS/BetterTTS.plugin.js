@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.15.3
+ * @version 2.15.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -952,7 +952,7 @@ class AudioPlayer {
         } else if (this.media instanceof SpeechSynthesisUtterance) {
             this.media.rate = this.rate;
             this.media.volume = clamp(this.volume, 0, 1);
-            this.media.onend = () => this.playNextTTS;
+            this.media.onend = () => this.playNextTTS();
             speechSynthesis.speak(this.media);
         } else {
             this.playNextTTS();
