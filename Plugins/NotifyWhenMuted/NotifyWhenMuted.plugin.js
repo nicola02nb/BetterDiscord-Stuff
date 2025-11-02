@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.13
+ * @version 1.4.14
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -17,7 +17,7 @@ const config = {
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
-        { type: "switch", id: "enabled", name: "Enable Notify When Muted", note:"Enables/Disables the plugin audio notifications.", settings: [] },
+        { type: "switch", id: "enabled", name: "Enable Notify When Muted", note:"Enables/Disables the plugin audio notifications.", value: true, settings: [] },
         { type: "switch", id: "notifyWhenDeafen", name: "Notify When Deafen", note: "Notify when you are self deafen.", value: true },
         { type: "switch", id: "notifyServerMuted", name: "Notify When Server Muted", note: "Notify when you get muted by server.", value: false },
         { type: "text", id: "audioUrl", name: "Custom Audio URL", note: "URL to the audio file to play when user tries to speak while muted.", value: defaultAudioUrl },
@@ -134,7 +134,7 @@ module.exports = class NotifyWhenMuted {
         this.isPlaying = false;
 
         Patcher.after(this.meta.name, MediaEngineStore, "getSpeakingWhileMuted", this.handleSpeak);
-        Patcher.after(this.meta.name, voiceButtonsContainer, "Z", this.handleAddButton);
+        Patcher.after(this.meta.name, voiceButtonsContainer, "Z", this.addButton);
     }
 
     stop() {
@@ -165,11 +165,11 @@ module.exports = class NotifyWhenMuted {
     handleAddButton(_, args, ret) {
         if(!config.settings[6].value) return ret;
         const ToggleButton = () =>{
-            const [enabled, setEnabled] = React.useState(config.settings[0].value);
+            const [enabled, setEnabled] = React.useState(this.settings.enabled);
             const update = () => {
-                setConfigSetting("enabled", !enabled);
+                this.updateSetting("enabled", !enabled);
                 setEnabled(!enabled);
-            }
+            };
     
             const getIcon = (enabled) => {
                 return React.createElement("svg", {
