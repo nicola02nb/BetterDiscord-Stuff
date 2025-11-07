@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.14
+ * @version 1.4.15
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -147,7 +147,7 @@ module.exports = class NotifyWhenMuted {
     }
 
     async handleSpeaking(_, args, ret) {
-        if (!config.settings[0].value
+        if (!this.settings.enabled
             || !this.settings.notifyServerMuted && !MediaEngineStore.isSelfMute() && MediaEngineStore.isMute()
             || MediaEngineStore.isSelfDeaf() && !this.settings.notifyWhenDeafen) return;
         if (ret && !this.isPlaying) {
@@ -163,7 +163,7 @@ module.exports = class NotifyWhenMuted {
     }
 
     handleAddButton(_, args, ret) {
-        if(!config.settings[6].value) return ret;
+        if(!this.settings.showToggleButton) return ret;
         const ToggleButton = () =>{
             const [enabled, setEnabled] = React.useState(this.settings.enabled);
             const update = () => {
