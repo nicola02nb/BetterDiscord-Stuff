@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.2.0
+ * @version 1.2.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -32,7 +32,7 @@ const { Webpack, Data, UI, Patcher, DOM, React } = BdApi;
 const { Filters } = Webpack;
 const [ DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore,
     GuildChannelStore, TopBarRender, TopBarButton, {navigateToQuestHome}, QuestIcon, RestApi,
-    QuestLocationMap] = Webpack.getBulk(
+    QuestApplyAction, QuestLocationMap] = Webpack.getBulk(
     { filter: (m => m.dispatch && m.subscribe) },
     { filter: Filters.byStoreName("ApplicationStreamingStore") },
     { filter: Filters.byStoreName("RunningGameStore") },
@@ -44,9 +44,9 @@ const [ DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore
     { filter: Filters.byKeys("navigateToQuestHome") },
     { filter: Filters.bySource("\"M7.5 21.7a8.95") },
     { filter: m => typeof m === 'object' && m.del && m.put, searchExports: true },
+    { filter: Filters.byStrings("type:\"QUESTS_ENROLL_BEGIN\""), searchExports: true },
     { filter: Filters.byKeys("QUEST_HOME_DESKTOP", "11"), searchExports: true }
 );
-const QuestApplyAction = Webpack.getBySource("type:\"QUESTS_ENROLL_BEGIN\"", {searchExports: true});
 
 module.exports = class BasePlugin {
     constructor(meta) {
