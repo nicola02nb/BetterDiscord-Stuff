@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.1.4
+ * @version 1.2.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -18,6 +18,7 @@ const config = {
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
+        { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: true },
         { type: "switch", disabled: true, id: "showQuestsButtonTopBar", name: "Show Quests Top Bar", note: "Whether to show the quests button in the top bar.", value: false },
         { type: "switch", disabled: true, id: "showQuestsButtonSettingsBar", name: "Show Quests Settings Bar", note: "Whether to show the quests button in the settings bar.", value: false },
         { type: "switch", disabled: true, id: "showQuestsButtonBadges", name: "Show Quests Badges", note: "Whether to show badges on the quests button.", value: false },
@@ -29,19 +30,23 @@ function getSetting(key) {
 
 const { Webpack, Data, UI, Patcher, DOM, React } = BdApi;
 const { Filters } = Webpack;
-const [ DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore, TopBarRender, TopBarButton, {navigateToQuestHome}, QuestIcon, RestApi] = Webpack.getBulk(
+const [ DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore,
+    GuildChannelStore, TopBarRender, TopBarButton, {navigateToQuestHome}, QuestIcon, RestApi,
+    QuestLocationMap] = Webpack.getBulk(
     { filter: (m => m.dispatch && m.subscribe) },
     { filter: Filters.byStoreName("ApplicationStreamingStore") },
     { filter: Filters.byStoreName("RunningGameStore") },
-    { filter: Filters.byStoreName("QuestsStore") },
+    { filter: Filters.byKeys("getQuest") },
     { filter: Filters.byStoreName("ChannelStore") },
     { filter: Filters.byStoreName("GuildChannelStore") },
     { filter: Filters.bySource("leading:", ",windowKey:") },
     { filter: Filters.bySource("badgePosition:") },
     { filter: Filters.byKeys("navigateToQuestHome") },
     { filter: Filters.bySource("\"M7.5 21.7a8.95") },
-    { filter: m => typeof m === 'object' && m.del && m.put, searchExports: true }
+    { filter: m => typeof m === 'object' && m.del && m.put, searchExports: true },
+    { filter: Filters.byKeys("QUEST_HOME_DESKTOP", "11"), searchExports: true }
 );
+const QuestApplyAction = Webpack.getBySource("type:\"QUESTS_ENROLL_BEGIN\"", {searchExports: true});
 
 module.exports = class BasePlugin {
     constructor(meta) {
@@ -61,6 +66,7 @@ module.exports = class BasePlugin {
         this.handleUpdateQuests = this.updateQuests.bind(this);
 
         this.availableQuests = [];
+        this.acceptableQuests = [];
         this.completableQuests = [];
 
         this.completingQuests = new Map();
@@ -192,7 +198,11 @@ module.exports = class BasePlugin {
 
     updateQuests() {
         this.availableQuests = [...QuestsStore.quests.values()];
-        this.completableQuests = this.availableQuests.filter(x => x.id !== "1248385850622869556" && x.userStatus?.enrolledAt && !x.userStatus?.completedAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
+        this.acceptableQuests = this.availableQuests.filter(x => !x.userStatus?.enrolledAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
+        this.completableQuests = this.availableQuests.filter(x => x.userStatus?.enrolledAt && !x.userStatus?.completedAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
+        for (const quest of this.acceptableQuests) {
+            this.acceptQuest(quest);
+        }
         for (const quest of this.completableQuests) {
             if (this.completingQuests.has(quest.id)) {
                 if (this.completingQuests.get(quest.id) === false) {
@@ -202,7 +212,23 @@ module.exports = class BasePlugin {
                 this.completeQuest(quest);
             }
         }
+        console.log("Available quests updated:", this.availableQuests);
+        console.log("Acceptable quests updated:", this.acceptableQuests);
         console.log("Completable quests updated:", this.completableQuests);
+    }
+
+    acceptQuest(quest) {
+        if (!this.settings.acceptQuestsAutomatically) return;
+        const action = {
+            questContent: QuestLocationMap.QUEST_HOME_DESKTOP,
+            questContentCTA: "ACCEPT_QUEST",
+            sourceQuestContent: 0,
+        };
+        QuestApplyAction(quest.id, action).then(() => {
+            console.log("Accepted quest:", quest.config.messages.questName);
+        }).catch(err => {
+            console.error("Failed to accept quest:", quest.config.messages.questName, err);
+        });
     }
 
     stopCompletingAll() {
