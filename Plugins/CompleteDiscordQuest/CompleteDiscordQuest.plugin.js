@@ -212,9 +212,9 @@ module.exports = class BasePlugin {
                 this.completeQuest(quest);
             }
         }
-        console.log("Available quests updated:", this.availableQuests);
+        /* console.log("Available quests updated:", this.availableQuests);
         console.log("Acceptable quests updated:", this.acceptableQuests);
-        console.log("Completable quests updated:", this.completableQuests);
+        console.log("Completable quests updated:", this.completableQuests); */
     }
 
     acceptQuest(quest) {
