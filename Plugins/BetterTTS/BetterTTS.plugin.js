@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.16.0
+ * @version 2.17.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -64,7 +64,8 @@ const config = {
         ]},
         { type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
             { type: "custom", id: "ttsSource", name: "TTS Source", note: "Choose the channel you want to play the TTS.", value:"streamelements", children: []},
-            { type: "custom", id: "ttsVoice", name: "Voice for TTS", note: "Changes voice used for TTS.", value:"Brian", children: []}
+            { type: "custom", id: "ttsVoice", name: "Voice for TTS", note: "Changes voice used for TTS.", value:"Brian", children: []},
+            { type: "text", id: "streamelementsApiKey", name: "StreamElements API Key", note: "Your StreamElements API Key. Required only if you use StreamElements as TTS source. You can get it from https://streamelements.com/dashboard/account/channels (Overlay Token).", value: "" },
         ]},
         { type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
             { type: "custom", id: "mutedUsers", name: "Muted Users", note: "List of users that muted to TTS.", children: [] },
@@ -385,7 +386,10 @@ module.exports = class BetterTTS {
                 config.settings[6].settings[1].options = getVoices(value);
                 break;
             case "ttsVoice":
-                this.audioPlayer.updateTTSSourceAndVoice(value);
+                this.audioPlayer.updateTTSSourceAndVoice(this.settings.ttsSource, value);
+                break;
+            case "streamelementsApiKey":
+                streamElementsTTS.streamelementsApiKey = value;
                 break;
             case "ttsSpeechRate":
                 this.audioPlayer.updateRate(value);
@@ -440,6 +444,8 @@ module.exports = class BetterTTS {
             this.settings.ttsSpeechRate,
             this.settings.ttsDelayBetweenMessages,
             this.settings.ttsVolume / 100);
+        this.audioPlayer.updateConfig(this.settings.ttsSource, this.settings.ttsVoice, this.settings.ttsSpeechRate, this.settings.ttsDelayBetweenMessages, this.settings.ttsVolume / 100);
+        streamElementsTTS.streamelementsApiKey = this.settings.streamelementsApiKey;
 
         document.addEventListener("keydown", this.handleKeyDown);
         DiscordModules.subscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
@@ -1090,10 +1096,10 @@ const streamElementsTTS = new class StreamElementsTTS extends AbstractTTSSource 
         return this.voicesLabels;
     }
 
-    static async getMedia(text) {
-        return new Promise<HTMLAudioElement>((resolve, reject) => {
+    async getMedia(text) {
+        return new Promise((resolve, reject) => {
             text = encodeURIComponent(text);
-            const url = `https://api.streamelements.com/kappa/v2/speech?voice=${this.selectedVoice}&text=${text}`;
+            const url = `https://api.streamelements.com/kappa/v2/speech?voice=${this.selectedVoice}&text=${text}&key=${this.streamelementsApiKey}`;
             const audio = new Audio(url);
             audio.addEventListener("loadeddata", () => resolve(audio));
             audio.addEventListener("error", () => reject(new Error("Failed to load audio")));
@@ -1209,7 +1215,7 @@ const tikTokTTS = new class TikTokTTS extends AbstractTTSSource {
     }
 
     async getMedia(text) {
-        return new Promise<HTMLAudioElement>((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             try {
                 fetch("https://tiktok-tts.weilnet.workers.dev/api/generation", {
                     method: "POST",
