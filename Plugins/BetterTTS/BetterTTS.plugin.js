@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.15.4
+ * @version 2.16.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -63,7 +63,7 @@ const config = {
             { type: "switch", id: "messageSpoilersReading", name: "Enables Reading Messages Spoilers", note: "If enabled, it will read messages spoilers content.", value: false },
         ]},
         { type: "category", id: "ttsSourceSelection", name: "TTS Voice Source", collapsible: true, shown: false, settings: [
-            { type: "custom", id: "ttsSource", name: "TTS Source", note: "Choose the channel you want to play the TTS.", value:"streamlabs", children: []},
+            { type: "custom", id: "ttsSource", name: "TTS Source", note: "Choose the channel you want to play the TTS.", value:"streamelements", children: []},
             { type: "custom", id: "ttsVoice", name: "Voice for TTS", note: "Changes voice used for TTS.", value:"Brian", children: []}
         ]},
         { type: "category", id: "messageBlockFilters", name: "Message Block Filters", collapsible: true, shown: false, settings: [
@@ -133,6 +133,8 @@ module.exports = class BetterTTS {
             }
         });
 
+        this.audioPlayer = null;
+
         this.ttsMutedUsers = new Set(Data.load(this.meta.name, "ttsMutedUsers")) ?? new Set();
         this.ttsSubscribedChannels = new Set(Data.load(this.meta.name, "ttsSubscribedChannels")) ?? new Set();
         this.ttsSubscribedGuilds = new Set(Data.load(this.meta.name, "ttsSubscribedGuilds")) ?? new Set();
@@ -154,7 +156,7 @@ module.exports = class BetterTTS {
     };
 
     DropdownSources = ({ selected = "discord" }) => {
-        const options = getTTSSources();
+        const options = sourcesOptions;
         const [selectedSource, setSelectedSource] = React.useState(selected || options[0]?.value);
 
         return React.createElement(Components.DropdownInput, {
@@ -170,12 +172,12 @@ module.exports = class BetterTTS {
 
     DropdownVoices = ({ source = "discord", selected }) => {
         const [selectedSource, setSelectedSource] = React.useState(source);
-        const [options, setOptions] = React.useState(getTTSVoices(selectedSource));
+        const [options, setOptions] = React.useState(getVoices(selectedSource));
         const [selectedVoice, setSelectedVoice] = React.useState(selected || getDefaultVoice(source) || options[0]?.value);
 
         this.subscribe("sourceChanged", (newSource) => {
             setSelectedSource(newSource);
-            setOptions(getTTSVoices(newSource));
+            setOptions(getVoices(newSource));
             const newVoice = getDefaultVoice(newSource) || options[0]?.value;
             setSelectedVoice(newVoice);
             this.updateSettingValue(undefined, "ttsVoice", newVoice);
@@ -254,9 +256,9 @@ module.exports = class BetterTTS {
             }),
             React.createElement(Components.Button, {
                 onClick: () => {
-                    this.AudioPlayer.stopTTS();
+                    this.audioPlayer.stopTTS();
                     if (!isPlaying) {
-                        this.AudioPlayer.startTTS(text, true);
+                        this.audioPlayer.enqueueTTSMessage(text, true);
                     }
                     setIsPlaying(!isPlaying);
                 }
@@ -359,7 +361,7 @@ module.exports = class BetterTTS {
         switch (id) {
             case "enableTTS":
                 if (!value)
-                    this.AudioPlayer.stopTTS();
+                    this.audioPlayer.stopTTS();
                 break;
             case "enableTTSCommand":
                 UserSettingsProtoStore.settings.textAndImages.enableTtsCommand.value = value;
@@ -379,21 +381,21 @@ module.exports = class BetterTTS {
                 }
                 break;
             case "ttsSource":
-                this.AudioPlayer.updateSource(value);
-                config.settings[6].settings[1].options = getTTSVoices(value);
+                this.audioPlayer.updateTTSSourceAndVoice(value);
+                config.settings[6].settings[1].options = getVoices(value);
                 break;
             case "ttsVoice":
-                this.AudioPlayer.updateVoice(value);
+                this.audioPlayer.updateTTSSourceAndVoice(value);
                 break;
             case "ttsSpeechRate":
-                this.AudioPlayer.updateRate(value);
+                this.audioPlayer.updateRate(value);
                 break;
             case "ttsVolume":
-                this.AudioPlayer.updateVolume(value / 100);
+                this.audioPlayer.updateVolume(value / 100);
                 break;
             case "ttsDelayBetweenMessages":
                 value = parseInt(value);
-                this.AudioPlayer.updateDelay(value);
+                this.audioPlayer.updateDelay(value);
                 break;
             case "ttsToggle":
                 this.updateToggleKeys(value);
@@ -433,7 +435,7 @@ module.exports = class BetterTTS {
 
         this.updateToggleKeys(this.settings.ttsToggle);
 
-        this.AudioPlayer = new AudioPlayer(this.settings.ttsSource,
+        this.audioPlayer = new AudioPlayer(this.settings.ttsSource,
             this.settings.ttsVoice,
             this.settings.ttsSpeechRate,
             this.settings.ttsDelayBetweenMessages,
@@ -465,7 +467,7 @@ module.exports = class BetterTTS {
         DiscordModules.unsubscribe("RELATIONSHIP_REMOVE", this.handleUpdateRelations);
         DiscordModules.unsubscribe("RELATIONSHIP_ADD", this.handleUpdateRelations);
         document.removeEventListener("keydown", this.handleKeyDown);
-        this.AudioPlayer.stopTTS();
+        this.audioPlayer.stopTTS();
         DOM.removeStyle(this.meta.name);
     }
 
@@ -484,7 +486,7 @@ module.exports = class BetterTTS {
         let message = event.message;
         if ((event.guildId || !message.member) && this.shouldPlayMessage(event.message)) {
             let text = this.getPatchedContent(message, message.guild_id);
-            this.AudioPlayer.startTTS(text);
+            this.audioPlayer.enqueueTTSMessage(text);
         }
     }
 
@@ -497,9 +499,9 @@ module.exports = class BetterTTS {
                 if (userStatus.channelId !== userStatus.oldChannelId) {
                     let username = this.getUserName(userStatus.userId, userStatus.guildId);
                     if (userStatus.channelId === connectedChannelId) {
-                        this.AudioPlayer.startTTS(`${username} joined`, true);
+                        this.audioPlayer.enqueueTTSMessage(`${username} joined`, true);
                     } else if (userStatus.oldChannelId === connectedChannelId) {
-                        this.AudioPlayer.startTTS(`${username} left`, true);
+                        this.audioPlayer.enqueueTTSMessage(`${username} left`, true);
                     }
                 }
             }
@@ -509,12 +511,12 @@ module.exports = class BetterTTS {
     speakMessage(event) {
         if (!this.settings.enableTTS) return;
         let text = this.getPatchedContent(event.message, event.channel.guild_id);
-        this.AudioPlayer.startTTS(text);
+        this.audioPlayer.enqueueTTSMessage(text);
     }
 
     stopTTS() {
         if (MediaEngineStore.isSelfDeaf())
-            this.AudioPlayer.stopTTS();
+            this.audioPlayer.stopTTS();
     }
 
     updateRelationships() {
@@ -578,7 +580,7 @@ module.exports = class BetterTTS {
             action: () => {
                 const guildId = SelectedGuildStore.getGuildId();
                 let username = this.getUserName(userId, guildId);
-                this.AudioPlayer.startTTS(`${username} joined`, true);
+                this.audioPlayer.enqueueTTSMessage(`${username} joined`, true);
             }
         });
         let ttsToggleChat = ContextMenu.buildItem({
@@ -853,32 +855,64 @@ function clamp(number, min, max) {
 }
 
 class AudioPlayer {
-    constructor(source, voice, rate, delay, volume) {
-        this.updateConfig(source, voice, rate, delay, volume);
+    usersCache = new Map();
 
-        this.isPlaying = false;
-        this.isPriority = false;
-        this.playingText = "";
-        this.media = null;
-        this.priorityMessages = [];
-        this.normalMessages = [];
-    }
+    sourceInterface = discordTTS;
 
+    previewMessages = [];
+    userAnnouncements = [];
+    normalMessages = [];
+    isPlaying = false;
+    isPriority = false;
+    usingCache = false;
+    playingText = "";
+    media = undefined;
+
+    rate = 1.0;
+    delay = 0;
+    volume = 1.0;
     updateConfig(source, voice, rate, delay, volume) {
-        this.source = source;
-        this.voice = voice;
-        this.rate = rate;
-        this.delay = delay;
-        this.volume = volume;
+        this.updateTTSSourceAndVoice(source, voice);
+        this.updateRate(rate);
+        this.updateDelay(delay);
+        this.updateVolume(volume);
     }
 
-    startTTS(text, priority) {
+    updateTTSSourceAndVoice(source, voice) {
+        this.sourceInterface = getSource(source);
+        if (!voice) {
+            voice = this.sourceInterface.getDefaultVoice();
+        }
+        this.sourceInterface.setVoice(voice);
+        this.usersCache.clear();
+    }
+
+    updateRate(rate) {
+        this.rate = rate;
+        if (this.media instanceof Audio)
+            this.media.playbackRate = rate;
+        else if (this.media instanceof SpeechSynthesisUtterance)
+            this.media.rate = rate;
+    }
+
+    updateDelay(delay) {
+        this.delay = delay;
+    }
+
+    updateVolume(volume) {
+        this.volume = volume;
+        if (this.media instanceof Audio)
+            this.media.volume = clamp(volume, 0, 1);
+        else if (this.media instanceof SpeechSynthesisUtterance)
+            this.media.volume = clamp(volume, 0, 1);
+    }
+
+    enqueueTTSMessage(text, type) {
         if (!text) return;
-        if (priority) {
-            this.priorityMessages.push(text);
-            /* if (!this.isPriority) {
-                this.stopCurrentTTS();
-            } */
+        if (type === "preview") {
+            this.previewMessages.push(text);
+        } else if (type === "user") {
+            this.userAnnouncements.push(text);
         } else {
             this.normalMessages.push(text);
         }
@@ -894,61 +928,41 @@ class AudioPlayer {
         else if (this.media instanceof SpeechSynthesisUtterance)
             speechSynthesis.cancel();
         this.playingText = "";
-        this.media = null;
+        this.media = undefined;
         this.playNextTTS();
     }
 
     stopTTS() {
         this.isPlaying = false;
-        this.priorityMessages = [];
+        this.previewMessages = [];
+        this.userAnnouncements = [];
         this.normalMessages = [];
         this.stopCurrentTTS();
     }
 
-    updateSource(source) {
-        this.source = source;
-    }
-
-    updateVoice(voice) {
-        this.voice = voice;
-    }
-
-    updateRate(rate) {
-        this.rate = rate;
-        if (this.media instanceof Audio)
-            this.media.playbackRate = rate;
-        else if (this.media instanceof SpeechSynthesisUtterance)
-            this.media.rate = rate;
-    }
-
-    updateVolume(volume) {
-        this.volume = volume;
-        if (this.media instanceof Audio)
-            this.media.volume = clamp(volume, 0, 1);
-        else if (this.media instanceof SpeechSynthesisUtterance)
-            this.media.volume = clamp(volume, 0, 1);
-    }
-
-    updateDelay(delay) {
-        this.delay = delay;
-    }
-
     playNextTTS() {
-        this.playingText = "";
-        this.media = null;
-        if (this.priorityMessages.length > 0 || this.normalMessages.length > 0) {
-            this.playTTS();
-        } else {
-            this.isPlaying = false;
-        }
+        setTimeout(() => {
+            this.playingText = "";
+            this.media = undefined;
+            if (this.previewMessages.length > 0 || this.userAnnouncements.length > 0 || this.normalMessages.length > 0) {
+                this.playTTS();
+            } else {
+                this.isPlaying = false;
+            }
+        }, this.delay);
     }
 
     playAudio() {
-        if (this.media instanceof Audio) {
-            this.media.playbackRate = this.rate;
-            this.media.volume = clamp(this.volume, 0, 1);
-            this.media.addEventListener('ended', () => this.playNextTTS());
-            this.media.play();
+        if (this.media instanceof HTMLAudioElement) {
+            try {
+                this.media.playbackRate = this.rate;
+                this.media.volume = clamp(this.volume, 0, 1);
+                this.media.addEventListener("ended", () => this.playNextTTS());
+                this.media.play();
+            } catch (error) {
+                console.error("Error playing audio:", error);
+                this.playNextTTS();
+            }
         } else if (this.media instanceof SpeechSynthesisUtterance) {
             this.media.rate = this.rate;
             this.media.volume = clamp(this.volume, 0, 1);
@@ -960,217 +974,288 @@ class AudioPlayer {
     }
 
     playTTS() {
-        this.isPriority = this.priorityMessages.length > 0;
-        this.playingText = this.isPriority ? this.priorityMessages.shift() : this.normalMessages.shift() || "";
+        this.isPriority = this.previewMessages.length > 0;
+        this.usingCache = this.userAnnouncements.length > 0;
+        this.playingText = this.isPriority ? this.previewMessages.shift() || "" : this.usingCache ? this.userAnnouncements.shift() || "" : this.normalMessages.shift() || "";
         if (this.playingText) {
-            switch (this.source) {
-                case "discord":
-                    this.media = DiscordTTS.getUtterance(this.playingText, this.voice);
-                    break;
-                case "streamlabs":
-                    this.media = StreamElementsTTS.getAudio(this.playingText, this.voice);
-                    break;
-                case "tiktok":
-                    this.media = TikTokTTS.getAudio(this.playingText, this.voice);
-                    break;
-                default:
-                    console.error("Unknown TTS source:", this.source);
+            if (this.usingCache) {
+                const cachedAudio = this.usersCache.get(this.playingText);
+                if (cachedAudio) {
+                    this.media = cachedAudio;
+                    this.playAudio();
+                    return;
+                }
             }
-            setTimeout(() => this.playAudio(), this.delay);
+            this.sourceInterface.getMedia(this.playingText).then(media => {
+                if (this.usingCache) this.usersCache.set(this.playingText, media);
+                this.media = media;
+                this.playAudio();
+            }).catch(error => {
+                console.error("Error getting media:", error);
+                this.playNextTTS();
+            });
+        } else {
+            this.stopCurrentTTS();
         }
     }
-}
+};
 
 // TTS Sources
-function getTTSSources() {
-    const Sources = [
-        { label: "Discord", value: "discord", default: "" },
-        { label: "Streamlabs", value: "streamlabs", default: "Brian" },
-        { label: "TikTok", value: "tiktok", default: "en_us_001" }
-    ];
-    return Sources;
-}
-function getDefaultVoice(source) {
-    return getTTSSources().find(s => s.value === source)?.default;
-}
-function getTTSVoices(source) {
-    switch (source) {
-        case "discord":
-            return DiscordTTS.getVoices();
-        case "streamlabs":
-            return StreamElementsTTS.getVoices();
-        case "tiktok":
-            return TikTokTTS.getVoices();
-        default:
-            return [{ label: "No voices available", value: "none" }];
+class AbstractTTSSource {
+    sourceLabel = { label: "Abstract", value: "abstract" };
+    
+    constructor() {
+        const retrive = async () => {
+            console.log(`Retrieving voices...`);
+            this.voicesLabels = await this.retrieveVoices();
+            if (this.voicesLabels.length === 0) {
+                setTimeout(retrive, 5000);
+            }
+        };
+        retrive();
+    }
+
+    voicesLabels = [{ label: "No voices available", value: "none" }];
+    selectedVoice = "";
+
+    async retrieveVoices() {
+        throw new Error("Method not implemented.");
+    }
+
+    getDefaultVoice() {
+        throw new Error("Method not implemented.");
+    }
+
+    getVoices() {
+        return this.voicesLabels;
+    }
+
+    setVoice(voice) {
+        this.selectedVoice = voice;
+    }
+
+    async getMedia(text) {
+        throw new Error("Method not implemented.");
     }
 }
+const discordTTS = new class DiscordTTS extends AbstractTTSSource {
+    sourceLabel = { label: "Discord", value: "discord" };
 
-class DiscordTTS {
-    static voicesLables = [{ label: "No voices available", value: "none" }];
-    static getVoices() {
-        let voices = speechSynthesis.getVoices();
-        DiscordTTS.voicesLables = voices
+    getDefaultVoice() {
+        return speechSynthesis.getVoices()[0].voiceURI;
+    }
+
+    async retrieveVoices() {
+        const voices = speechSynthesis.getVoices();
+        this.voicesLabels = voices
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(voice => ({
                 label: voice.name,
                 value: voice.voiceURI
             }));
-        return DiscordTTS.voicesLables;
+        return this.voicesLabels;
     }
 
-    static getUtterance(text, voice) {
-        let utterance = new SpeechSynthesisUtterance(text);
-        utterance.voice = speechSynthesis.getVoices().find(v => v.voiceURI === voice);
+    async getMedia(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.voice = speechSynthesis.getVoices().find(v => v.voiceURI === this.selectedVoice) || speechSynthesis.getVoices()[0];
         return utterance;
     }
 }
-class StreamElementsTTS {
-    static voicesLables = [{ label: "No voices available", value: "none" }];
-    static getVoices() {
-        const request = new XMLHttpRequest();
-        request.open('GET', 'https://api.streamelements.com/kappa/v2/speech/voices', false);
-        request.send(null);
+const streamElementsTTS = new class StreamElementsTTS extends AbstractTTSSource {
+    sourceLabel = { label: "StreamElements", value: "streamelements" };
 
-        if (request.status === 200) {
-            const data = JSON.parse(request.responseText);
-            let voices = data.voices;
-            StreamElementsTTS.voicesLables = Object.values(voices)
+    getDefaultVoice() {
+        return "Brian";
+    }
+
+    async retrieveVoices() {
+        try {
+            const response = await fetch("https://api.streamelements.com/kappa/v2/speech/voices");
+            if (!response.ok) {
+                console.error("Failed to load voices");
+                return this.voicesLabels;
+            }
+            const data = await response.json();
+            const voices = data.voices;
+            this.voicesLabels = Object.values(voices)
                 .sort((a, b) => a.languageName.localeCompare(b.languageName))
-                .map(voice => ({
+                .map((voice) => ({
                     label: `${voice.name} (${voice.languageName} ${voice.languageCode})`,
                     value: voice.id
                 }));
-        } else {
-            console.error('Error loading voices:', request.statusText);
+        } catch (error) {
+            throw new Error("Failed to load voices");
         }
-        return StreamElementsTTS.voicesLables;
+        return this.voicesLabels;
     }
 
-    static getAudio(text, voice) {
-        text = encodeURIComponent(text);
-        let url = `https://api.streamelements.com/kappa/v2/speech?voice=${voice}&text=${text}`;
-        return new Audio(url);
+    static async getMedia(text) {
+        return new Promise<HTMLAudioElement>((resolve, reject) => {
+            text = encodeURIComponent(text);
+            const url = `https://api.streamelements.com/kappa/v2/speech?voice=${this.selectedVoice}&text=${text}`;
+            const audio = new Audio(url);
+            audio.addEventListener("loadeddata", () => resolve(audio));
+            audio.addEventListener("error", () => reject(new Error("Failed to load audio")));
+        });
     }
 }
-class TikTokTTS {
-    static voicesLables = [{ label: "No voices available", value: "none" }];
-    static getVoices() {
+const tikTokTTS = new class TikTokTTS extends AbstractTTSSource {
+    sourceLabel = { label: "TikTok", value: "tiktok" };
+
+    getVoices() {
         return tickTockVoices;
     }
 
-    static getAudio(text, voice) {
-        const request = new XMLHttpRequest();
-        request.open('POST', 'https://tiktok-tts.weilnet.workers.dev/api/generation', false);
-        request.setRequestHeader('Content-Type', 'application/json');
-        request.send(JSON.stringify({ text: text, voice: voice }));
+    async retrieveVoices() {
+        this.voicesLabels = [
+            { label: "GHOSTFACE", value: "en_us_ghostface" },
+            { label: "CHEWBACCA", value: "en_us_chewbacca" },
+            { label: "C3PO", value: "en_us_c3po" },
+            { label: "STITCH", value: "en_us_stitch" },
+            { label: "STORMTROOPER", value: "en_us_stormtrooper" },
+            { label: "ROCKET", value: "en_us_rocket" },
+            { label: "MADAME_LEOTA", value: "en_female_madam_leota" },
+            { label: "GHOST_HOST", value: "en_male_ghosthost" },
+            { label: "PIRATE", value: "en_male_pirate" },
+            { label: "AU_FEMALE_1", value: "en_au_001" },
+            { label: "AU_MALE_1", value: "en_au_002" },
+            { label: "UK_MALE_1", value: "en_uk_001" },
+            { label: "UK_MALE_2", value: "en_uk_003" },
+            { label: "US_FEMALE_1", value: "en_us_001" },
+            { label: "US_FEMALE_2", value: "en_us_002" },
+            { label: "US_MALE_1", value: "en_us_006" },
+            { label: "US_MALE_2", value: "en_us_007" },
+            { label: "US_MALE_3", value: "en_us_009" },
+            { label: "US_MALE_4", value: "en_us_010" },
+            { label: "MALE_JOMBOY", value: "en_male_jomboy" },
+            { label: "MALE_CODY", value: "en_male_cody" },
+            { label: "FEMALE_SAMC", value: "en_female_samc" },
+            { label: "FEMALE_MAKEUP", value: "en_female_makeup" },
+            { label: "FEMALE_RICHGIRL", value: "en_female_richgirl" },
+            { label: "MALE_GRINCH", value: "en_male_grinch" },
+            { label: "MALE_DEADPOOL", value: "en_male_deadpool" },
+            { label: "MALE_JARVIS", value: "en_male_jarvis" },
+            { label: "MALE_ASHMAGIC", value: "en_male_ashmagic" },
+            { label: "MALE_OLANTERKKERS", value: "en_male_olantekkers" },
+            { label: "MALE_UKNEIGHBOR", value: "en_male_ukneighbor" },
+            { label: "MALE_UKBUTLER", value: "en_male_ukbutler" },
+            { label: "FEMALE_SHENNA", value: "en_female_shenna" },
+            { label: "FEMALE_PANSINO", value: "en_female_pansino" },
+            { label: "MALE_TREVOR", value: "en_male_trevor" },
+            { label: "FEMALE_BETTY", value: "en_female_betty" },
+            { label: "MALE_CUPID", value: "en_male_cupid" },
+            { label: "FEMALE_GRANDMA", value: "en_female_grandma" },
+            { label: "MALE_XMXS_CHRISTMAS", value: "en_male_m2_xhxs_m03_christmas" },
+            { label: "MALE_SANTA_NARRATION", value: "en_male_santa_narration" },
+            { label: "MALE_SING_DEEP_JINGLE", value: "en_male_sing_deep_jingle" },
+            { label: "MALE_SANTA_EFFECT", value: "en_male_santa_effect" },
+            { label: "FEMALE_HT_NEYEAR", value: "en_female_ht_f08_newyear" },
+            { label: "MALE_WIZARD", value: "en_male_wizard" },
+            { label: "FEMALE_HT_HALLOWEEN", value: "en_female_ht_f08_halloween" },
+            { label: "FR_MALE_1", value: "fr_001" },
+            { label: "FR_MALE_2", value: "fr_002" },
+            { label: "DE_FEMALE", value: "de_001" },
+            { label: "DE_MALE", value: "de_002" },
+            { label: "ES_MALE", value: "es_002" },
+            { label: "ES_MX_MALE", value: "es_mx_002" },
+            { label: "BR_FEMALE_1", value: "br_001" },
+            { label: "BR_FEMALE_2", value: "br_003" },
+            { label: "BR_FEMALE_3", value: "br_004" },
+            { label: "BR_MALE", value: "br_005" },
+            { label: "BP_FEMALE_IVETE", value: "bp_female_ivete" },
+            { label: "BP_FEMALE_LUDMILLA", value: "bp_female_ludmilla" },
+            { label: "PT_FEMALE_LHAYS", value: "pt_female_lhays" },
+            { label: "PT_FEMALE_LAIZZA", value: "pt_female_laizza" },
+            { label: "PT_MALE_BUENO", value: "pt_male_bueno" },
+            { label: "ID_FEMALE", value: "id_001" },
+            { label: "JP_FEMALE_1", value: "jp_001" },
+            { label: "JP_FEMALE_2", value: "jp_003" },
+            { label: "JP_FEMALE_3", value: "jp_005" },
+            { label: "JP_MALE", value: "jp_006" },
+            { label: "KR_MALE_1", value: "kr_002" },
+            { label: "KR_FEMALE", value: "kr_003" },
+            { label: "KR_MALE_2", value: "kr_004" },
+            { label: "JP_FEMALE_FUJICOCHAN", value: "jp_female_fujicochan" },
+            { label: "JP_FEMALE_HASEGAWARIONA", value: "jp_female_hasegawariona" },
+            { label: "JP_MALE_KEIICHINAKANO", value: "jp_male_keiichinakano" },
+            { label: "JP_FEMALE_OOMAEAIIKA", value: "jp_female_oomaeaika" },
+            { label: "JP_MALE_YUJINCHIGUSA", value: "jp_male_yujinchigusa" },
+            { label: "JP_FEMALE_SHIROU", value: "jp_female_shirou" },
+            { label: "JP_MALE_TAMAWAKAZUKI", value: "jp_male_tamawakazuki" },
+            { label: "JP_FEMALE_KAORISHOJI", value: "jp_female_kaorishoji" },
+            { label: "JP_FEMALE_YAGISHAKI", value: "jp_female_yagishaki" },
+            { label: "JP_MALE_HIKAKIN", value: "jp_male_hikakin" },
+            { label: "JP_FEMALE_REI", value: "jp_female_rei" },
+            { label: "JP_MALE_SHUICHIRO", value: "jp_male_shuichiro" },
+            { label: "JP_MALE_MATSUDAKE", value: "jp_male_matsudake" },
+            { label: "JP_FEMALE_MACHIKORIIITA", value: "jp_female_machikoriiita" },
+            { label: "JP_MALE_MATSUO", value: "jp_male_matsuo" },
+            { label: "JP_MALE_OSADA", value: "jp_male_osada" },
+            { label: "SING_FEMALE_ALTO", value: "en_female_f08_salut_damour" },
+            { label: "SING_MALE_TENOR", value: "en_male_m03_lobby" },
+            { label: "SING_FEMALE_WARMY_BREEZE", value: "en_female_f08_warmy_breeze" },
+            { label: "SING_MALE_SUNSHINE_SOON", value: "en_male_m03_sunshine_soon" },
+            { label: "SING_FEMALE_GLORIOUS", value: "en_female_ht_f08_glorious" },
+            { label: "SING_MALE_IT_GOES_UP", value: "en_male_sing_funny_it_goes_up" },
+            { label: "SING_MALE_CHIPMUNK", value: "en_male_m2_xhxs_m03_silly" },
+            { label: "SING_FEMALE_WONDERFUL_WORLD", value: "en_female_ht_f08_wonderful_world" },
+            { label: "SING_MALE_FUNNY_THANKSGIVING", value: "en_male_sing_funny_thanksgiving" },
+            { label: "MALE_NARRATION", value: "en_male_narration" },
+            { label: "MALE_FUNNY", value: "en_male_funny" },
+            { label: "FEMALE_EMOTIONAL", value: "en_female_emotional" }
+        ];
+        return this.voicesLabels;
+    }
 
-        if (request.status === 200) {
-            const data = JSON.parse(request.responseText);
-            const audioElement = new Audio();
-            audioElement.src = `data:audio/mpeg;base64,${data.data}`;
-            return audioElement;
-        } else {
-            console.error('Error loading voices:', request.statusText);
-        }
-        return null;
+    async getMedia(text) {
+        return new Promise<HTMLAudioElement>((resolve, reject) => {
+            try {
+                fetch("https://tiktok-tts.weilnet.workers.dev/api/generation", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: text, voice: this.selectedVoice })
+                }).then(async response => {
+                    const data = await response.json();
+                    const audio = new Audio();
+                    audio.src = `data:audio/mpeg;base64,${data.data}`;
+                    audio.addEventListener("loadeddata", () => resolve(audio));
+                    audio.addEventListener("error", () => reject(new Error("Failed to load audio")));
+                }).catch(error => {
+                    reject(error);
+                });
+            } catch (error) {
+                reject(new Error("Failed to load audio"));
+            }
+        });
     }
 }
 
-const tickTockVoices = [
-  { label: "GHOSTFACE", value: "en_us_ghostface" },
-  { label: "CHEWBACCA", value: "en_us_chewbacca" },
-  { label: "C3PO", value: "en_us_c3po" },
-  { label: "STITCH", value: "en_us_stitch" },
-  { label: "STORMTROOPER", value: "en_us_stormtrooper" },
-  { label: "ROCKET", value: "en_us_rocket" },
-  { label: "MADAME_LEOTA", value: "en_female_madam_leota" },
-  { label: "GHOST_HOST", value: "en_male_ghosthost" },
-  { label: "PIRATE", value: "en_male_pirate" },
-  { label: "AU_FEMALE_1", value: "en_au_001" },
-  { label: "AU_MALE_1", value: "en_au_002" },
-  { label: "UK_MALE_1", value: "en_uk_001" },
-  { label: "UK_MALE_2", value: "en_uk_003" },
-  { label: "US_FEMALE_1", value: "en_us_001" },
-  { label: "US_FEMALE_2", value: "en_us_002" },
-  { label: "US_MALE_1", value: "en_us_006" },
-  { label: "US_MALE_2", value: "en_us_007" },
-  { label: "US_MALE_3", value: "en_us_009" },
-  { label: "US_MALE_4", value: "en_us_010" },
-  { label: "MALE_JOMBOY", value: "en_male_jomboy" },
-  { label: "MALE_CODY", value: "en_male_cody" },
-  { label: "FEMALE_SAMC", value: "en_female_samc" },
-  { label: "FEMALE_MAKEUP", value: "en_female_makeup" },
-  { label: "FEMALE_RICHGIRL", value: "en_female_richgirl" },
-  { label: "MALE_GRINCH", value: "en_male_grinch" },
-  { label: "MALE_DEADPOOL", value: "en_male_deadpool" },
-  { label: "MALE_JARVIS", value: "en_male_jarvis" },
-  { label: "MALE_ASHMAGIC", value: "en_male_ashmagic" },
-  { label: "MALE_OLANTERKKERS", value: "en_male_olantekkers" },
-  { label: "MALE_UKNEIGHBOR", value: "en_male_ukneighbor" },
-  { label: "MALE_UKBUTLER", value: "en_male_ukbutler" },
-  { label: "FEMALE_SHENNA", value: "en_female_shenna" },
-  { label: "FEMALE_PANSINO", value: "en_female_pansino" },
-  { label: "MALE_TREVOR", value: "en_male_trevor" },
-  { label: "FEMALE_BETTY", value: "en_female_betty" },
-  { label: "MALE_CUPID", value: "en_male_cupid" },
-  { label: "FEMALE_GRANDMA", value: "en_female_grandma" },
-  { label: "MALE_XMXS_CHRISTMAS", value: "en_male_m2_xhxs_m03_christmas" },
-  { label: "MALE_SANTA_NARRATION", value: "en_male_santa_narration" },
-  { label: "MALE_SING_DEEP_JINGLE", value: "en_male_sing_deep_jingle" },
-  { label: "MALE_SANTA_EFFECT", value: "en_male_santa_effect" },
-  { label: "FEMALE_HT_NEYEAR", value: "en_female_ht_f08_newyear" },
-  { label: "MALE_WIZARD", value: "en_male_wizard" },
-  { label: "FEMALE_HT_HALLOWEEN", value: "en_female_ht_f08_halloween" },
-  { label: "FR_MALE_1", value: "fr_001" },
-  { label: "FR_MALE_2", value: "fr_002" },
-  { label: "DE_FEMALE", value: "de_001" },
-  { label: "DE_MALE", value: "de_002" },
-  { label: "ES_MALE", value: "es_002" },
-  { label: "ES_MX_MALE", value: "es_mx_002" },
-  { label: "BR_FEMALE_1", value: "br_001" },
-  { label: "BR_FEMALE_2", value: "br_003" },
-  { label: "BR_FEMALE_3", value: "br_004" },
-  { label: "BR_MALE", value: "br_005" },
-  { label: "BP_FEMALE_IVETE", value: "bp_female_ivete" },
-  { label: "BP_FEMALE_LUDMILLA", value: "bp_female_ludmilla" },
-  { label: "PT_FEMALE_LHAYS", value: "pt_female_lhays" },
-  { label: "PT_FEMALE_LAIZZA", value: "pt_female_laizza" },
-  { label: "PT_MALE_BUENO", value: "pt_male_bueno" },
-  { label: "ID_FEMALE", value: "id_001" },
-  { label: "JP_FEMALE_1", value: "jp_001" },
-  { label: "JP_FEMALE_2", value: "jp_003" },
-  { label: "JP_FEMALE_3", value: "jp_005" },
-  { label: "JP_MALE", value: "jp_006" },
-  { label: "KR_MALE_1", value: "kr_002" },
-  { label: "KR_FEMALE", value: "kr_003" },
-  { label: "KR_MALE_2", value: "kr_004" },
-  { label: "JP_FEMALE_FUJICOCHAN", value: "jp_female_fujicochan" },
-  { label: "JP_FEMALE_HASEGAWARIONA", value: "jp_female_hasegawariona" },
-  { label: "JP_MALE_KEIICHINAKANO", value: "jp_male_keiichinakano" },
-  { label: "JP_FEMALE_OOMAEAIIKA", value: "jp_female_oomaeaika" },
-  { label: "JP_MALE_YUJINCHIGUSA", value: "jp_male_yujinchigusa" },
-  { label: "JP_FEMALE_SHIROU", value: "jp_female_shirou" },
-  { label: "JP_MALE_TAMAWAKAZUKI", value: "jp_male_tamawakazuki" },
-  { label: "JP_FEMALE_KAORISHOJI", value: "jp_female_kaorishoji" },
-  { label: "JP_FEMALE_YAGISHAKI", value: "jp_female_yagishaki" },
-  { label: "JP_MALE_HIKAKIN", value: "jp_male_hikakin" },
-  { label: "JP_FEMALE_REI", value: "jp_female_rei" },
-  { label: "JP_MALE_SHUICHIRO", value: "jp_male_shuichiro" },
-  { label: "JP_MALE_MATSUDAKE", value: "jp_male_matsudake" },
-  { label: "JP_FEMALE_MACHIKORIIITA", value: "jp_female_machikoriiita" },
-  { label: "JP_MALE_MATSUO", value: "jp_male_matsuo" },
-  { label: "JP_MALE_OSADA", value: "jp_male_osada" },
-  { label: "SING_FEMALE_ALTO", value: "en_female_f08_salut_damour" },
-  { label: "SING_MALE_TENOR", value: "en_male_m03_lobby" },
-  { label: "SING_FEMALE_WARMY_BREEZE", value: "en_female_f08_warmy_breeze" },
-  { label: "SING_MALE_SUNSHINE_SOON", value: "en_male_m03_sunshine_soon" },
-  { label: "SING_FEMALE_GLORIOUS", value: "en_female_ht_f08_glorious" },
-  { label: "SING_MALE_IT_GOES_UP", value: "en_male_sing_funny_it_goes_up" },
-  { label: "SING_MALE_CHIPMUNK", value: "en_male_m2_xhxs_m03_silly" },
-  { label: "SING_FEMALE_WONDERFUL_WORLD", value: "en_female_ht_f08_wonderful_world" },
-  { label: "SING_MALE_FUNNY_THANKSGIVING", value: "en_male_sing_funny_thanksgiving" },
-  { label: "MALE_NARRATION", value: "en_male_narration" },
-  { label: "MALE_FUNNY", value: "en_male_funny" },
-  { label: "FEMALE_EMOTIONAL", value: "en_female_emotional" }
-]
+const sourcesOptions = [
+    discordTTS.sourceLabel,
+    streamElementsTTS.sourceLabel,
+    tikTokTTS.sourceLabel
+];
+
+function getSource(source) {
+    switch (source) {
+        case "discord":
+            return discordTTS;
+        case "streamelements":
+            return streamElementsTTS;
+        case "tiktok":
+            return tikTokTTS;
+        default:
+            return undefined;
+    }
+}
+
+function getVoices(source) {
+    const sourceInterface = getSource(source);
+    return sourceInterface ? sourceInterface.getVoices() : [];
+}
+
+function getDefaultVoice(source) {
+    const sourceInterface = getSource(source);
+    return sourceInterface ? sourceInterface.getDefaultVoice() : "";
+}
