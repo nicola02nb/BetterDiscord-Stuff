@@ -1002,7 +1002,7 @@ class AudioPlayer {
 
 // TTS Sources
 class AbstractTTSSource {
-    sourceLabel = { label: "Abstract", value: "abstract" };
+    sourceOption = { label: "Abstract", value: "abstract" };
     
     constructor() {
         const retrive = async () => {
@@ -1039,7 +1039,7 @@ class AbstractTTSSource {
     }
 }
 const discordTTS = new class DiscordTTS extends AbstractTTSSource {
-    sourceLabel = { label: "Discord", value: "discord" };
+    sourceOption = { label: "Discord", value: "discord" };
 
     getDefaultVoice() {
         return speechSynthesis.getVoices()[0].voiceURI;
@@ -1063,7 +1063,7 @@ const discordTTS = new class DiscordTTS extends AbstractTTSSource {
     }
 }
 const streamElementsTTS = new class StreamElementsTTS extends AbstractTTSSource {
-    sourceLabel = { label: "StreamElements", value: "streamelements" };
+    sourceOption = { label: "StreamElements", value: "streamelements" };
 
     getDefaultVoice() {
         return "Brian";
@@ -1101,7 +1101,7 @@ const streamElementsTTS = new class StreamElementsTTS extends AbstractTTSSource 
     }
 }
 const tikTokTTS = new class TikTokTTS extends AbstractTTSSource {
-    sourceLabel = { label: "TikTok", value: "tiktok" };
+    sourceOption = { label: "TikTok", value: "tiktok" };
 
     getVoices() {
         return tickTockVoices;
@@ -1232,9 +1232,9 @@ const tikTokTTS = new class TikTokTTS extends AbstractTTSSource {
 }
 
 const sourcesOptions = [
-    discordTTS.sourceLabel,
-    streamElementsTTS.sourceLabel,
-    tikTokTTS.sourceLabel
+    discordTTS.sourceOption,
+    streamElementsTTS.sourceOption,
+    tikTokTTS.sourceOption
 ];
 
 function getSource(source) {
