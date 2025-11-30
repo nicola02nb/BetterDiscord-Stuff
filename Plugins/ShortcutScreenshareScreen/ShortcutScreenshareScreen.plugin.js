@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.14
+ * @version 1.1.15
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -348,7 +348,7 @@ module.exports = class ShortcutScreenshareScreen {
             id,
             keybind,
             (isDown) => { if (isDown) toCall() },
-            { blurred: true, focused: true, keydown: true, keyup: true }
+            { blurred: true, focused: true, keydown: true, keyup: false }
         );
         this.keyBindsIds.push(id);
     }
