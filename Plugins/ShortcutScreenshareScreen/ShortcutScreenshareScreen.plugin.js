@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.13
+ * @version 1.1.14
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -46,7 +46,7 @@ const [ ApplicationStreamingStore, StreamRTCConnectionStore, MediaEngineStore, R
     { filter: Filters.byStoreName("RunningGameStore") },
     { filter: Filters.byStoreName("RTCConnectionStore") },
     { filter: Filters.byStrings("STREAM_START", "GUILD", "CALL", "OVERLAY"), searchExports: true },
-    { filter: Filters.byStrings("STREAM_STOP"), searchExports: true }
+    { filter: Filters.byStrings("\"STREAM_STOP\""), searchExports: true }
 );
 
 const DiscordUtils = DiscordNative.nativeModules.requireModule("discord_utils");
@@ -166,7 +166,12 @@ module.exports = class ShortcutScreenshareScreen {
     getActiveStreamKey() {
         const activeStream = ApplicationStreamingStore.getCurrentUserActiveStream();
         if (activeStream) {
-            return activeStream.streamType+":"+activeStream.guildId+":"+activeStream.channelId+":"+activeStream.ownerId;
+            const guildId = activeStream.guildId;
+            if (guildId) {
+                return activeStream.streamType+":"+guildId+":"+activeStream.channelId+":"+activeStream.ownerId;
+            } else {
+                return activeStream.streamType+":"+activeStream.channelId+":"+activeStream.ownerId;
+            }
         }
         return null;
     }
