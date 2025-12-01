@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.17.0
+ * @version 2.17.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -1109,8 +1109,8 @@ const streamElementsTTS = new class StreamElementsTTS extends AbstractTTSSource 
 const tikTokTTS = new class TikTokTTS extends AbstractTTSSource {
     sourceOption = { label: "TikTok", value: "tiktok" };
 
-    getVoices() {
-        return tickTockVoices;
+    getDefaultVoice() {
+        return "en_us_001";
     }
 
     async retrieveVoices() {
