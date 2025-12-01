@@ -1012,7 +1012,6 @@ class AbstractTTSSource {
     
     constructor() {
         const retrive = async () => {
-            console.log(`Retrieving voices...`);
             this.voicesLabels = await this.retrieveVoices();
             if (this.voicesLabels.length === 0) {
                 setTimeout(retrive, 5000);
