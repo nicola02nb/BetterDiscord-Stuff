@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.8.1
+ * @version 1.8.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -97,6 +97,20 @@ module.exports = class AutoSwitchStatus {
                 this.settings[id] = value;
             },
         });
+    }
+
+    showChangelog() {
+        const savedVersion = Data.load(this.meta.name, "version");
+        if (savedVersion !== this.meta.version) {
+            if (config.changelog.length > 0) {
+                UI.showChangelogModal({
+                    title: this.meta.name,
+                    subtitle: this.meta.version,
+                    changes: config.changelog
+                });
+            }
+            Data.save(this.meta.name, "version", this.meta.version);
+        }
     }
 
     start() {
