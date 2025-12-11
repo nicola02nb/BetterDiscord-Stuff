@@ -62,6 +62,8 @@ var console = {};
 module.exports = class ShortcutScreenshareScreen {
     constructor(meta) {
         this.meta = meta;
+        this.BdApi = new BdApi(this.meta.name);
+        console = this.BdApi.Logger;
 
         this.settings = new Proxy({}, {
             get: (_target, key) => {
@@ -95,6 +97,36 @@ module.exports = class ShortcutScreenshareScreen {
                 this.settings[setting.id] = Data.load(this.meta.name, setting.id) ?? setting.value;
             }
         });
+    }
+    setConfigSetting(id, newValue) {
+        for (const setting of config.settings) {
+            if (setting.id === id) {
+                this.BdApi.Data.save(id, newValue);
+                return setting.value = newValue;
+            }
+            if (setting.settings) {
+                for (const settingInt of setting.settings) {
+                    if (settingInt.id === id) {
+                        this.BdApi.Data.save(id, newValue);
+                        settingInt.value = newValue;
+                    }
+                }
+            }
+        }
+    }
+
+    initSettingsValues() {
+        for (const setting of config.settings) {
+            if (setting.type === "category") {
+                for (const settingInt of setting.settings) {
+                    settingInt.value = this.BdApi.Data.load(settingInt.id) ?? settingInt.value;
+                    this.settings[settingInt.id] = settingInt.value;
+                }
+            } else {
+                setting.value = this.BdApi.Data.load(setting.id) ?? setting.value;
+                this.settings[setting.id] = setting.value;
+            }
+        }
     }
 
     getSettingsPanel() {
