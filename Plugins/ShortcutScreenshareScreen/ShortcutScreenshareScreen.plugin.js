@@ -43,7 +43,7 @@ function getSetting(key) {
     return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
 }
 
-const { Webpack } = BdApi;
+const { Webpack, DOM, UI, Data, Keybinds } = BdApi;
 const { Filters } = Webpack;
 
 const [ApplicationStreamingStore, StreamRTCConnectionStore, MediaEngineStore, RunningGameStore, RTCConnectionStore,
@@ -57,13 +57,9 @@ const [ApplicationStreamingStore, StreamRTCConnectionStore, MediaEngineStore, Ru
         { filter: Filters.byStrings("\"STREAM_STOP\""), searchExports: true }
     );
 
-var console = {};
-
 module.exports = class ShortcutScreenshareScreen {
     constructor(meta) {
         this.meta = meta;
-        this.BdApi = new BdApi(this.meta.name);
-        console = this.BdApi.Logger;
 
         this.settings = new Proxy({}, {
             get: (_target, key) => {
@@ -98,39 +94,9 @@ module.exports = class ShortcutScreenshareScreen {
             }
         });
     }
-    setConfigSetting(id, newValue) {
-        for (const setting of config.settings) {
-            if (setting.id === id) {
-                this.BdApi.Data.save(id, newValue);
-                return setting.value = newValue;
-            }
-            if (setting.settings) {
-                for (const settingInt of setting.settings) {
-                    if (settingInt.id === id) {
-                        this.BdApi.Data.save(id, newValue);
-                        settingInt.value = newValue;
-                    }
-                }
-            }
-        }
-    }
-
-    initSettingsValues() {
-        for (const setting of config.settings) {
-            if (setting.type === "category") {
-                for (const settingInt of setting.settings) {
-                    settingInt.value = this.BdApi.Data.load(settingInt.id) ?? settingInt.value;
-                    this.settings[settingInt.id] = settingInt.value;
-                }
-            } else {
-                setting.value = this.BdApi.Data.load(setting.id) ?? setting.value;
-                this.settings[setting.id] = setting.value;
-            }
-        }
-    }
 
     getSettingsPanel() {
-        return this.BdApi.UI.buildSettingsPanel({
+        return UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
                 this.settings[id] = value;
@@ -182,22 +148,20 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     start() {
-        this.BdApi.DOM.addStyle(`
-            .bd-toast.toast-stream-stopped.icon {background-image: none;}
-            .bd-toast.toast-stream-start.icon {background: "📺";}
-        `);
-        this.initSettingsValues();
+        DOM.addStyle(this.meta.name, `.bd-toast.toast-stream-stopped.icon {background-image: none;}
+            .bd-toast.toast-stream-start.icon {background: "📺";}`);
+        this.initSettings();
         this.updateKeybinds();
     }
 
     stop() {
         this.unregisterKeybinds();
-        this.BdApi.DOM.removeStyle();
+        DOM.removeStyle(this.meta.name);
     }
 
     showToast(message, type) {
         if (this.settings.showToast) {
-            this.BdApi.UI.showToast(message, { type: type, icon: false });
+            UI.showToast(message, { type: type, icon: false });
         }
     }
 
@@ -329,11 +293,11 @@ module.exports = class ShortcutScreenshareScreen {
         for (const [shortcutName, shortcutFunction] of Object.entries(shortcuts)) {
             if (this.settings[shortcutName]?.length > 0) {
                 const keys = this.settings[shortcutName];
-                this.BdApi.Keybinds.registerGlobalKeybind(keys, shortcutFunction);
+                Keybinds.register(this.meta.name, keys, shortcutFunction);
             }
         }
     }
     unregisterKeybinds() {
-        this.BdApi.Keybinds.unregisterAllKeybinds();
+        Keybinds.unregisterAll(this.meta.name);
     }
 };
