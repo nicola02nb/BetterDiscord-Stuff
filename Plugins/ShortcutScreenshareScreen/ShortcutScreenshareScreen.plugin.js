@@ -196,7 +196,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     async startStream() {
         await this.initializeStreamSetting();
-        if (!this.streamChannelId === undefined || !this.streamGuildId || !this.streamOptions) {
+        if (!this.streamChannelId === undefined || !this.streamOptions) {
             this.showToast("No channel or guild found for streaming!", "error");
             return;
         }
