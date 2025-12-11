@@ -1,18 +1,19 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.2.1
+ * @version 1.3.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
  * @source https://github.com/nicola02nb/BetterDiscord-Stuff/tree/main/Plugins/CompleteDiscordQuest
+ * @updateUrl https://raw.githubusercontent.com/nicola02nb/BetterDiscord-Stuff/main/Plugins/CompleteDiscordQuest/CompleteDiscordQuest.plugin.js
  */
 
 // Porting of https://gist.github.com/aamiaa/204cd9d42013ded9faf646fae7f89fbb for betterdiscord
 
 const config = {
     changelog: [
-        //{ title: "New Features", type: "added", items: ["Added changelog"] },
+        { title: "New Features", type: "added", items: ["Added buttons inside settings bar and badges in quests menu button"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -20,33 +21,39 @@ const config = {
     settings: [
         { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: true },
         { type: "switch", disabled: true, id: "showQuestsButtonTopBar", name: "Show Quests Top Bar", note: "Whether to show the quests button in the top bar.", value: false },
-        { type: "switch", disabled: true, id: "showQuestsButtonSettingsBar", name: "Show Quests Settings Bar", note: "Whether to show the quests button in the settings bar.", value: false },
-        { type: "switch", disabled: true, id: "showQuestsButtonBadges", name: "Show Quests Badges", note: "Whether to show badges on the quests button.", value: false },
+        { type: "switch", id: "showQuestsButtonSettingsBar", name: "Show Quests Settings Bar", note: "Whether to show the quests button in the settings bar.", value: true },
+        { type: "switch", id: "showQuestsButtonBadges", name: "Show Quests Badges", note: "Whether to show badges on the quests button.", value: true },
     ]
 };
 function getSetting(key) {
     return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
 }
 
-const { Webpack, Data, UI, Patcher, DOM, React } = BdApi;
+const { Webpack, Data, UI, Patcher, DOM, React, Components, Utils, Plugins, Net, Logger } = BdApi;
 const { Filters } = Webpack;
-const [ DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore,
-    GuildChannelStore, TopBarRender, TopBarButton, {navigateToQuestHome}, QuestIcon, RestApi,
-    QuestApplyAction, QuestLocationMap] = Webpack.getBulk(
-    { filter: (m => m.dispatch && m.subscribe) },
-    { filter: Filters.byStoreName("ApplicationStreamingStore") },
-    { filter: Filters.byStoreName("RunningGameStore") },
-    { filter: Filters.byKeys("getQuest") },
-    { filter: Filters.byStoreName("ChannelStore") },
-    { filter: Filters.byStoreName("GuildChannelStore") },
-    { filter: Filters.bySource("leading:", ",windowKey:") },
-    { filter: Filters.bySource("badgePosition:") },
-    { filter: Filters.byKeys("navigateToQuestHome") },
-    { filter: Filters.bySource("\"M7.5 21.7a8.95") },
-    { filter: m => typeof m === 'object' && m.del && m.put, searchExports: true },
-    { filter: Filters.byStrings("type:\"QUESTS_ENROLL_BEGIN\""), searchExports: true },
-    { filter: Filters.byKeys("QUEST_HOME_DESKTOP", "11"), searchExports: true }
-);
+const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore,
+    GuildChannelStore, RestApi, QuestApplyAction, QuestLocationMap,
+    QuestIcon, { navigateToQuestHome }, TopBarButton, SettingsBarButton, CountBadge,
+    QuestButtonModule, SettingsBarModule, TopBarRender] = Webpack.getBulk(
+        { filter: (m => m.dispatch && m.subscribe) },
+        { filter: Filters.byStoreName("ApplicationStreamingStore") },
+        { filter: Filters.byStoreName("RunningGameStore") },
+        { filter: Filters.byKeys("getQuest") },
+        { filter: Filters.byStoreName("ChannelStore") },
+        { filter: Filters.byStoreName("GuildChannelStore") },
+        { filter: m => typeof m === 'object' && m.del && m.put, searchExports: true },
+        { filter: Filters.byStrings("type:\"QUESTS_ENROLL_BEGIN\""), searchExports: true },
+        { filter: Filters.byKeys("QUEST_HOME_DESKTOP", "11"), searchExports: true },
+        { filter: Filters.bySource("\"M7.5 21.7a8.95") },
+        { filter: Filters.byKeys("navigateToQuestHome") },
+        { filter: Filters.bySource("badgePosition:") },
+        { filter: Filters.bySource(",iconForeground:", ",positionKeyStemOverride:") },
+        { filter: Filters.byStrings("renderBadgeCount", "disableColor"), searchExports: true },
+        { filter: Filters.bySource(",focusProps:", ",interactiveClassName:") },
+        { filter: Filters.bySource("shouldShowSpeakingWhileMutedTooltip:") },
+        { filter: Filters.bySource("leading:", ",windowKey:") },
+    );
+const { Tooltip, Flex } = Components;
 
 module.exports = class BasePlugin {
     constructor(meta) {
@@ -93,30 +100,111 @@ module.exports = class BasePlugin {
         });
     }
 
+    parseMeta(fileContent) {
+        //zlibrary code
+        const splitRegex = /[^\S\r\n]*?\r?(?:\r\n|\n)[^\S\r\n]*?\*[^\S\r\n]?/;
+        const escapedAtRegex = /^\\@/;
+        const block = fileContent.split("/**", 2)[1].split("*/", 1)[0];
+        const out = {};
+        let field = "";
+        let accum = "";
+        for (const line of block.split(splitRegex)) {
+            if (line.length === 0) continue;
+            if (line.charAt(0) === "@" && line.charAt(1) !== " ") {
+                out[field] = accum;
+                const l = line.indexOf(" ");
+                field = line.substring(1, l);
+                accum = line.substring(l + 1);
+            }
+            else {
+                accum += " " + line.replace("\\n", "\n").replace(escapedAtRegex, "@");
+            }
+        }
+        out[field] = accum.trim();
+        delete out[""];
+        out.format = "jsdoc";
+        return out;
+    }
+
+    async checkForUpdate() {
+        try {
+            let res = await fetch(this.meta.updateUrl);
+
+            if (!res.ok && res.status != 200) {
+                Logger.warn("CompleteDiscordQuest", res);
+                res = await Net.fetch(this.meta.updateUrl);
+                if (!res.ok && res.status != 200) {
+                    Logger.error("CompleteDiscordQuest", res);
+                    throw new Error("Failed to check for updates!");
+                }
+            }
+
+            let fileContent = await res.text();
+            let remoteMeta = this.parseMeta(fileContent);
+            let remoteVersion = remoteMeta.version.trim().split('.');
+            let currentVersion = this.meta.version.trim().split('.');
+
+            if (parseInt(remoteVersion[0]) > parseInt(currentVersion[0])) {
+                this.newUpdateNotify(remoteMeta, fileContent);
+                return true;
+            } else if (remoteVersion[0] == currentVersion[0] && parseInt(remoteVersion[1]) > parseInt(currentVersion[1])) {
+                this.newUpdateNotify(remoteMeta, fileContent);
+                return true;
+            } else if (remoteVersion[0] == currentVersion[0] && remoteVersion[1] == currentVersion[1] && parseInt(remoteVersion[2]) > parseInt(currentVersion[2])) {
+                this.newUpdateNotify(remoteMeta, fileContent);
+                return true;
+            }
+        }
+        catch (err) {
+            UI.showToast("[YABDP4Nitro] Failed to check for updates", { type: "error" });
+            Logger.error(this.meta.name, err);
+        }
+
+    }
+
+    newUpdateNotify(remoteMeta, remoteFile) {
+        Logger.info(this.meta.name, `Update ${remoteMeta.version} is available!`);
+        UI.showNotification({
+            title: "CompleteDiscordQuest Update Available!",
+            content: `Update ${remoteMeta.version} is now available!`,
+            actions: [{
+                label: "Update",
+                onClick: async (e) => {
+                    try {
+                        await new Promise(r => fs.writeFile(path.join(Plugins.folder, `${this.meta.name}.plugin.js`), remoteFile, r));
+                    } catch (err) {
+                        UI.showToast("An error occurred when trying to download the update!", { type: "error", forceShow: true });
+                        Logger.error(this.meta.name, err);
+                    }
+                }
+            }]
+        })
+    }
+
     showChangelog() {
         const savedVersion = Data.load(this.meta.name, "version");
-		if (savedVersion !== this.meta.version) {
-			if(config.changelog.length > 0){
+        if (savedVersion !== this.meta.version) {
+            if (config.changelog.length > 0) {
                 UI.showChangelogModal({
                     title: this.meta.name,
                     subtitle: this.meta.version,
                     changes: config.changelog
                 });
             }
-			Data.save(this.meta.name, "version", this.meta.version);
-		}
+            Data.save(this.meta.name, "version", this.meta.version);
+        }
     }
 
     start() {
         this.initSettings();
         this.showChangelog();
+        this.checkForUpdate();
 
-        DOM.addStyle(this.meta.name, `.quest-button-enrollable > [class^="iconBadge"] { background-color: var(--status-danger); }
+        DOM.addStyle(this.meta.name, `.quest-button-enrollable > [class^="iconBadge"] { background-color: var(--status-danger);}
             .quest-button-enrolled > [class^="iconBadge"] { background-color: var(--status-warning); }
-            .quest-button-claimable > [class^="iconBadge"] { background-color: var(--status-positive); }`);
-        //BdApi.UI.showConfirmationModal("title", React.createElement(this.QuestButton));
-        //BdApi.ReactDOM.createRoot(document.querySelectorAll("[class^=\"bar_\"] > [class^=\"trailing_\"")[1]).render(this.QuestButton);
-        //BdApi.ReactUtils.getInternalInstance(document.querySelectorAll("[class^=\"bar_\"] > [class^=\"trailing_\"")[1])?.pendingProps?.children.unshift(this.QuestButton);
+            .quest-button-claimable > [class^="iconBadge"] { background-color: var(--status-positive); }
+            .quest-button svg:has(> [mask^="url(#svg-mask-panel-button)"]) { display: none; }`);
+
         Patcher.instead(this.meta.name, RunningGameStore, "getRunningGames", (_, _args, originalFunction) => {
             if (this.fakeGames.size > 0) {
                 return Array.from(this.fakeGames.values());
@@ -135,7 +223,36 @@ module.exports = class BasePlugin {
             }
             return originalFunction();
         });
-        
+
+        Patcher.after(this.meta.name, SettingsBarModule.m.prototype, "render", (_, _args, returnValue) => {
+            if (this.settings.showQuestsButtonSettingsBar && Array.isArray(returnValue?.props?.children) && typeof returnValue.props.children[0]?.props?.children === "function") {
+                console.log("Patching settings bar to add quests button", returnValue);
+                const f1 = returnValue.props.children[0]?.props?.children;
+                returnValue.props.children[0].props.children = (e) => {
+                    const c1 = f1(e);
+                    if (Array.isArray(c1?.props?.children) && typeof c1.props.children[2]?.type === "function") {
+                        const f2 = c1.props.children[2].type;
+                        c1.props.children[2].type = (e) => {
+                            const c2 = f2(e);
+                            c2.props.children.unshift(React.createElement(this.QuestButton, { type: "settings-bar" }));
+                            return c2;
+                        };
+                    }
+                    return c1;
+                }
+            }
+        });
+
+        Patcher.after(this.meta.name, QuestButtonModule, "Qj", (_, args, returnValue) => {
+            if (this.settings.showQuestsButtonBadges) {
+                const component = Utils.findInTree(returnValue?.props?.children, m => Array.isArray(m?.props?.children) && m.props?.to?.pathname === "/quest-home");
+                if (component && Array.isArray(component.props.children)) {
+                    component.props.children.push(React.createElement(this.QuestsCount));
+                }
+            }
+            return returnValue;
+        });
+
         QuestsStore.addChangeListener(this.handleUpdateQuests);
     }
 
@@ -149,8 +266,7 @@ module.exports = class BasePlugin {
     questsStatus() {
         const availableQuests = [...QuestsStore.quests.values()];
         return availableQuests.reduce((acc, x) => {
-            if (x.id === "1248385850622869556") return acc;
-            else if (new Date(x.config.expiresAt).getTime() < Date.now()) {
+            if (new Date(x.config.expiresAt).getTime() < Date.now()) {
                 acc.expired++;
             } else if (x.userStatus?.claimedAt) {
                 acc.claimed++;
@@ -165,12 +281,13 @@ module.exports = class BasePlugin {
         }, { enrollable: 0, enrolled: 0, claimable: 0, claimed: 0, expired: 0 });
     }
 
-    QuestButton = () => {
-        const [status, setStatus] = React.useState({ enrollable: 0, enrolled: 0, claimable: 0, claimed: 0, expired: 0 });
+    QuestsCount = () => {
+        const [status, setStatus] = React.useState(this.questsStatus());
 
         const checkForNewQuests = () => {
             setStatus(this.questsStatus());
         };
+
         React.useEffect(() => {
             QuestsStore.addChangeListener(checkForNewQuests);
             return () => {
@@ -178,22 +295,121 @@ module.exports = class BasePlugin {
             };
         }, []);
 
-        return React.createElement(TopBarButton.JO, { 
-            className:status.enrollable ? "quest-button-enrollable" : status.enrolled ? "quest-button-enrolled" : status.claimable ? "quest-button-claimable" : "",
-            iconClassName:undefined,
-            /* children={undefined} */
-            selected:undefined,
-            disabled:navigateToQuestHome === undefined,
-            showBadge:status.enrollable > 0 || status.enrolled > 0 || status.claimable > 0,
-            badgePosition:"bottom",
-            icon:QuestIcon.q,
-            iconSize:20,
-            onClick:navigateToQuestHome,
-            onContextMenu:undefined,
-            tooltip:status.enrollable ? `${status.enrollable} Enrollable Quests` : status.enrolled ? `${status.enrolled} Enrolled Quests` : status.claimable ? `${status.claimable} Claimable Quests` : "Quests",
-            tooltipPosition:"bottom",
-            hideOnClick:false
-        });
+        const children = [];
+        if (status.enrollable > 0) {
+            children.push(
+                React.createElement(Tooltip, { text: "Enrollable" },
+                    ({ onMouseEnter, onMouseLeave }) =>
+                        React.createElement(CountBadge, {
+                            onMouseEnter: onMouseEnter,
+                            onMouseLeave: onMouseLeave,
+                            count: status.enrollable,
+                            color: "var(--status-danger)"
+                        })
+                )
+            );
+        }
+        if (status.enrolled > 0) {
+            children.push(
+                React.createElement(Tooltip, { text: "Enrolled" },
+                    ({ onMouseEnter, onMouseLeave }) =>
+                        React.createElement(CountBadge, {
+                            onMouseEnter: onMouseEnter,
+                            onMouseLeave: onMouseLeave,
+                            count: status.enrolled,
+                            color: "var(--status-warning)"
+                        })
+                )
+            );
+        }
+        if (status.claimable > 0) {
+            children.push(
+                React.createElement(Tooltip, { text: "Claimable" },
+                    ({ onMouseEnter, onMouseLeave }) =>
+                        React.createElement(CountBadge, {
+                            onMouseEnter: onMouseEnter,
+                            onMouseLeave: onMouseLeave,
+                            count: status.claimable,
+                            color: "var(--status-positive)"
+                        })
+                )
+            );
+        }
+        if (status.claimed > 0) {
+            children.push(
+                React.createElement(Tooltip, { text: "Claimed" },
+                    ({ onMouseEnter, onMouseLeave }) =>
+                        React.createElement(CountBadge, {
+                            onMouseEnter: onMouseEnter,
+                            onMouseLeave: onMouseLeave,
+                            count: status.claimed,
+                            color: "var(--blurple-50)"
+                        })
+                )
+            );
+        }
+
+        return React.createElement(Flex, {
+            flexDirection: Flex.Direction.HORIZONTAL,
+            justify: Flex.Justify.END,
+            style: { gap: "5px" },
+            className: "quest-button-badges",
+            shrink: false
+        }, ...children);
+    }
+
+    // type: "top-bar" | "settings-bar"
+    QuestButton = ({ type }) => {
+        const [state, setState] = React.useState(this.questsStatus());
+
+        const checkForNewQuests = () => {
+            setState(this.questsStatus());
+        };
+
+        React.useEffect(() => {
+            QuestsStore.addChangeListener(checkForNewQuests);
+            return () => {
+                QuestsStore.removeChangeListener(checkForNewQuests);
+            };
+        }, []);
+
+        const className = state.enrollable ? "quest-button-enrollable" : state.enrolled ? "quest-button-enrolled" : state.claimable ? "quest-button-claimable" : "";
+        const tooltip = state.enrollable ? `${state.enrollable} Enrollable Quests` : state.enrolled ? `${state.enrolled} Enrolled Quests` : state.claimable ? `${state.claimable} Claimable Quests` : "Quests";
+        if (type === "top-bar") {
+            return React.createElement(TopBarButton.JO, {
+                className: className,
+                iconClassName: undefined,
+                disabled: navigateToQuestHome === undefined,
+                showBadge: state.enrollable > 0 || state.enrolled > 0 || state.claimable > 0,
+                badgePosition: "bottom",
+                icon: QuestIcon.q,
+                iconSize: 20,
+                onClick: navigateToQuestHome,
+                onContextMenu: undefined,
+                tooltip: tooltip,
+                tooltipPosition: "bottom",
+                hideOnClick: false
+            });
+        } else if (type === "settings-bar") {
+            return React.createElement(SettingsBarButton.Z, {
+                tooltipText: tooltip,
+                onContextMenu: undefined,
+                onClick: navigateToQuestHome,
+                disabled: navigateToQuestHome === undefined,
+                className: "quest-button"
+            }, React.createElement(TopBarButton.JO, {
+                className: className,
+                iconClassName: undefined,
+                disabled: navigateToQuestHome === undefined,
+                showBadge: state.enrollable > 0 || state.enrolled > 0 || state.claimable > 0,
+                badgePosition: "bottom",
+                icon: QuestIcon.q,
+                iconSize: 20,
+                onClick: navigateToQuestHome,
+                onContextMenu: undefined,
+                hideOnClick: false
+            }));
+        }
     }
 
     updateQuests() {
