@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.8.0
+ * @version 1.8.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -16,7 +16,7 @@ const dropdownStatusOptions = [
 
 const config = {
     changelog: [
-        //{ title: "New Features", type: "added", items: ["Added changelog"] },
+        //{ title: "New Features", type: "added", items: [""] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -42,8 +42,6 @@ function getSetting(key) {
     return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
 }
 
-const fs = require("fs");
-const path = require("path");
 const { Webpack, Data, DOM, UI } = BdApi;
 const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
 const SelectedChannelStore = Webpack.getStore("SelectedChannelStore");
@@ -101,105 +99,9 @@ module.exports = class AutoSwitchStatus {
         });
     }
 
-    parseMeta(fileContent) {
-        //zlibrary code
-        const splitRegex = /[^\S\r\n]*?\r?(?:\r\n|\n)[^\S\r\n]*?\*[^\S\r\n]?/;
-        const escapedAtRegex = /^\\@/;
-        const block = fileContent.split("/**", 2)[1].split("*/", 1)[0];
-        const out = {};
-        let field = "";
-        let accum = "";
-        for (const line of block.split(splitRegex)) {
-            if (line.length === 0) continue;
-            if (line.charAt(0) === "@" && line.charAt(1) !== " ") {
-                out[field] = accum;
-                const l = line.indexOf(" ");
-                field = line.substring(1, l);
-                accum = line.substring(l + 1);
-            }
-            else {
-                accum += " " + line.replace("\\n", "\n").replace(escapedAtRegex, "@");
-            }
-        }
-        out[field] = accum.trim();
-        delete out[""];
-        out.format = "jsdoc";
-        return out;
-    }
-
-    async checkForUpdate() {
-        try {
-            let res = await fetch(this.meta.updateUrl);
-
-            if (!res.ok && res.status != 200) {
-                Logger.warn("CompleteDiscordQuest", res);
-                res = await Net.fetch(this.meta.updateUrl);
-                if (!res.ok && res.status != 200) {
-                    Logger.error("CompleteDiscordQuest", res);
-                    throw new Error("Failed to check for updates!");
-                }
-            }
-
-            let fileContent = await res.text();
-            let remoteMeta = this.parseMeta(fileContent);
-            let remoteVersion = remoteMeta.version.trim().split('.');
-            let currentVersion = this.meta.version.trim().split('.');
-
-            if (parseInt(remoteVersion[0]) > parseInt(currentVersion[0])) {
-                this.newUpdateNotify(remoteMeta, fileContent);
-                return true;
-            } else if (remoteVersion[0] == currentVersion[0] && parseInt(remoteVersion[1]) > parseInt(currentVersion[1])) {
-                this.newUpdateNotify(remoteMeta, fileContent);
-                return true;
-            } else if (remoteVersion[0] == currentVersion[0] && remoteVersion[1] == currentVersion[1] && parseInt(remoteVersion[2]) > parseInt(currentVersion[2])) {
-                this.newUpdateNotify(remoteMeta, fileContent);
-                return true;
-            }
-        }
-        catch (err) {
-            UI.showToast("[YABDP4Nitro] Failed to check for updates", { type: "error" });
-            Logger.error(this.meta.name, err);
-        }
-
-    }
-
-    newUpdateNotify(remoteMeta, remoteFile) {
-        Logger.info(this.meta.name, `Update ${remoteMeta.version} is available!`);
-        UI.showNotification({
-            title: "CompleteDiscordQuest Update Available!",
-            content: `Update ${remoteMeta.version} is now available!`,
-            actions: [{
-                label: "Update",
-                onClick: async (e) => {
-                    try {
-                        await new Promise(r => fs.writeFile(path.join(Plugins.folder, `${this.meta.name}.plugin.js`), remoteFile, r));
-                    } catch (err) {
-                        UI.showToast("An error occurred when trying to download the update!", { type: "error", forceShow: true });
-                        Logger.error(this.meta.name, err);
-                    }
-                }
-            }]
-        })
-    }
-
-    showChangelog() {
-        const savedVersion = Data.load(this.meta.name, "version");
-        if (savedVersion !== this.meta.version) {
-            if (config.changelog.length > 0) {
-                UI.showChangelogModal({
-                    title: this.meta.name,
-                    subtitle: this.meta.version,
-                    changes: config.changelog
-                });
-            }
-            Data.save(this.meta.name, "version", this.meta.version);
-        }
-    }
-
     start() {
         this.showChangelog();
         this.initSettings();
-        this.checkForUpdate();
 
         /* DOM.addStyle(this.meta.name,`.bd-toast.toast-online.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='12.5' y='10' width='0' height='0' rx='0' ry='0' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%2323a55a' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
         .bd-toast.toast-idle.icon {background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' %3E%3Cmask id=':r1d:'%3E%3Crect x='7.5' y='5' width='10' height='10' rx='5' ry='5' fill='white'%3E%3C/rect%3E%3Crect x='6.25' y='3.75' width='7.5' height='7.5' rx='3.75' ry='3.75' fill='black'%3E%3C/rect%3E%3Cpolygon points='-2.16506,-2.5 2.16506,0 -2.16506,2.5' fill='black' transform='scale(0) translate(13.125 10)' style='transform-origin: 13.125px 10px;'%3E%3C/polygon%3E%3Ccircle fill='black' cx='12.5' cy='10' r='0'%3E%3C/circle%3E%3C/mask%3E%3Crect fill='%23f0b232' width='25' height='15' mask='url(%23:r1d:)'%3E%3C/rect%3E%3C/svg%3E");}
