@@ -30,6 +30,7 @@ function getSetting(key) {
 }
 
 const fs = require("fs");
+const path = require("path");
 const { Webpack, Data, UI, Patcher, DOM, React, Components, Utils, Plugins, Net, Logger } = BdApi;
 const { Filters } = Webpack;
 const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore,
