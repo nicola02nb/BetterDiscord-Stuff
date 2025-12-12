@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.3.2
+ * @version 1.4.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -13,14 +13,14 @@
 
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added buttons inside settings bar and badges in quests menu button"] },
+        { title: "New Features", type: "added", items: ["Added buttons inside title bar, settings bar and badges in quests menu button"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
         { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: true },
-        { type: "switch", disabled: true, id: "showQuestsButtonTopBar", name: "Show Quests Top Bar", note: "Whether to show the quests button in the top bar.", value: false },
+        { type: "switch", id: "showQuestsButtonTitleBar", name: "Show Quests Title Bar", note: "Whether to show the quests button in the title bar.", value: true },
         { type: "switch", id: "showQuestsButtonSettingsBar", name: "Show Quests Settings Bar", note: "Whether to show the quests button in the settings bar.", value: true },
         { type: "switch", id: "showQuestsButtonBadges", name: "Show Quests Badges", note: "Whether to show badges on the quests button.", value: true },
     ]
@@ -36,7 +36,7 @@ const { Filters } = Webpack;
 const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore,
     GuildChannelStore, RestApi, QuestApplyAction, QuestLocationMap,
     QuestIcon, { navigateToQuestHome }, TopBarButton, SettingsBarButton, CountBadge,
-    QuestButtonModule, SettingsBarModule, TopBarRender] = Webpack.getBulk(
+    QuestButtonModule, SettingsBarModule, trailingModule] = Webpack.getBulk(
         { filter: (m => m.dispatch && m.subscribe) },
         { filter: Filters.byStoreName("ApplicationStreamingStore") },
         { filter: Filters.byStoreName("RunningGameStore") },
@@ -53,9 +53,19 @@ const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
         { filter: Filters.byStrings("renderBadgeCount", "disableColor"), searchExports: true },
         { filter: Filters.bySource(",focusProps:", ",interactiveClassName:") },
         { filter: Filters.bySource("shouldShowSpeakingWhileMutedTooltip:") },
-        { filter: Filters.bySource("leading:", ",windowKey:") },
+        { filter: Webpack.Filters.byKeys('bar', 'trailing') },
     );
+const windowArea = BdApi.Webpack.getById("950796");
+const trailing = trailingModule.trailing;
 const { Tooltip, Flex } = Components;
+
+function reRender(selector, patchId) {
+    const target = document.querySelector(selector)?.parentElement;
+    if (!target) return;
+    const instance = BdApi.ReactUtils.getOwnerInstance(target);
+    const unpatch = Patcher.instead(patchId, instance, "render", () => unpatch());
+    instance.forceUpdate(() => instance.forceUpdate());
+}
 
 module.exports = class BasePlugin {
     constructor(meta) {
@@ -98,6 +108,15 @@ module.exports = class BasePlugin {
             settings: config.settings,
             onChange: (category, id, value) => {
                 this.settings[id] = value;
+                switch (id) {
+                    case "showQuestsButtonTopBar":
+                        if (value) {
+                            this.patchTitleBar();
+                        } else {
+                            this.unpatchTitleBar();
+                        }
+                        break;
+                }
             }
         });
     }
@@ -226,9 +245,10 @@ module.exports = class BasePlugin {
             return originalFunction();
         });
 
+        this.patchTitleBar();
+
         Patcher.after(this.meta.name, SettingsBarModule.m.prototype, "render", (_, _args, returnValue) => {
             if (this.settings.showQuestsButtonSettingsBar && Array.isArray(returnValue?.props?.children) && typeof returnValue.props.children[0]?.props?.children === "function") {
-                console.log("Patching settings bar to add quests button", returnValue);
                 const f1 = returnValue.props.children[0]?.props?.children;
                 returnValue.props.children[0].props.children = (e) => {
                     const c1 = f1(e);
@@ -262,6 +282,7 @@ module.exports = class BasePlugin {
         QuestsStore.removeChangeListener(this.handleUpdateQuests);
         this.stopCompletingAll();
         Patcher.unpatchAll(this.meta.name);
+        this.unpatchTitleBar();
         DOM.removeStyle(this.meta.name);
     }
 
@@ -360,7 +381,7 @@ module.exports = class BasePlugin {
         }, ...children);
     }
 
-    // type: "top-bar" | "settings-bar"
+    // type: "title-bar" | "settings-bar"
     QuestButton = ({ type }) => {
         const [state, setState] = React.useState(this.questsStatus());
 
@@ -377,7 +398,7 @@ module.exports = class BasePlugin {
 
         const className = state.enrollable ? "quest-button-enrollable" : state.enrolled ? "quest-button-enrolled" : state.claimable ? "quest-button-claimable" : "";
         const tooltip = state.enrollable ? `${state.enrollable} Enrollable Quests` : state.enrolled ? `${state.enrolled} Enrolled Quests` : state.claimable ? `${state.claimable} Claimable Quests` : "Quests";
-        if (type === "top-bar") {
+        if (type === "title-bar") {
             return React.createElement(TopBarButton.JO, {
                 className: className,
                 iconClassName: undefined,
@@ -433,6 +454,23 @@ module.exports = class BasePlugin {
         /* console.log("Available quests updated:", this.availableQuests);
         console.log("Acceptable quests updated:", this.acceptableQuests);
         console.log("Completable quests updated:", this.completableQuests); */
+    }
+
+    patchTitleBar() {
+        if (this.settings.showQuestsButtonTopBar) {
+            Patcher.after(this.meta.name + "-title-bar", windowArea, "TF", (_, [props], ret) => {
+                if (props.windowKey?.startsWith("DISCORD_")) return ret;
+                if (props.trailing?.props?.children) {
+                    props.trailing.props.children.unshift(React.createElement(this.QuestButton, { type: "title-bar" }));
+                }
+            });
+            reRender("." + trailing, this.meta.name + "-title-bar");
+        }
+    }
+
+    unpatchTitleBar() {
+        Patcher.unpatchAll(this.meta.name + "-title-bar");
+        reRender("." + trailing, this.meta.name + "-title-bar");
     }
 
     acceptQuest(quest) {
