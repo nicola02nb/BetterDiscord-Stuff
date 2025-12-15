@@ -31,7 +31,7 @@ function getSetting(key) {
 
 const fs = require("fs");
 const path = require("path");
-const { Webpack, Data, UI, Patcher, DOM, React, Components, Utils, Plugins, Net, Logger } = BdApi;
+const { Webpack, Data, UI, Patcher, DOM, React, ReactUtils, Components, Utils, Plugins, Net, Logger } = BdApi;
 const { Filters } = Webpack;
 const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore,
     GuildChannelStore, RestApi, QuestApplyAction, QuestLocationMap,
@@ -63,7 +63,7 @@ const { Tooltip, Flex } = Components;
 function reRender(selector, patchId) {
     const target = document.querySelector(selector)?.parentElement;
     if (!target) return;
-    const instance = BdApi.ReactUtils.getOwnerInstance(target);
+    const instance = ReactUtils.getOwnerInstance(target);
     const unpatch = Patcher.instead(patchId, instance, "render", () => unpatch());
     instance.forceUpdate(() => instance.forceUpdate());
 }
