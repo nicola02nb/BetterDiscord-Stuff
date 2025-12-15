@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.4.0
+ * @version 1.4.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -15,7 +15,7 @@ const config = {
     changelog: [
         { title: "New Features", type: "added", items: ["Added buttons inside title bar, settings bar and badges in quests menu button"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
-        //{ title: "Improvements", type: "improved", items: [""] },
+        { title: "Improvements", type: "improved", items: ["Improved webpack selectors"] },
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
@@ -35,8 +35,8 @@ const { Webpack, Data, UI, Patcher, DOM, React, Components, Utils, Plugins, Net,
 const { Filters } = Webpack;
 const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore,
     GuildChannelStore, RestApi, QuestApplyAction, QuestLocationMap,
-    QuestIcon, { navigateToQuestHome }, TopBarButton, SettingsBarButton, CountBadge,
-    QuestButtonModule, SettingsBarModule, trailingModule] = Webpack.getBulk(
+    QuestIcon, { navigateToQuestHome }, CountBadge,
+    windowArea, SettingsBarModule, trailingModule] = Webpack.getBulk(
         { filter: (m => m.dispatch && m.subscribe) },
         { filter: Filters.byStoreName("ApplicationStreamingStore") },
         { filter: Filters.byStoreName("RunningGameStore") },
@@ -48,14 +48,15 @@ const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
         { filter: Filters.byKeys("QUEST_HOME_DESKTOP", "11"), searchExports: true },
         { filter: Filters.bySource("\"M7.5 21.7a8.95") },
         { filter: Filters.byKeys("navigateToQuestHome") },
-        { filter: Filters.bySource("badgePosition:") },
-        { filter: Filters.bySource(",iconForeground:", ",positionKeyStemOverride:") },
         { filter: Filters.byStrings("renderBadgeCount", "disableColor"), searchExports: true },
-        { filter: Filters.bySource(",focusProps:", ",interactiveClassName:") },
+        { filter: Filters.bySource("windowKey:", "showDivider:") },
         { filter: Filters.bySource("shouldShowSpeakingWhileMutedTooltip:") },
-        { filter: Webpack.Filters.byKeys('bar', 'trailing') },
+        { filter: Filters.byKeys('bar', 'trailing') },
     );
-const windowArea = BdApi.Webpack.getById("950796");
+
+const TopBarButtonWithKey = [...Webpack.getWithKey(Filters.byStrings("badgePosition:"), { searchExports: true })];
+const SettingsBarButtonWithKey = [...Webpack.getWithKey(Filters.byStrings("iconForeground:", "positionKeyStemOverride:"))];
+const QuestButtonWithKey = [...Webpack.getWithKey(Filters.byStrings("focusProps:", "interactiveClassName:"))];
 const trailing = trailingModule.trailing;
 const { Tooltip, Flex } = Components;
 
@@ -265,7 +266,7 @@ module.exports = class BasePlugin {
             }
         });
 
-        Patcher.after(this.meta.name, QuestButtonModule, "Qj", (_, args, returnValue) => {
+        Patcher.after(this.meta.name, QuestButtonWithKey[0], QuestButtonWithKey[1], (_, args, returnValue) => {
             if (this.settings.showQuestsButtonBadges) {
                 const component = Utils.findInTree(returnValue?.props?.children, m => Array.isArray(m?.props?.children) && m.props?.to?.pathname === "/quest-home");
                 if (component && Array.isArray(component.props.children)) {
@@ -399,7 +400,7 @@ module.exports = class BasePlugin {
         const className = state.enrollable ? "quest-button-enrollable" : state.enrolled ? "quest-button-enrolled" : state.claimable ? "quest-button-claimable" : "";
         const tooltip = state.enrollable ? `${state.enrollable} Enrollable Quests` : state.enrolled ? `${state.enrolled} Enrolled Quests` : state.claimable ? `${state.claimable} Claimable Quests` : "Quests";
         if (type === "title-bar") {
-            return React.createElement(TopBarButton.JO, {
+            return React.createElement(TopBarButtonWithKey[0], {
                 className: className,
                 iconClassName: undefined,
                 disabled: navigateToQuestHome === undefined,
@@ -414,13 +415,13 @@ module.exports = class BasePlugin {
                 hideOnClick: false
             });
         } else if (type === "settings-bar") {
-            return React.createElement(SettingsBarButton.Z, {
+            return React.createElement(SettingsBarButtonWithKey[0], {
                 tooltipText: tooltip,
                 onContextMenu: undefined,
                 onClick: navigateToQuestHome,
                 disabled: navigateToQuestHome === undefined,
                 className: "quest-button"
-            }, React.createElement(TopBarButton.JO, {
+            }, React.createElement(TopBarButtonWithKey[0], {
                 className: className,
                 iconClassName: undefined,
                 disabled: navigateToQuestHome === undefined,
