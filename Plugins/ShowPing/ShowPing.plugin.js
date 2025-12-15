@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.9
+ * @version 2.6.10
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -30,7 +30,7 @@ function getSetting(key) {
 
 const { Webpack, React, Data, DOM, Patcher, UI } = BdApi;
 const { Filters } = Webpack;
-const [ DiscordModules, RTCConnectionStore, { labelWrapper, rtcConnectionStatusConnected }, { voiceButtonsContainer }, labelClasses, textMdMedium, ConnectionStatus ] =
+const [DiscordModules, RTCConnectionStore, { labelWrapper, rtcConnectionStatusConnected }, { voiceButtonsContainer }, labelClasses, textMdMedium, ConnectionStatus] =
     Webpack.getBulk(
         { filter: (m => m.dispatch && m.subscribe) },
         { filter: Filters.byStoreName("RTCConnectionStore") },
@@ -43,7 +43,7 @@ const [ DiscordModules, RTCConnectionStore, { labelWrapper, rtcConnectionStatusC
 module.exports = class ShowPing {
     constructor(meta) {
         this.meta = meta;
-        
+
         this.settings = new Proxy({}, {
             get: (_target, key) => {
                 return Data.load(this.meta.name, key) ?? getSetting(key)?.value;
@@ -73,7 +73,7 @@ module.exports = class ShowPing {
     }
 
     getSettingsPanel() {
-        return BdApi.UI.buildSettingsPanel({
+        return UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
                 if (id === "hideKrispButton") {
@@ -86,16 +86,16 @@ module.exports = class ShowPing {
 
     showChangelog() {
         const savedVersion = Data.load(this.meta.name, "version");
-		if (savedVersion !== this.meta.version) {
-			if(config.changelog.length > 0){
+        if (savedVersion !== this.meta.version) {
+            if (config.changelog.length > 0) {
                 UI.showChangelogModal({
                     title: this.meta.name,
                     subtitle: this.meta.version,
                     changes: config.changelog
                 });
             }
-			Data.save(this.meta.name, "version", this.meta.version);
-		}
+            Data.save(this.meta.name, "version", this.meta.version);
+        }
     }
 
     start() {
@@ -109,7 +109,7 @@ module.exports = class ShowPing {
             .${labelClasses["default"]} > div {text-overflow: ellipsis; overflow: hidden;}
             .${labelClasses["hover"]} > div {text-overflow: ellipsis; overflow: hidden;}
             .pingDisplay {min-width: min-content;}`);
-        
+
         Patcher.after(this.meta.name, ConnectionStatus, "Z", (_, args, ret) => {
             const container = ret;
             container.props.children = [container.props.children];
@@ -144,9 +144,9 @@ module.exports = class ShowPing {
 
     displayKrispButton(show) {
         if (show) {
-            DOM.removeStyle(this.meta.name+"-hidekrispStyle");
+            DOM.removeStyle(this.meta.name + "-hidekrispStyle");
         } else {
-            DOM.addStyle(this.meta.name+"-hidekrispStyle", `.${voiceButtonsContainer} > button[aria-label*="Krisp"] {display: none !important;}`);
+            DOM.addStyle(this.meta.name + "-hidekrispStyle", `.${voiceButtonsContainer} > button[aria-label*="Krisp"] {display: none !important;}`);
         }
     }
 };
