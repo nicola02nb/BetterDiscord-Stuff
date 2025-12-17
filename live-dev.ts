@@ -1,14 +1,13 @@
 import fs from "fs";
 import path from "path";
 
-const type = process.argv[2];
+const types = ["plugin", "theme"];
 
-if (type === "plugin" || type === "theme") {
+for (const type of types) {
     const addonDir = path.resolve(__dirname, type.charAt(0).toUpperCase() + type.slice(1) + "s");
 
     if (!fs.existsSync(addonDir)) {
-        console.error(`Error: ${addonDir} does not exist.`);
-        process.exit(1);
+        continue;
     }
 
     // Watch all subfolders (recursively) inside addonDir
@@ -23,7 +22,7 @@ if (type === "plugin" || type === "theme") {
                     }
                 });
                 console.log(`File ${filename} was ${eventType} in ${dir}`);
-                if (filename.endsWith(".js")) {
+                if (filename.endsWith(".js") || filename.endsWith(".css")) {
                     const destDir = path.join(process.env.APPDATA || "", "BetterDiscord", type + "s");
                     const destPath = path.join(destDir, filename);
                     fs.copyFile(fullPath, destPath, (err) => {
@@ -47,7 +46,4 @@ if (type === "plugin" || type === "theme") {
 
     watchRecursively(addonDir);
     console.log(`Watching for file updates in ${addonDir}`);
-} else {
-    console.error(`Error: Type is required and must be either 'plugin' or 'theme'.`);
-    process.exit(1);
 }
