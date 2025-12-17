@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.4.1
+ * @version 1.4.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -13,9 +13,9 @@
 
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Added buttons inside title bar, settings bar and badges in quests menu button"] },
+        //{ title: "New Features", type: "added", items: [""] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
-        { title: "Improvements", type: "improved", items: ["Improved webpack selectors"] },
+        //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
@@ -222,9 +222,9 @@ module.exports = class BasePlugin {
         this.showChangelog();
         this.checkForUpdate();
 
-        DOM.addStyle(this.meta.name, `.quest-button-enrollable > [class^="iconBadge"] { background-color: var(--status-danger);}
-            .quest-button-enrolled > [class^="iconBadge"] { background-color: var(--status-warning); }
-            .quest-button-claimable > [class^="iconBadge"] { background-color: var(--status-positive); }
+        DOM.addStyle(this.meta.name, `.quest-button-enrollable > span[class*="iconBadge"] { background-color: var(--status-danger);}
+            .quest-button-enrolled > span[class*="iconBadge"] { background-color: var(--status-warning); }
+            .quest-button-claimable > span[class*="iconBadge"] { background-color: var(--status-positive); }
             .quest-button svg:has(> [mask^="url(#svg-mask-panel-button)"]) { display: none; }`);
 
         Patcher.instead(this.meta.name, RunningGameStore, "getRunningGames", (_, _args, originalFunction) => {
