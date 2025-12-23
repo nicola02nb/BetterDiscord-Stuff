@@ -312,7 +312,7 @@ module.exports = class ShortcutScreenshareScreen {
         const normalKeys = [];
 
         for (const key of keybind) {
-            const keyL = key.toLowerCase();
+            let keyL = key.toLowerCase();
             if (keyL === "control") keyL = "ctrl";
             if (keyL.startsWith("arrow")) keyL = keyL.replace("arrow", "");
             if (keyL.startsWith("page")) keyL = keyL.replace("page", "page ");
