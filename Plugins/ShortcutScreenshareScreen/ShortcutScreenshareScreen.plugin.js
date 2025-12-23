@@ -181,9 +181,9 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     isStreamingWindow() {
-        let streamkey = this.getActiveStreamKey();
+        const streamkey = this.getActiveStreamKey();
         if (streamkey === null) return false;
-        let streamSource = StreamRTCConnectionStore.getStreamSourceId(streamkey);
+        const streamSource = StreamRTCConnectionStore.getStreamSourceId(streamkey);
         if (streamSource) {
             return streamSource.startsWith("window");
         }
@@ -219,7 +219,7 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     stopStream() {
-        let streamkey = this.getActiveStreamKey();
+        const streamkey = this.getActiveStreamKey();
         if (streamkey === null) return;
         streamStop(streamkey);
         this.streamChannelId = null;
@@ -254,11 +254,12 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     async updateStreamSetting(firstInit = false) {
-        let game = RunningGameStore.getVisibleGame();
-        let streamGame = firstInit ? !this.settings.shareAlwaysScreen && game !== null : !this.isStreamingWindow() && game !== null;
-        let displayIndex = this.settings.displayNumber - 1;
-        let screenPreviews = await this.getPreviews("getScreenPreviews");
-        let windowPreviews = await this.getPreviews("getWindowPreviews");
+        const game = RunningGameStore.getVisibleGame();
+        const isStreamingWindow = this.isStreamingWindow();
+        const streamGame = firstInit ? !this.settings.shareAlwaysScreen && game !== null : !isStreamingWindow && game !== null;
+        const displayIndex = this.settings.displayNumber - 1;
+        const screenPreviews = await this.getPreviews("getScreenPreviews");
+        const windowPreviews = await this.getPreviews("getWindowPreviews");
 
         if (!streamGame && game && screenPreviews.length === 0) return;
         if (displayIndex >= screenPreviews.length) {
@@ -266,8 +267,8 @@ module.exports = class ShortcutScreenshareScreen {
             displayIndex = 1;
         }
 
-        let screenPreview = screenPreviews[displayIndex];
-        let windowPreview = windowPreviews.find(window => window.id.endsWith(game?.windowHandle));
+        const screenPreview = screenPreviews[displayIndex];
+        const windowPreview = windowPreviews.find(window => window.id.endsWith(game?.windowHandle));
 
         this.streamChannelId = RTCConnectionStore.getChannelId();
         this.streamGuildId = RTCConnectionStore.getGuildId(this.streamChannelId);
@@ -283,7 +284,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     updateKeybinds() {
         this.unregisterKeybinds();
-        let shortcuts = {
+        const shortcuts = {
             toggleStreamShortcut: this.toggleStreamHandle,
             toggleGameOrScreenShortcut: this.toggleGameOrScreenHandle,
             toggleAudioShortcut: this.toggleAudiohandle,
@@ -311,7 +312,7 @@ module.exports = class ShortcutScreenshareScreen {
         const normalKeys = [];
 
         for (const key of keybind) {
-            let keyL = key.toLowerCase();
+            const keyL = key.toLowerCase();
             if (keyL === "control") keyL = "ctrl";
             if (keyL.startsWith("arrow")) keyL = keyL.replace("arrow", "");
             if (keyL.startsWith("page")) keyL = keyL.replace("page", "page ");

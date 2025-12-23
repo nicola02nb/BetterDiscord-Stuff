@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.4.2
+ * @version 1.4.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -36,7 +36,8 @@ const { Filters } = Webpack;
 const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore,
     GuildChannelStore, RestApi, QuestApplyAction, QuestLocationMap,
     QuestIcon, { navigateToQuestHome }, CountBadge,
-    windowArea, SettingsBarModule, trailingModule] = Webpack.getBulk(
+    windowArea, SettingsBarModule, trailingModule,
+    SettingsBarButton] = Webpack.getBulk(
         { filter: (m => m.dispatch && m.subscribe) },
         { filter: Filters.byStoreName("ApplicationStreamingStore") },
         { filter: Filters.byStoreName("RunningGameStore") },
@@ -50,12 +51,12 @@ const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
         { filter: Filters.byKeys("navigateToQuestHome") },
         { filter: Filters.byStrings("renderBadgeCount", "disableColor"), searchExports: true },
         { filter: Filters.bySource("windowKey:", "showDivider:") },
-        { filter: Filters.bySource("shouldShowSpeakingWhileMutedTooltip:") },
+        { filter: Filters.byStrings("handleToggleSelfMute"), searchExports: true },
         { filter: Filters.byKeys('bar', 'trailing') },
+        { filter: Filters.byStrings("keyboardShortcut", "positionKey"), searchExports: true },
     );
 
-const TopBarButtonWithKey = [...Webpack.getWithKey(Filters.byStrings("badgePosition:"), { searchExports: true })];
-const SettingsBarButtonWithKey = [...Webpack.getWithKey(Filters.byStrings("iconForeground:", "positionKeyStemOverride:"))];
+const TopBarButton = [...Webpack.getWithKey(Filters.byStrings("badgePosition:"), { searchExports: true })];
 const QuestButtonWithKey = [...Webpack.getWithKey(Filters.byStrings("focusProps:", "interactiveClassName:"))];
 const trailing = trailingModule.trailing;
 const { Tooltip, Flex } = Components;
@@ -248,7 +249,7 @@ module.exports = class BasePlugin {
 
         this.patchTitleBar();
 
-        Patcher.after(this.meta.name, SettingsBarModule.m.prototype, "render", (_, _args, returnValue) => {
+        Patcher.after(this.meta.name, SettingsBarModule?.prototype, "render", (_, _args, returnValue) => {
             if (this.settings.showQuestsButtonSettingsBar && Array.isArray(returnValue?.props?.children) && typeof returnValue.props.children[0]?.props?.children === "function") {
                 const f1 = returnValue.props.children[0]?.props?.children;
                 returnValue.props.children[0].props.children = (e) => {
@@ -400,7 +401,7 @@ module.exports = class BasePlugin {
         const className = state.enrollable ? "quest-button-enrollable" : state.enrolled ? "quest-button-enrolled" : state.claimable ? "quest-button-claimable" : "";
         const tooltip = state.enrollable ? `${state.enrollable} Enrollable Quests` : state.enrolled ? `${state.enrolled} Enrolled Quests` : state.claimable ? `${state.claimable} Claimable Quests` : "Quests";
         if (type === "title-bar") {
-            return React.createElement(TopBarButtonWithKey[0], {
+            return React.createElement(TopBarButton[0], {
                 className: className,
                 iconClassName: undefined,
                 disabled: navigateToQuestHome === undefined,
@@ -415,13 +416,13 @@ module.exports = class BasePlugin {
                 hideOnClick: false
             });
         } else if (type === "settings-bar") {
-            return React.createElement(SettingsBarButtonWithKey[0], {
+            return React.createElement(SettingsBarButton, {
                 tooltipText: tooltip,
                 onContextMenu: undefined,
                 onClick: navigateToQuestHome,
                 disabled: navigateToQuestHome === undefined,
                 className: "quest-button"
-            }, React.createElement(TopBarButtonWithKey[0], {
+            }, React.createElement(TopBarButton[0], {
                 className: className,
                 iconClassName: undefined,
                 disabled: navigateToQuestHome === undefined,
