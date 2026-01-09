@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that comppletes you multiple discord quests in background simultaneously.
- * @version 1.4.3
+ * @version 1.4.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -249,18 +249,25 @@ module.exports = class BasePlugin {
 
         this.patchTitleBar();
 
+        const settingsBarMap = new WeakMap();
         Patcher.after(this.meta.name, SettingsBarModule?.prototype, "render", (_, _args, returnValue) => {
             if (this.settings.showQuestsButtonSettingsBar && Array.isArray(returnValue?.props?.children) && typeof returnValue.props.children[0]?.props?.children === "function") {
                 const f1 = returnValue.props.children[0]?.props?.children;
                 returnValue.props.children[0].props.children = (e) => {
                     const c1 = f1(e);
                     if (Array.isArray(c1?.props?.children) && typeof c1.props.children[2]?.type === "function") {
-                        const f2 = c1.props.children[2].type;
-                        c1.props.children[2].type = (e) => {
-                            const c2 = f2(e);
-                            c2.props.children.unshift(React.createElement(this.QuestButton, { type: "settings-bar" }));
-                            return c2;
-                        };
+                        const originalType = c1.props.children[2].type;
+                        if (!settingsBarMap.has(originalType)) {
+                            const wrapper = (props) => {
+                                const c2 = originalType(props);
+                                if (Array.isArray(c2?.props?.children)) {
+                                    c2.props.children.unshift(React.createElement(this.QuestButton, { type: "settings-bar" }));
+                                }
+                                return c2;
+                            };
+                            settingsBarMap.set(originalType, wrapper);
+                        }
+                        c1.props.children[2].type = settingsBarMap.get(originalType);
                     }
                     return c1;
                 }
