@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.1.16
+ * @version 1.2.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -19,10 +19,10 @@ const config = {
         {
             type: "category", id: "keybinds", name: "Keybinds", settings: [
                 { type: "keybind", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", clearable: true, value: [] },
-                { type: "keybind", id: "toggleGameOrScreenShortcut", name: "Toggle Game/Screen Shortcut", note: "Set the shortcut to toggle between sharing game or screen.", clearable: true, value: [] },
-                { type: "keybind", id: "toggleAudioShortcut", name: "Toggle Audio Shortcut", note: "Set the shortcut to toggle audio sharing.", clearable: true, value: [] },
                 { type: "keybind", id: "startStreamShortcut", name: "Start Stream Shortcut", note: "Set the shortcut to start the stream.", clearable: true, value: [] },
                 { type: "keybind", id: "stopStreamShortcut", name: "Stop Stream Shortcut", note: "Set the shortcut to stop the stream.", clearable: true, value: [] },
+                { type: "keybind", id: "toggleGameOrScreenShortcut", name: "Toggle Game/Screen Shortcut", note: "Set the shortcut to toggle between sharing game or screen.", clearable: true, value: [] },
+                { type: "keybind", id: "toggleAudioShortcut", name: "Toggle Audio Shortcut", note: "Set the shortcut to toggle audio sharing.", clearable: true, value: [] },
             ]
         },
         {
@@ -200,25 +200,16 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     async startStream() {
-        await this.initializeStreamSetting();
-        streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
-        this.showToast("Screenshare started!", "success");
+        this.streamChannelId = RTCConnectionStore.getChannelId();
+        this.streamGuildId = RTCConnectionStore.getGuildId(this.streamChannelId);
+        if (this.streamChannelId) {
+            await this.initializeStreamSetting();
+            streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
+            this.showToast("Screenshare started!", "success");
+        }
     }
 
-    async toggleGameOrScreen() {
-        await this.updateStreamSetting();
-        this.updateStream();
-        this.showToast(`Switched to ${!this.isStreamingWindow() ? "screen" : "game"} sharing!`, "info");
-    }
-
-    toggleAudio() {
-        this.settings.shareAudio = !this.settings.shareAudio;
-        this.streamOptions.sound = this.settings.shareAudio;
-        this.updateStream();
-        this.showToast(`Audio sharing ${this.settings.shareAudio ? "enabled" : "disabled"}!`, "info");
-    }
-
-    stopStream() {
+    async stopStream() {
         const streamkey = this.getActiveStreamKey();
         if (streamkey === null) return;
         streamStop(streamkey);
@@ -228,18 +219,31 @@ module.exports = class ShortcutScreenshareScreen {
         this.showToast("Screenshare stopped!", "info");
     }
 
-    toggleStream() {
+    async toggleGameOrScreen() {
+        await this.updateStreamSetting();
+        this.updateStream();
+        this.showToast(`Switched to ${!this.isStreamingWindow() ? "screen" : "game"} sharing!`, "info");
+    }
+
+    async toggleStream() {
         if (ApplicationStreamingStore.getCurrentUserActiveStream()) {
             this.stopStream();
         } else {
-            this.startStream();
+            await this.startStream();
         }
+    }
+
+    toggleAudio() {
+        this.settings.shareAudio = !this.settings.shareAudio;
+        this.streamOptions.sound = this.settings.shareAudio;
+        this.updateStream();
+        this.showToast(`Audio sharing ${this.settings.shareAudio ? "enabled" : "disabled"}!`, "info");
     }
 
     getStreamOptions(surce) {
         return {
             audioSourceId: null,
-            goLiveModalDurationMs: 1858,
+            goLiveModalDurationMs: 0,
             nativePickerStyleUsed: undefined,
             pid: surce?.pid ? surce.pid : null,
             previewDisabled: this.settings.disablePreview,
@@ -270,14 +274,11 @@ module.exports = class ShortcutScreenshareScreen {
         const screenPreview = screenPreviews[displayIndex];
         const windowPreview = windowPreviews.find(window => window.id.endsWith(game?.windowHandle));
 
-        this.streamChannelId = RTCConnectionStore.getChannelId();
-        this.streamGuildId = RTCConnectionStore.getGuildId(this.streamChannelId);
-
         this.streamOptions = this.getStreamOptions(windowPreview && streamGame ? windowPreview : screenPreview);
     }
 
     updateStream() {
-        if (ApplicationStreamingStore.getCurrentUserActiveStream()) {
+        if (ApplicationStreamingStore.getCurrentUserActiveStream() && this.streamGuildId && this.streamChannelId && this.streamOptions) {
             streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
         }
     }
@@ -316,6 +317,7 @@ module.exports = class ShortcutScreenshareScreen {
             if (keyL === "control") keyL = "ctrl";
             if (keyL.startsWith("arrow")) keyL = keyL.replace("arrow", "");
             if (keyL.startsWith("page")) keyL = keyL.replace("page", "page ");
+            if (keyL.startsWith("delete")) keyL = keyL.replace("delete", "del");
 
             if (keyL === "ctrl" || keyL === "shift" || keyL === "alt" || keyL === "meta") {
                 specialKeys.push(keyL);
