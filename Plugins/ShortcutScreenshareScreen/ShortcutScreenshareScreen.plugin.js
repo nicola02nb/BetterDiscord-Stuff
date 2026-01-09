@@ -299,8 +299,12 @@ module.exports = class ShortcutScreenshareScreen {
             if (this.settings[shortcutName]?.length > 0) {
                 const mappedKeybinds = this.mapKeybind(this.settings[shortcutName]);
                 for (const keybind of mappedKeybinds) {
-                    this.registerKeybind(TOGGLE_STREAM_KEYBIND + i, keybind, shortcutFunction);
-                    i++;
+                    if (keybind.length === this.settings[shortcutName].length) {
+                        this.registerKeybind(TOGGLE_STREAM_KEYBIND + i, keybind, shortcutFunction);
+                        i++;
+                    } else {
+                        console.error("Keybind mapping failed for keybind: ", this.settings[shortcutName]);
+                    }
                 }
             }
         }
@@ -312,12 +316,25 @@ module.exports = class ShortcutScreenshareScreen {
         const specialKeys = [];
         const normalKeys = [];
 
+        const italianSpecialKeysMap = {
+            "à": "#",
+            "°": "#",
+            "è": "[",
+            "é": "[",
+            "ì": "=",
+            "ò": ";",
+            "ç": ";",
+            "ù": "\\",
+            "§": "\\"
+        };
+
         for (const key of keybind) {
             let keyL = key.toLowerCase();
             if (keyL === "control") keyL = "ctrl";
             if (keyL.startsWith("arrow")) keyL = keyL.replace("arrow", "");
             if (keyL.startsWith("page")) keyL = keyL.replace("page", "page ");
             if (keyL.startsWith("delete")) keyL = keyL.replace("delete", "del");
+            if (italianSpecialKeysMap[keyL]) keyL = italianSpecialKeysMap[keyL];
 
             if (keyL === "ctrl" || keyL === "shift" || keyL === "alt" || keyL === "meta") {
                 specialKeys.push(keyL);
@@ -342,7 +359,10 @@ module.exports = class ShortcutScreenshareScreen {
         }
         for (const mappedKeybind of mappedKeybinds) {
             for (const key of normalKeys) {
-                mappedKeybind.push([0, keybindModule[key]]);
+                const keyCode = keybindModule[key];
+                if (keyCode) {
+                    mappedKeybind.push([0, keyCode]);
+                }
             }
         }
 
@@ -350,10 +370,6 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     registerKeybind(id, keybind, toCall) {
-        if (!Array.isArray(keybind) || keybind.length === 0) {
-            console.error("Keybind keybind is not an array or is empty. Keybind: ", keybind);
-            return;
-        }
         DiscordUtils.inputEventRegister(
             id,
             keybind,
