@@ -202,21 +202,29 @@ module.exports = class ShortcutScreenshareScreen {
     async startStream() {
         this.streamChannelId = RTCConnectionStore.getChannelId();
         this.streamGuildId = RTCConnectionStore.getGuildId(this.streamChannelId);
-        if (this.streamChannelId) {
+        const activeStream = ApplicationStreamingStore.getCurrentUserActiveStream();
+        if (activeStream) {
+            this.showToast("You are already streaming!", "warning");
+        } else if (this.streamChannelId) {
             await this.initializeStreamSetting();
             streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
             this.showToast("Screenshare started!", "success");
+        } else {
+            this.showToast("No active call to start screenshare!", "error");
         }
     }
 
     async stopStream() {
         const streamkey = this.getActiveStreamKey();
-        if (streamkey === null) return;
-        streamStop(streamkey);
-        this.streamChannelId = null;
-        this.streamGuildId = null;
-        this.streamOptions = null;
-        this.showToast("Screenshare stopped!", "info");
+        if (streamkey) {
+            streamStop(streamkey);
+            this.streamChannelId = null;
+            this.streamGuildId = null;
+            this.streamOptions = null;
+            this.showToast("Screenshare stopped!", "info");
+        } else {
+            this.showToast("No active screenshare to stop!", "warning");
+        }
     }
 
     async toggleGameOrScreen() {
@@ -225,19 +233,23 @@ module.exports = class ShortcutScreenshareScreen {
         this.showToast(`Switched to ${!this.isStreamingWindow() ? "screen" : "game"} sharing!`, "info");
     }
 
-    async toggleStream() {
+    toggleStream() {
         if (ApplicationStreamingStore.getCurrentUserActiveStream()) {
             this.stopStream();
         } else {
-            await this.startStream();
+            this.startStream();
         }
     }
 
     toggleAudio() {
         this.settings.shareAudio = !this.settings.shareAudio;
         this.streamOptions.sound = this.settings.shareAudio;
-        this.updateStream();
-        this.showToast(`Audio sharing ${this.settings.shareAudio ? "enabled" : "disabled"}!`, "info");
+        const updated = this.updateStream();
+        if (updated) {
+            this.showToast(`Audio sharing ${this.settings.shareAudio ? "enabled" : "disabled"}!`, "info");
+        } else {
+            this.showToast("No active screenshare to toggle audio!", "warning");
+        }
     }
 
     getStreamOptions(surce) {
@@ -269,6 +281,9 @@ module.exports = class ShortcutScreenshareScreen {
         if (displayIndex >= screenPreviews.length) {
             this.settings.displayNumber = 1;
             displayIndex = 1;
+        } else if (displayIndex < 0) {
+            this.settings.displayNumber = screenPreviews.length;
+            displayIndex = screenPreviews.length - 1;
         }
 
         const screenPreview = screenPreviews[displayIndex];
@@ -280,6 +295,9 @@ module.exports = class ShortcutScreenshareScreen {
     updateStream() {
         if (ApplicationStreamingStore.getCurrentUserActiveStream() && this.streamGuildId && this.streamChannelId && this.streamOptions) {
             streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -319,13 +337,26 @@ module.exports = class ShortcutScreenshareScreen {
         const italianSpecialKeysMap = {
             "à": "#",
             "°": "#",
-            "è": "[",
-            "é": "[",
-            "ì": "=",
-            "ò": ";",
-            "ç": ";",
-            "ù": "\\",
-            "§": "\\"
+            "#": "#",
+            "è": ";",
+            "é": ";",
+            "[": ";",
+            "{": ";",
+            "+": "=",
+            "*": "=",
+            "]": "=",
+            "}": "=",
+            "ì": "]",
+            "^": "]",
+            "'": "[",
+            "?": "[",
+            "ò": "@",
+            "ç": "@",
+            "@": "@",
+            "ù": "/",
+            "§": "/",
+            "<": "numpad =",
+            ">": "numpad =",
         };
 
         for (const key of keybind) {
