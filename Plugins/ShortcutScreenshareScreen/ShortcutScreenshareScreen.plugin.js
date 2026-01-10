@@ -242,6 +242,9 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     toggleAudio() {
+        if (!this.streamOptions) {
+            return;
+        }
         this.settings.shareAudio = !this.settings.shareAudio;
         this.streamOptions.sound = this.settings.shareAudio;
         const updated = this.updateStream();
@@ -252,16 +255,16 @@ module.exports = class ShortcutScreenshareScreen {
         }
     }
 
-    getStreamOptions(surce) {
+    getStreamOptions(source) {
         return {
             audioSourceId: null,
             goLiveModalDurationMs: 0,
             nativePickerStyleUsed: undefined,
-            pid: surce?.pid ? surce.pid : null,
+            pid: source?.pid ? source.pid : null,
             previewDisabled: this.settings.disablePreview,
             sound: this.settings.shareAudio,
-            sourceId: surce?.id ? surce.id : null,
-            sourceName: surce?.name ? surce.name : null,
+            sourceId: source?.id ? source.id : null,
+            sourceName: source?.name ? source.name : null,
         };
     }
 
@@ -271,9 +274,9 @@ module.exports = class ShortcutScreenshareScreen {
 
     async updateStreamSetting(firstInit = false) {
         const game = RunningGameStore.getVisibleGame();
-        const isStreamingWindow = this.isStreamingWindow();
-        const streamGame = firstInit ? !this.settings.shareAlwaysScreen && game !== null : !isStreamingWindow && game !== null;
-        const displayIndex = this.settings.displayNumber - 1;
+        const streamingWindow = this.isStreamingWindow();
+        const streamGame = firstInit ? !this.settings.shareAlwaysScreen && game !== null : !streamingWindow && game !== null;
+        let displayIndex = this.settings.displayNumber - 1;
         const screenPreviews = await this.getPreviews("getScreenPreviews");
         const windowPreviews = await this.getPreviews("getWindowPreviews");
 
