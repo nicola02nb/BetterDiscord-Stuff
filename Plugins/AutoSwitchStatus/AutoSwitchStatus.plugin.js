@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server. For Bugs or Feature Requests open an issue on my Github.
- * @version 1.8.3
+ * @version 1.8.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -133,13 +133,28 @@ module.exports = class AutoSwitchStatus {
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleConnection);
         DiscordModules.subscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleMute);
         DiscordModules.subscribe("AUDIO_TOGGLE_SELF_MUTE", this.handleMute);
+
+        //this.startSimulateChange(16);
     }
 
     stop() {
+        //this.stopSimulateChange();
         DiscordModules.unsubscribe("AUDIO_TOGGLE_SELF_MUTE", this.handleMute);
         DiscordModules.unsubscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleMute);
         DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleConnection);
         /* DOM.removeStyle(this.meta.name); */
+    }
+
+    startSimulateChange(seconds) {
+        this.intervalStatus = true;
+        this.interval = setInterval(() => {
+            this.setStatus(this.intervalStatus ? 'online' : 'idle');
+            this.intervalStatus = !this.intervalStatus;
+        }, seconds * 1000);
+    }
+
+    stopSimulateChange() {
+        clearInterval(this.interval);
     }
 
     handleConnectionStateChange(event) {
@@ -172,7 +187,7 @@ module.exports = class AutoSwitchStatus {
         if (this.status != toSet) {
             this.status = toSet;
 
-            this.updateStatus(toSet);
+            this.setStatus(toSet);
         }
     }
 
@@ -201,15 +216,15 @@ module.exports = class AutoSwitchStatus {
 
     /**
      * Updates the remote status to the param `toStatus`
-     * @param {('online'|'idle'|'invisible'|'dnd')} toStatus
+     * @param {('online'|'idle'|'invisible'|'dnd')} status
      */
-    updateStatus(toStatus) {
+    setStatus(status) {
         UserSettingsProtoUtils.updateAsync(
             "status",
             (settings) => {
-                settings.status.value = toStatus;
+                settings.status.value = status;
             }, 15); // 15 is the seconds after which the status will be updated through the API (Prevents rate limiting)
-        this.showToast(this.locales[toStatus], { type: toStatus });
+        this.showToast(this.locales[status], { type: status });
     }
 
     /**
