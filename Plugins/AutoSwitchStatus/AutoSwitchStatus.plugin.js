@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status when you are muted, connected to a server or when disconnected from a server.
- * @version 1.9.0
+ * @version 1.9.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -78,6 +78,12 @@ module.exports = class AutoSwitchStatus {
             invisible: "Invisible",
             dnd: "Do Not Disturb"
         }
+        this.statusToToastType = {
+            online: "success",
+            idle: "warning",
+            invisible: "info",
+            dnd: "error"
+        };
     }
 
     initSettings(settings = config.settings) {
@@ -174,7 +180,7 @@ module.exports = class AutoSwitchStatus {
             SECONDS_TO_PREVENT_RATE_LIMITING  // the seconds after which the status will be updated through the API (Prevents rate limiting)
         );
         if (this.settings.showToast) {
-            UI.showToast(this.locales[status], { type: status });
+            UI.showToast(this.locales[status], { type: this.statusToToastType[status], icon: false });
         }
     }
 };
