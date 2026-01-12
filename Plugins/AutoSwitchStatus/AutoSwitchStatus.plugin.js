@@ -1,6 +1,6 @@
 /**
  * @name AutoSwitchStatus
- * @description Automatically switches your discord status to 'away' when you are muted inside a server or 'invisible' when disconnected from a server.
+ * @description Automatically switches your discord status when you are muted, connected to a server or when disconnected from a server.
  * @version 1.9.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
