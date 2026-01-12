@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status when you are muted, connected to a server or when disconnected from a server.
- * @version 1.9.1
+ * @version 1.9.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -71,7 +71,9 @@ module.exports = class AutoSwitchStatus {
 
         this.handleUpdateUserStatus = this.updateUserStatus.bind(this);
 
+        this.justSettedStatus = '';
         this.justSettedDND = false;
+
         this.locales = {
             online: "Online",
             idle: "Idle",
@@ -125,6 +127,7 @@ module.exports = class AutoSwitchStatus {
 
         this.updateUserStatus();
 
+        DiscordModules.subscribe("USER_SETTINGS_PROTO_UPDATE_EDIT_INFO", this.handleUpdateUserStatus);
         DiscordModules.subscribe("RTC_CONNECTION_STATE", this.handleUpdateUserStatus);
         DiscordModules.subscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleUpdateUserStatus);
         DiscordModules.subscribe("AUDIO_TOGGLE_SELF_MUTE", this.handleUpdateUserStatus);
@@ -134,6 +137,7 @@ module.exports = class AutoSwitchStatus {
                 args[2] = SECONDS_TO_PREVENT_RATE_LIMITING;
                 this.justSettedDND = false;
             }
+
             return await originalFunction(...args);
         });
     }
@@ -143,17 +147,17 @@ module.exports = class AutoSwitchStatus {
         DiscordModules.unsubscribe("AUDIO_TOGGLE_SELF_MUTE", this.handleUpdateUserStatus);
         DiscordModules.unsubscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleUpdateUserStatus);
         DiscordModules.unsubscribe("RTC_CONNECTION_STATE", this.handleUpdateUserStatus);
+        DiscordModules.unsubscribe("USER_SETTINGS_PROTO_UPDATE_EDIT_INFO", this.handleUpdateUserStatus);
     }
 
-    /**
-     * Functions used by the interval that checks for new user status
-     *  or for changed update interval 
-     */
-    updateUserStatus() {
+    updateUserStatus(event) {
+        if (event?.type === "USER_SETTINGS_PROTO_UPDATE_EDIT_INFO" && event.settings.changes.protoToSave) {
+            this.justSettedStatus = event.settings.changes.protoToSave?.status?.status?.value ?? this.justSettedStatus;
+            return;
+        }
         const toSet = this.getUserCurrentStatus();
-        const current = UserSettingsProtoStore?.settings?.status?.status?.value;
 
-        if (toSet !== current) {
+        if (toSet !== this.justSettedStatus) {
             this.setStatus(toSet);
         }
     }
@@ -174,7 +178,8 @@ module.exports = class AutoSwitchStatus {
     }
 
     setStatus(status) {
-        this.justSettedDND = status === 'dnd';
+        this.justSettedStatus = status;
+        this.justSettedDND = (status === "dnd");
         UserSettingsProtoUtils.updateAsync("status",
             (settings) => { settings.status.value = status; },
             SECONDS_TO_PREVENT_RATE_LIMITING  // the seconds after which the status will be updated through the API (Prevents rate limiting)
