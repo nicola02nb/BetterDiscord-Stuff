@@ -21,7 +21,7 @@ const config = {
     settings: [
         { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: true },
         {
-            type: "category", id: "uiElements", name: "Quest Type Filters", collapsible: true, shown: false, settings: [
+            type: "category", id: "uiElements", name: "UI Elements", collapsible: true, shown: false, settings: [
                 { type: "switch", id: "showQuestsButtonTitleBar", name: "Show Quests Title Bar", note: "Whether to show the quests button in the title bar.", value: true },
                 { type: "switch", id: "showQuestsButtonSettingsBar", name: "Show Quests Settings Bar", note: "Whether to show the quests button in the settings bar.", value: true },
                 { type: "switch", id: "showQuestsButtonBadges", name: "Show Quests Badges", note: "Whether to show badges on the quests button.", value: true },
