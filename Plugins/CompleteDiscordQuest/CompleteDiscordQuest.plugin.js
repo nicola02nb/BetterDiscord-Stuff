@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.2
+ * @version 1.5.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -324,11 +324,11 @@ module.exports = class BasePlugin {
         const rewards = quest.config?.rewardsConfig?.rewards || [];
         if (!Array.isArray(rewards) || rewards.length === 0) return false;
         return rewards.some(reward => {
-            return (reward.type === "REWARD_CODE" && this.settings.farmRewardCodes
-                || reward.type === "IN_GAME" && this.settings.farmInGame
-                || reward.type === "COLLECTIBLE" && this.settings.farmCollectibles
-                || reward.type === "VIRTUAL_CURRENCY" && this.settings.farmVirtualCurrency
-                || reward.type === "FRACTIONAL_PREMIUM" && this.settings.farmFractionalPremium);
+            return (reward.type === 1 && this.settings.farmRewardCodes
+                || reward.type === 2 && this.settings.farmInGame
+                || reward.type === 3 && this.settings.farmCollectibles
+                || reward.type === 4 && this.settings.farmVirtualCurrency
+                || reward.type === 5 && this.settings.farmFractionalPremium);
         });
     }
 
