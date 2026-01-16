@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.1
+ * @version 1.5.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -29,19 +29,19 @@ const config = {
         },
         {
             type: "category", id: "questTypeFilters", name: "Quest Type Filters", collapsible: true, shown: false, settings: [
-                { type: "switch", id: "farmVideos", name: "Videos", note: "Enables farming videos quests.", value: true },
-                { type: "switch", id: "farmPlayOnDesktop", name: "Play On Desktop", note: "Enables farming desktop games quests.", value: true },
-                { type: "switch", id: "farmStreamOnDesktop", name: "Streaming", note: "Enables farming streaming quests.", value: true },
-                { type: "switch", id: "farmPlayActivity", name: "Activities", note: "Enables farming activities quests.", value: true },
+                { type: "switch", id: "farmVideos", name: "Videos", note: "Whether to farm video quests automatically.", value: true },
+                { type: "switch", id: "farmPlayOnDesktop", name: "Play On Desktop", note: "Whether to farm desktop games quests automatically.", value: true },
+                { type: "switch", id: "farmStreamOnDesktop", name: "Streaming", note: "Whether to farm streaming quests automatically.", value: true },
+                { type: "switch", id: "farmPlayActivity", name: "Activities", note: "Whether to farm activities quests automatically.", value: true },
             ]
         },
         {
             type: "category", id: "questRewardsFilters", name: "Quest Rewards Filters", collapsible: true, shown: false, settings: [
-                { type: "switch", id: "farmRewardCodes", name: "Reward Codes", note: "Enables farming of reward codes.", value: true },
-                { type: "switch", id: "farmInGame", name: "In Game (Quests)", note: "Enables farming of in-game quests.", value: true },
-                { type: "switch", id: "farmCollectibles", name: "Collectibles (Decorations)", note: "Enables farming of discord user appearance decorations.", value: true },
-                { type: "switch", id: "farmVirtualCurrency", name: "Virtual Currency (Orbs)", note: "Enables farming of orbs.", value: true },
-                { type: "switch", id: "farmFractionalPremium", name: "Fractional Premium", note: "Enables farming of fractional premium.", value: true },
+                { type: "switch", id: "farmRewardCodes", name: "Reward Codes", note: "Whether to farm reward codes automatically.", value: true },
+                { type: "switch", id: "farmInGame", name: "In Game (Quests)", note: "Whether to farm in-game quests automatically.", value: true },
+                { type: "switch", id: "farmCollectibles", name: "Collectibles (Decorations)", note: "Whether to farm discord user appearance decorations automatically.", value: true },
+                { type: "switch", id: "farmVirtualCurrency", name: "Virtual Currency (Orbs)", note: "Whether to farm orbs automatically.", value: true },
+                { type: "switch", id: "farmFractionalPremium", name: "Fractional Premium", note: "Whether to farm fractional premium automatically.", value: true },
             ]
         },
     ]
