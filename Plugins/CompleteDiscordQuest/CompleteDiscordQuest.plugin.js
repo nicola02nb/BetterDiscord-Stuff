@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.0
+ * @version 1.5.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -54,7 +54,7 @@ const fs = require("fs");
 const path = require("path");
 const { Webpack, Data, UI, Patcher, DOM, React, ReactUtils, Components, Utils, Plugins, Net, Logger } = BdApi;
 const { Filters } = Webpack;
-const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore, QuestRewardTypes, QuestTypes,
+const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
     ChannelStore, GuildChannelStore, RestApi, QuestApplyAction, QuestLocationMap,
     QuestIcon, { navigateToQuestHome }, CountBadge,
     windowArea, SettingsBarModule, trailingModule,
@@ -63,8 +63,6 @@ const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
         { filter: Filters.byStoreName("ApplicationStreamingStore") },
         { filter: Filters.byStoreName("RunningGameStore") },
         { filter: Filters.byKeys("getQuest") },
-        { filter: Filters.byKeys("VIRTUAL_CURRENCY", "REWARD_CODE"), searchExports: true },
-        { filter: Filters.byKeys("PLAY_ON_DESKTOP"), searchExports: true },
         { filter: Filters.byStoreName("ChannelStore") },
         { filter: Filters.byStoreName("GuildChannelStore") },
         { filter: m => typeof m === 'object' && m.del && m.put, searchExports: true },
@@ -317,20 +315,20 @@ module.exports = class BasePlugin {
     isQuestEligibleForFarming(quest) {
         const questConfig = quest.config.taskConfig || quest.config.taskConfigV2;
         if (!Object.keys(questConfig.tasks).some(taskName => {
-            return (taskName === QuestTypes.WATCH_VIDEO && this.settings.farmVideos
-                || taskName === QuestTypes.PLAY_ON_DESKTOP && this.settings.farmPlayOnDesktop
-                || taskName === QuestTypes.STREAM_ON_DESKTOP && this.settings.farmStreamOnDesktop
-                || taskName === QuestTypes.PLAY_ACTIVITY && this.settings.farmPlayActivity);
+            return (taskName === "WATCH_VIDEO" && this.settings.farmVideos
+                || taskName === "PLAY_ON_DESKTOP" && this.settings.farmPlayOnDesktop
+                || taskName === "STREAM_ON_DESKTOP" && this.settings.farmStreamOnDesktop
+                || taskName === "PLAY_ACTIVITY" && this.settings.farmPlayActivity);
         })) return false;
 
         const rewards = quest.config?.rewardsConfig?.rewards || [];
         if (!Array.isArray(rewards) || rewards.length === 0) return false;
         return rewards.some(reward => {
-            return (reward.type === QuestRewardTypes.REWARD_CODE && this.settings.farmRewardCodes
-                || reward.type === QuestRewardTypes.IN_GAME && this.settings.farmInGame
-                || reward.type === QuestRewardTypes.COLLECTIBLE && this.settings.farmCollectibles
-                || reward.type === QuestRewardTypes.VIRTUAL_CURRENCY && this.settings.farmVirtualCurrency
-                || reward.type === QuestRewardTypes.FRACTIONAL_PREMIUM && this.settings.farmFractionalPremium);
+            return (reward.type === "REWARD_CODE" && this.settings.farmRewardCodes
+                || reward.type === "IN_GAME" && this.settings.farmInGame
+                || reward.type === "COLLECTIBLE" && this.settings.farmCollectibles
+                || reward.type === "VIRTUAL_CURRENCY" && this.settings.farmVirtualCurrency
+                || reward.type === "FRACTIONAL_PREMIUM" && this.settings.farmFractionalPremium);
         });
     }
 
