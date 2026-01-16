@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.4
+ * @version 1.5.5
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -420,8 +420,8 @@ module.exports = class BasePlugin {
             console.log(`Completing quest ${questName} (${quest.id}) - ${taskName} for ${secondsNeeded} seconds.`);
 
             switch (taskName) {
-                case QuestTypes.WATCH_VIDEO:
-                case QuestTypes.WATCH_VIDEO_ON_MOBILE:
+                case "WATCH_VIDEO":
+                case "WATCH_VIDEO_ON_MOBILE":
                     const maxFuture = 10, speed = 7, interval = 1;
                     const enrolledAt = new Date(quest.userStatus.enrolledAt).getTime();
                     let completed = false;
@@ -458,7 +458,7 @@ module.exports = class BasePlugin {
                     console.log(`Spoofing video for ${questName}.`);
                     break;
 
-                case QuestTypes.PLAY_ON_DESKTOP:
+                case "PLAY_ON_DESKTOP":
                     RestApi.get({ url: `/applications/public?application_ids=${applicationId}` }).then(res => {
                         const appData = res.body[0];
                         const exeName = appData.executables.find(x => x.os === "win32").name.replace(">", "");
@@ -507,7 +507,7 @@ module.exports = class BasePlugin {
                     })
                     break;
 
-                case QuestTypes.STREAM_ON_DESKTOP:
+                case "STREAM_ON_DESKTOP":
                     const fakeApp = {
                         id: applicationId,
                         name: `FakeApp ${applicationName} (CompleteDiscordQuest)`,
@@ -539,7 +539,7 @@ module.exports = class BasePlugin {
                     console.log("Remember that you need at least 1 other person to be in the vc!");
                     break;
 
-                case QuestTypes.PLAY_ACTIVITY:
+                case "PLAY_ACTIVITY":
                     const channelId = ChannelStore.getSortedPrivateChannels()[0]?.id ?? Object.values(GuildChannelStore.getAllGuilds()).find(x => x != null && x.VOCAL.length > 0).VOCAL[0].channel.id;
                     const streamKey = `call:${channelId}:1`;
 
