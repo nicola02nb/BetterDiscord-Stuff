@@ -424,6 +424,7 @@ module.exports = class BasePlugin {
                 case "WATCH_VIDEO_ON_MOBILE":
                     const maxFuture = 10, speed = 7, interval = 1;
                     const enrolledAt = new Date(quest.userStatus.enrolledAt).getTime();
+                    let incrementNum = Math.floor(secondsDone / speed)
                     let completed = false;
                     let watchVideo = async () => {
                         while (true) {
@@ -438,10 +439,16 @@ module.exports = class BasePlugin {
                             }
 
                             if (diff >= speed) {
-                                const res = await RestApi.post({ url: `/quests/${quest.id}/video-progress`, body: { timestamp: Math.min(secondsNeeded, timestamp + Math.random()) } });
-                                completed = res.body.completed_at != null;
-                                secondsDone = Math.min(secondsNeeded, timestamp);
-                            }
+								const body = {
+									timestamp: Math.floor(Math.min(secondsNeeded, timestamp + Math.random())),
+									increment_num: incrementNum
+								};
+								const res = await RestApi.post({ url: `/quests/${quest.id}/video-progress`, body: body});
+								completed = res.body.completed_at != null;
+								secondsDone = Math.min(secondsNeeded, timestamp);
+                                incrementNum++;
+                                console.log(`Quest progress for${questName}: ${secondsDone}/${secondsNeeded}`);
+							}
 
                             if (timestamp >= secondsNeeded) {
                                 this.completingQuests.set(quest.id, false);
@@ -450,8 +457,12 @@ module.exports = class BasePlugin {
                             await new Promise(resolve => setTimeout(resolve, interval * 1000));
                         }
                         if (!completed) {
-                            await RestApi.post({ url: `/quests/${quest.id}/video-progress`, body: { timestamp: secondsNeeded } });
-                        }
+							const body = {
+								timestamp: Math.floor(secondsNeeded),
+								increment_num: incrementNum
+							};
+							await RestApi.post({ url: `/quests/${quest.id}/video-progress`, body: body });
+						}
                         console.log("Quest completed!");
                     }
                     watchVideo();
