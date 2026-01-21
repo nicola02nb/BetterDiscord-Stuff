@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.17.2
+ * @version 2.17.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -910,6 +910,9 @@ class AudioPlayer {
 
     updateTTSSourceAndVoice(source, voice) {
         this.sourceInterface = getSource(source);
+        if (!this.sourceInterface) {
+            this.sourceInterface = getSource("discord");
+        }
         if (!voice) {
             voice = this.sourceInterface.getDefaultVoice();
         }
