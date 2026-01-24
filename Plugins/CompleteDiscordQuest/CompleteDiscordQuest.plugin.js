@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.5
+ * @version 1.5.6
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -59,7 +59,7 @@ const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
     QuestIcon, { navigateToQuestHome }, CountBadge,
     windowArea, SettingsBarModule, trailingModule,
     SettingsBarButton] = Webpack.getBulk(
-        { filter: (m => m.dispatch && m.subscribe) },
+        { filter: Filters.byKeys("subscribe", "dispatch"), searchExports: true },
         { filter: Filters.byStoreName("ApplicationStreamingStore") },
         { filter: Filters.byStoreName("RunningGameStore") },
         { filter: Filters.byKeys("getQuest") },
@@ -268,6 +268,7 @@ module.exports = class BasePlugin {
 
         const settingsBarMap = new WeakMap();
         Patcher.after(this.meta.name, SettingsBarModule?.prototype, "render", (_, _args, returnValue) => {
+            return returnValue;
             if (this.settings.showQuestsButtonSettingsBar && Array.isArray(returnValue?.props?.children) && typeof returnValue.props.children[0]?.props?.children === "function") {
                 const f1 = returnValue.props.children[0]?.props?.children;
                 returnValue.props.children[0].props.children = (e) => {
@@ -288,6 +289,8 @@ module.exports = class BasePlugin {
                     }
                     return c1;
                 }
+            } else {
+                return returnValue;
             }
         });
 
