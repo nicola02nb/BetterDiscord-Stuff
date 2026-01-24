@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.6
+ * @version 1.5.7
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -268,7 +268,6 @@ module.exports = class BasePlugin {
 
         const settingsBarMap = new WeakMap();
         Patcher.after(this.meta.name, SettingsBarModule?.prototype, "render", (_, _args, returnValue) => {
-            return returnValue;
             if (this.settings.showQuestsButtonSettingsBar && Array.isArray(returnValue?.props?.children) && typeof returnValue.props.children[0]?.props?.children === "function") {
                 const f1 = returnValue.props.children[0]?.props?.children;
                 returnValue.props.children[0].props.children = (e) => {
@@ -360,7 +359,7 @@ module.exports = class BasePlugin {
 
     patchTitleBar() {
         if (this.settings.showQuestsButtonTopBar) {
-            Patcher.after(this.meta.name + "-title-bar", windowArea, "TF", (_, [props], ret) => {
+            Patcher.after(this.meta.name + "-title-bar", windowArea, "cq", (_, [props], ret) => {
                 if (props.windowKey?.startsWith("DISCORD_")) return ret;
                 if (props.trailing?.props?.children) {
                     props.trailing.props.children.unshift(React.createElement(this.QuestButton, { type: "title-bar" }));
@@ -698,7 +697,7 @@ module.exports = class BasePlugin {
                 disabled: navigateToQuestHome === undefined,
                 showBadge: state.enrollable > 0 || state.enrolled > 0 || state.claimable > 0,
                 badgePosition: "bottom",
-                icon: QuestIcon.q,
+                icon: QuestIcon.r,
                 iconSize: 20,
                 onClick: navigateToQuestHome,
                 onContextMenu: undefined,
@@ -719,7 +718,7 @@ module.exports = class BasePlugin {
                 disabled: navigateToQuestHome === undefined,
                 showBadge: state.enrollable > 0 || state.enrolled > 0 || state.claimable > 0,
                 badgePosition: "bottom",
-                icon: QuestIcon.q,
+                icon: QuestIcon.r,
                 iconSize: 20,
                 onClick: navigateToQuestHome,
                 onContextMenu: undefined,
