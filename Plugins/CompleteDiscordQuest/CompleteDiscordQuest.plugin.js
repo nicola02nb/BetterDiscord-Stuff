@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.7
+ * @version 1.5.8
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -688,6 +688,8 @@ module.exports = class BasePlugin {
             };
         }, []);
 
+        const questIcon = QuestIcon[Object.keys(QuestIcon)[0]];
+
         const className = state.enrollable ? "quest-button-enrollable" : state.enrolled ? "quest-button-enrolled" : state.claimable ? "quest-button-claimable" : "";
         const tooltip = state.enrollable ? `${state.enrollable} Enrollable Quests` : state.enrolled ? `${state.enrolled} Enrolled Quests` : state.claimable ? `${state.claimable} Claimable Quests` : "Quests";
         if (type === "title-bar") {
@@ -697,7 +699,7 @@ module.exports = class BasePlugin {
                 disabled: navigateToQuestHome === undefined,
                 showBadge: state.enrollable > 0 || state.enrolled > 0 || state.claimable > 0,
                 badgePosition: "bottom",
-                icon: QuestIcon.r,
+                icon: questIcon,
                 iconSize: 20,
                 onClick: navigateToQuestHome,
                 onContextMenu: undefined,
@@ -718,7 +720,7 @@ module.exports = class BasePlugin {
                 disabled: navigateToQuestHome === undefined,
                 showBadge: state.enrollable > 0 || state.enrolled > 0 || state.claimable > 0,
                 badgePosition: "bottom",
-                icon: QuestIcon.r,
+                icon: questIcon,
                 iconSize: 20,
                 onClick: navigateToQuestHome,
                 onContextMenu: undefined,
