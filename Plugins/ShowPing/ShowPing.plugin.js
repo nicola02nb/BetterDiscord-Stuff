@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.10
+ * @version 2.6.11
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -32,7 +32,7 @@ const { Webpack, React, Data, DOM, Patcher, UI } = BdApi;
 const { Filters } = Webpack;
 const [DiscordModules, RTCConnectionStore, { labelWrapper, rtcConnectionStatusConnected }, { voiceButtonsContainer }, labelClasses, textMdMedium, ConnectionStatus] =
     Webpack.getBulk(
-        { filter: (m => m.dispatch && m.subscribe) },
+        { filter: Filters.byKeys("subscribe", "dispatch"), searchExports: true },
         { filter: Filters.byStoreName("RTCConnectionStore") },
         { filter: Filters.byKeys("labelWrapper", "rtcConnectionStatusConnected") },
         { filter: Filters.byKeys("voiceButtonsContainer") },
@@ -110,7 +110,7 @@ module.exports = class ShowPing {
             .${labelClasses["hover"]} > div {text-overflow: ellipsis; overflow: hidden;}
             .pingDisplay {min-width: min-content;}`);
 
-        Patcher.after(this.meta.name, ConnectionStatus, "Z", (_, args, ret) => {
+        Patcher.after(this.meta.name, ConnectionStatus, "A", (_, args, ret) => {
             const container = ret;
             container.props.children = [container.props.children];
             if (Array.isArray(container?.props?.children)) {
@@ -118,6 +118,10 @@ module.exports = class ShowPing {
             }
             return ret;
         });
+
+        if (this.settings.hideKrispButton) {
+            this.displayKrispButton(false);
+        }
     }
 
     stop() {
@@ -146,7 +150,7 @@ module.exports = class ShowPing {
         if (show) {
             DOM.removeStyle(this.meta.name + "-hidekrispStyle");
         } else {
-            DOM.addStyle(this.meta.name + "-hidekrispStyle", `.${voiceButtonsContainer} > button[aria-label*="Krisp"] {display: none !important;}`);
+            DOM.addStyle(this.meta.name + "-hidekrispStyle", `.${voiceButtonsContainer} > button:first-child:has(+ span) {display: none;}`); // TODO: improve selector
         }
     }
 };

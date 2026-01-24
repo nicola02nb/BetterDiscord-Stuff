@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.16
+ * @version 1.4.17
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -134,7 +134,7 @@ module.exports = class NotifyWhenMuted {
         this.isPlaying = false;
 
         Patcher.after(this.meta.name, MediaEngineStore, "getSpeakingWhileMuted", this.handleSpeak);
-        Patcher.after(this.meta.name, voiceButtonsContainer, "Z", this.addButton);
+        Patcher.after(this.meta.name, voiceButtonsContainer, "A", this.addButton);
     }
 
     stop() {

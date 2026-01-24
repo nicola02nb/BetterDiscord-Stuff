@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status when you are muted, connected to a server or when disconnected from a server.
- * @version 1.9.3
+ * @version 1.9.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -46,11 +46,10 @@ function getSetting(key) {
 
 const { Webpack, Data, UI, Patcher } = BdApi;
 const { Filters } = Webpack;
-const [DiscordModules, RTCConnectionStore, MediaEngineStore, UserSettingsProtoStore, UserSettingsProtoUtils] = Webpack.getBulk(
-    { filter: (m => m.dispatch && m.subscribe) },
+const [DiscordModules, RTCConnectionStore, MediaEngineStore, UserSettingsProtoUtils] = Webpack.getBulk(
+    { filter: Filters.byKeys("subscribe", "dispatch"), searchExports: true },
     { filter: Filters.byStoreName("RTCConnectionStore") },
     { filter: Filters.byStoreName("MediaEngineStore") },
-    { filter: Filters.byStoreName("UserSettingsProtoStore") },
     { filter: m => m.ProtoClass && m.ProtoClass.typeName.endsWith(".PreloadedUserSettings"), first: true, searchExports: true }
 );
 

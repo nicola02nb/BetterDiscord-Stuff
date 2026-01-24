@@ -1,7 +1,7 @@
 /**
  * @name PushToMute
  * @description A plugin that adds a keybind to mute the microphone while it is pressed.
- * @version 1.0.6
+ * @version 1.0.7
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -24,7 +24,7 @@ function getSetting(key) {
 }
 
 const { Webpack, Data, UI } = BdApi;
-const DiscordModules = Webpack.getModule(m => m.dispatch && m.subscribe);
+const DiscordModules = Webpack.getModuleFilters.byKeys("subscribe", "dispatch", { searchExports: true });
 
 const MediaEngineStore = Webpack.getStore("MediaEngineStore");
 
@@ -85,16 +85,16 @@ module.exports = class BasePlugin {
 
     showChangelog() {
         const savedVersion = Data.load(this.meta.name, "version");
-		if (savedVersion !== this.meta.version) {
-			if(config.changelog.length > 0){
+        if (savedVersion !== this.meta.version) {
+            if (config.changelog.length > 0) {
                 UI.showChangelogModal({
                     title: this.meta.name,
                     subtitle: this.meta.version,
                     changes: config.changelog
                 });
             }
-			Data.save(this.meta.name, "version", this.meta.version);
-		}
+            Data.save(this.meta.name, "version", this.meta.version);
+        }
     }
 
     start() {
@@ -121,7 +121,7 @@ module.exports = class BasePlugin {
         const isMuted = MediaEngineStore.isSelfMute();
         if (!isMuted) return;
         this.toggleMute();
-    }   
+    }
 
     keyDown() {
         const isMuted = MediaEngineStore.isSelfMute();
