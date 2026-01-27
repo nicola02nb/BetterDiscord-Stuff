@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.2.3
+ * @version 1.3.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,7 +9,7 @@
  */
 const config = {
     changelog: [
-        //{ title: "New Features", type: "added", items: ["Added changelog"] },
+        { title: "New Features", type: "added", items: ["Improved keyboard shortcut recording and registration"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
         //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
@@ -18,11 +18,11 @@ const config = {
         { type: "number", id: "displayNumber", name: "Default Display to Screenshare", note: "Set the default display number to screenshare.", value: 1, min: 1, max: 1, step: 1 },
         {
             type: "category", id: "keybinds", name: "Keybinds", settings: [
-                { type: "keybind", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", clearable: true, value: [] },
-                { type: "keybind", id: "startStreamShortcut", name: "Start Stream Shortcut", note: "Set the shortcut to start the stream.", clearable: true, value: [] },
-                { type: "keybind", id: "stopStreamShortcut", name: "Stop Stream Shortcut", note: "Set the shortcut to stop the stream.", clearable: true, value: [] },
-                { type: "keybind", id: "toggleGameOrScreenShortcut", name: "Toggle Game/Screen Shortcut", note: "Set the shortcut to toggle between sharing game or screen.", clearable: true, value: [] },
-                { type: "keybind", id: "toggleAudioShortcut", name: "Toggle Audio Shortcut", note: "Set the shortcut to toggle audio sharing.", clearable: true, value: [] },
+                { type: "custom", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", children: [], value: [] },
+                { type: "custom", id: "startStreamShortcut", name: "Start Stream Shortcut", note: "Set the shortcut to start the stream.", children: [], value: [] },
+                { type: "custom", id: "stopStreamShortcut", name: "Stop Stream Shortcut", note: "Set the shortcut to stop the stream.", children: [], value: [] },
+                { type: "custom", id: "toggleGameOrScreenShortcut", name: "Toggle Game/Screen Shortcut", note: "Set the shortcut to toggle between sharing game or screen.", children: [], value: [] },
+                { type: "custom", id: "toggleAudioShortcut", name: "Toggle Audio Shortcut", note: "Set the shortcut to toggle audio sharing.", children: [], value: [] },
             ]
         },
         {
@@ -39,7 +39,8 @@ function getSetting(key) {
     return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
 }
 
-const { Webpack, UI, Data } = BdApi;
+const { Webpack, UI, Data, React, Components, DOM } = BdApi;
+const { Button, Flex, Text, Tooltip } = Components;
 const { Filters } = Webpack;
 
 const [ApplicationStreamingStore, StreamRTCConnectionStore, MediaEngineStore, RunningGameStore, RTCConnectionStore,
@@ -53,12 +54,7 @@ const [ApplicationStreamingStore, StreamRTCConnectionStore, MediaEngineStore, Ru
         { filter: Filters.byStrings("\"STREAM_STOP\""), searchExports: true }
     );
 
-const DiscordUtils = DiscordNative.nativeModules.requireModule("discord_utils");
-const platform = process.platform;
-const ctrl = platform === "win32" ? 0xa2 : platform === "darwin" ? 0xe0 : 0x25;
-const keybindModule = Webpack.getModule(m => m.ctrl === ctrl, { searchExports: true });
-
-const TOGGLE_STREAM_KEYBIND = 3000;
+const [TOGGLE_STREAM_KEYBIND, TOGGLE_GAME_OR_SCREEN_KEYBIND, TOGGLE_AUDIO_KEYBIND, START_STREAM_KEYBIND, STOP_STREAM_KEYBIND] = [30000, 30001, 30002, 30003, 30004];
 
 module.exports = class ShortcutScreenshareScreen {
     constructor(meta) {
@@ -75,17 +71,17 @@ module.exports = class ShortcutScreenshareScreen {
             }
         });
 
-        this.keyBindsIds = [];
-
         this.streamChannelId = null;
         this.streamGuildId = null;
         this.streamOptions = null;
 
-        this.toggleStreamHandle = this.toggleStream.bind(this);
-        this.toggleGameOrScreenHandle = this.toggleGameOrScreen.bind(this);
-        this.toggleAudiohandle = this.toggleAudio.bind(this);
-        this.startStreamHandle = this.startStream.bind(this);
-        this.stopStreamHandle = this.stopStream.bind(this);
+        this.shortcuts = {
+            toggleStreamShortcut: { id: TOGGLE_STREAM_KEYBIND, callback: this.toggleStream.bind(this) },
+            toggleGameOrScreenShortcut: { id: TOGGLE_GAME_OR_SCREEN_KEYBIND, callback: this.toggleGameOrScreen.bind(this) },
+            toggleAudioShortcut: { id: TOGGLE_AUDIO_KEYBIND, callback: this.toggleAudio.bind(this) },
+            startStreamShortcut: { id: START_STREAM_KEYBIND, callback: this.startStream.bind(this) },
+            stopStreamShortcut: { id: STOP_STREAM_KEYBIND, callback: this.stopStream.bind(this) }
+        }
     }
 
     initSettings(settings = config.settings) {
@@ -99,40 +95,34 @@ module.exports = class ShortcutScreenshareScreen {
     }
 
     getSettingsPanel() {
+        const onChange = (category, id, value) => {
+            this.settings[id] = value;
+            switch (id) {
+                case "toggleStreamShortcut":
+                case "toggleGameOrScreenShortcut":
+                case "toggleAudioShortcut":
+                case "startStreamShortcut":
+                case "stopStreamShortcut":
+                    this.updateKeybind(id);
+                    break;
+                case "disablePreview":
+                    this.updateStream({ previewDisabled: value });
+                    break;
+                case "shareAudio":
+                    this.updateStream({ sound: value });
+                    break;
+            }
+        };
+
+        config.settings[1].settings[0].children = [React.createElement(ReadKeybind, { id: "toggleStreamShortcut", value: this.settings.toggleStreamShortcut, onChange: onChange })];
+        config.settings[1].settings[1].children = [React.createElement(ReadKeybind, { id: "startStreamShortcut", value: this.settings.startStreamShortcut, onChange: onChange })];
+        config.settings[1].settings[2].children = [React.createElement(ReadKeybind, { id: "stopStreamShortcut", value: this.settings.stopStreamShortcut, onChange: onChange })];
+        config.settings[1].settings[3].children = [React.createElement(ReadKeybind, { id: "toggleGameOrScreenShortcut", value: this.settings.toggleGameOrScreenShortcut, onChange: onChange })];
+        config.settings[1].settings[4].children = [React.createElement(ReadKeybind, { id: "toggleAudioShortcut", value: this.settings.toggleAudioShortcut, onChange: onChange })];
+
         return UI.buildSettingsPanel({
             settings: config.settings,
-            onChange: (category, id, value) => {
-                this.settings[id] = value;
-                switch (id) {
-                    case "toggleStreamShortcut":
-                        this.updateKeybinds();
-                        break;
-                    case "toggleGameOrScreenShortcut":
-                        this.updateKeybinds();
-                        break;
-                    case "toggleAudioShortcut":
-                        this.updateKeybinds();
-                        break;
-                    case "startStreamShortcut":
-                        this.updateKeybinds();
-                        break;
-                    case "stopStreamShortcut":
-                        this.updateKeybinds();
-                        break;
-                    case "disablePreview":
-                        this.settings.shareAudio
-                        if (this.streamOptions)
-                            this.streamOptions.previewDisabled = value;
-                        this.updateStream();
-                        break;
-                    case "shareAudio":
-                        this.settings.shareAudio
-                        if (this.streamOptions)
-                            this.streamOptions.sound = value;
-                        this.updateStream();
-                        break;
-                }
-            }
+            onChange: onChange,
         });
     }
 
@@ -154,10 +144,12 @@ module.exports = class ShortcutScreenshareScreen {
         this.initSettings();
         this.showChangelog();
 
-        this.updateKeybinds();
+        this.registerKeybinds();
+        DOM.addStyle(this.meta.name, style);
     }
 
     stop() {
+        DOM.removeStyle(this.meta.name);
         this.unregisterKeybinds();
     }
 
@@ -295,8 +287,14 @@ module.exports = class ShortcutScreenshareScreen {
         this.streamOptions = this.getStreamOptions(windowPreview && streamGame ? windowPreview : screenPreview);
     }
 
-    updateStream() {
+    updateStream({ previewDisabled = null, sound = null } = {}) {
         if (ApplicationStreamingStore.getCurrentUserActiveStream() && this.streamGuildId && this.streamChannelId && this.streamOptions) {
+            if (previewDisabled !== null) {
+                this.streamOptions.previewDisabled = previewDisabled;
+            }
+            if (sound !== null) {
+                this.streamOptions.sound = sound;
+            }
             streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
             return true;
         } else {
@@ -304,119 +302,218 @@ module.exports = class ShortcutScreenshareScreen {
         }
     }
 
-    updateKeybinds() {
+    updateKeybind(id) {
+        const shortcut = this.shortcuts[id];
+        if (shortcut) {
+            registerKeybind(shortcut.id, this.settings[id], shortcut.callback);
+        }
+    }
+
+    registerKeybinds() {
         this.unregisterKeybinds();
-        const shortcuts = {
-            toggleStreamShortcut: this.toggleStreamHandle,
-            toggleGameOrScreenShortcut: this.toggleGameOrScreenHandle,
-            toggleAudioShortcut: this.toggleAudiohandle,
-            startStreamShortcut: this.startStreamHandle,
-            stopStreamShortcut: this.stopStreamHandle
-        };
 
-        let i = 0;
-
-        for (const [shortcutName, shortcutFunction] of Object.entries(shortcuts)) {
-            if (this.settings[shortcutName]?.length > 0) {
-                const mappedKeybinds = this.mapKeybind(this.settings[shortcutName]);
-                for (const keybind of mappedKeybinds) {
-                    if (keybind.length === this.settings[shortcutName].length) {
-                        this.registerKeybind(TOGGLE_STREAM_KEYBIND + i, keybind, shortcutFunction);
-                        i++;
-                    } else {
-                        console.error("Keybind mapping failed for keybind: ", this.settings[shortcutName]);
-                    }
-                }
-            }
+        for (const [settingId, shortcut] of Object.entries(this.shortcuts)) {
+            const keys = this.settings[settingId];
+            registerKeybind(shortcut.id, keys, shortcut.callback);
         }
-    }
-
-    mapKeybind(keybind) {
-        const mappedKeybinds = [];
-
-        const specialKeys = [];
-        const normalKeys = [];
-
-        const italianSpecialKeysMap = {
-            "à": "#",
-            "°": "#",
-            "#": "#",
-            "è": ";",
-            "é": ";",
-            "[": ";",
-            "{": ";",
-            "+": "=",
-            "*": "=",
-            "]": "=",
-            "}": "=",
-            "ì": "]",
-            "^": "]",
-            "'": "[",
-            "?": "[",
-            "ò": "@",
-            "ç": "@",
-            "@": "@",
-            "ù": "/",
-            "§": "/",
-            "<": "numpad =",
-            ">": "numpad =",
-        };
-
-        for (const key of keybind) {
-            let keyL = key.toLowerCase();
-            if (keyL === "control") keyL = "ctrl";
-            if (keyL.startsWith("arrow")) keyL = keyL.replace("arrow", "");
-            if (keyL.startsWith("page")) keyL = keyL.replace("page", "page ");
-            if (keyL.startsWith("delete")) keyL = keyL.replace("delete", "del");
-            if (italianSpecialKeysMap[keyL]) keyL = italianSpecialKeysMap[keyL];
-
-            if (keyL === "ctrl" || keyL === "shift" || keyL === "alt" || keyL === "meta") {
-                specialKeys.push(keyL);
-            }
-            else {
-                normalKeys.push(keyL);
-            }
-        };
-
-        const numberOfCombinations = Math.pow(2, specialKeys.length);
-        for (let i = 0; i < numberOfCombinations; i++) {
-            const combination = [];
-            for (let j = 0; j < specialKeys.length; j++) {
-                if ((i & Math.pow(2, j)) > 0) {
-                    combination.push([0, keybindModule[specialKeys[j]]]);
-                }
-                else {
-                    combination.push([0, keybindModule["right " + specialKeys[j]]]);
-                }
-            }
-            mappedKeybinds.push(combination);
-        }
-        for (const mappedKeybind of mappedKeybinds) {
-            for (const key of normalKeys) {
-                const keyCode = keybindModule[key];
-                if (keyCode) {
-                    mappedKeybind.push([0, keyCode]);
-                }
-            }
-        }
-
-        return mappedKeybinds;
-    }
-
-    registerKeybind(id, keybind, toCall) {
-        DiscordUtils.inputEventRegister(
-            id,
-            keybind,
-            (isDown) => { if (isDown) toCall() },
-            { blurred: true, focused: true, keydown: true, keyup: false }
-        );
-        this.keyBindsIds.push(id);
     }
 
     unregisterKeybinds() {
-        for (const id of this.keyBindsIds) {
-            DiscordUtils.inputEventUnregister(id);
+        for (const shortcut of Object.values(this.shortcuts)) {
+            unregisterKeybind(shortcut.id);
         }
-        this.keyBindsIds = [];
     }
-};
+}
+
+const DiscordUtils = DiscordNative.nativeModules.requireModule("discord_utils");
+const keycodesToStringModule = Webpack.getBySource(".map(", ".KEYBOARD_KEY", ".KEYBOARD_MODIFIER_KEY", ".MOUSE_BUTTON", ".GAMEPAD_BUTTON");
+const keycodesToStringKey = Object.keys(keycodesToStringModule).find(key => {
+    const funcStr = keycodesToStringModule[key].toString();
+    return funcStr.includes(".KEYBOARD_KEY") && funcStr.includes(".KEYBOARD_MODIFIER_KEY") && funcStr.includes(".MOUSE_BUTTON") && funcStr.includes(".GAMEPAD_BUTTON");
+});
+const keycodesToString = keycodesToStringModule[keycodesToStringKey];
+const BinIconModule = Webpack.getBySource("M14.25 1c.41 0");
+const BinIcon = BinIconModule[Object.keys(BinIconModule)[0]];
+
+function registerKeybind(id, keys, callback) {
+    unregisterKeybind(id);
+    if (Array.isArray(keys) && keys.length > 0) {
+        DiscordUtils.inputEventRegister(
+            id,
+            keys,
+            (isDown) => { if (isDown) callback() },
+            { blurred: true, focused: true, keydown: true, keyup: false }
+        );
+    }
+}
+
+function unregisterKeybind(id) {
+    DiscordUtils.inputEventUnregister(id);
+}
+
+function ReadKeybind({ id, value, onChange, disabled }) {
+    const [recording, setRecording] = React.useState(false);
+    const [keys, setKeys] = React.useState(value || []);
+    const stopCapture = React.useRef(undefined);
+
+    function updateRecording() {
+        if (!recording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    }
+
+    function handleKeybindCapture(keys) {
+        stopRecording();
+        if (keys.length) {
+            onChange(null, id, keys);
+            setKeys(keys);
+        }
+    }
+
+    function startRecording() {
+        setRecording(true);
+        if (!stopCapture.current) {
+            stopCapture.current = DiscordUtils.inputCaptureRegisterElement(id, handleKeybindCapture);
+        }
+    }
+
+    function stopRecording() {
+        setRecording(false);
+        /* if (stopCapture.current) {
+            stopCapture.current();
+            stopCapture.current = undefined;
+        } */
+    }
+
+    function handleClear() {
+        onChange(null, id, []);
+        setKeys([]);
+        stopRecording();
+    }
+
+    return React.createElement(Tooltip, { text: keycodesToString(keys).toUpperCase() || "No Keybind Set" },
+        ({ onMouseEnter, onMouseLeave }) =>
+            React.createElement("div", {
+                className: "bd-setting-recorder-container" + (recording ? " recording" : "") + (disabled ? " disabled" : ""),
+                onMouseEnter: onMouseEnter, onMouseLeave: onMouseLeave
+            },
+                React.createElement(Flex, {
+                    className: "bd-setting-recorder-layout",
+                    flexDirection: Flex.Direction.HORIZONTAL,
+                    justify: Flex.Justify.END,
+                    alignItems: Flex.Align.CENTER
+                },
+                    React.createElement(FocusedInput, {
+                        id: id,
+                        onBlur: stopRecording,
+                        recording: recording,
+                        disabled: disabled,
+                        value: keycodesToString(keys).toUpperCase()
+                    }),
+                    [
+                        React.createElement(Button, {
+                            className: "bd-setting-recorder-button",
+                            color: recording ? Button.Colors.RED : Button.Colors.TRANSPARENT,
+                            size: Button.Sizes.SMALL,
+                            onClick: updateRecording, onMouseDown: e => e.preventDefault()
+                        },
+                            React.createElement(Text, { style: { color: "inherit" } },
+                                !recording ? value.length ? "Record Keybind" : "Edit Keybind" : "Stop Recording"
+                            )
+                        ),
+                        React.createElement(Button, {
+                            className: "bd-setting-recorder-button",
+                            color: Button.Colors.RED,
+                            size: Button.Sizes.ICON,
+                            onClick: handleClear, onMouseDown: e => e.preventDefault(),
+                            disabled: keys.length === 0 || disabled,
+                            title: "Clear Keybind"
+                        }, React.createElement(BinIcon, null))
+                    ]
+                )
+            )
+    );
+}
+
+function FocusedInput({ id, onBlur, recording, disabled, value }) {
+    const inputRef = React.useRef(null);
+    React.useEffect(() => {
+        if (recording) {
+            inputRef.current?.focus();
+        } else {
+            inputRef.current?.blur();
+        }
+    }, [recording]);
+
+    return React.createElement("input", {
+        id: id,
+        onBlur: onBlur,
+        type: "text",
+        readOnly: true,
+        disabled: disabled,
+        value: value,
+        placeholder: "No Keybind Set",
+        className: "bd-setting-recorder-input",
+        ref: inputRef
+    });
+}
+
+const style = `
+.bd-setting-recorder-layout {
+    cursor: pointer;
+}
+
+.bd-setting-recorder-container {
+    transition: border .15s ease;
+    background-color: var(--input-background-default, #0000001f);
+    border: 1px solid;
+    border-color: var(--input-border-default, #97979f33);
+    border-radius: var(--radius-sm, 8px);
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.bd-setting-recorder-container.recording {
+    animation: bd-setting-recorder-shadowpulse 1s ease-in infinite;
+    border-color: hsl(var(--red-400-hsl, #da3e4499) / 60%);
+    box-shadow: 0 0 6px hsl(var(--red-400-hsl, #da3e4499) / 30%);
+    color: var(--status-danger, #da3e44);
+}
+
+.bd-setting-recorder-container.disabled {
+    cursor: not-allowed;
+    opacity: .3;
+}
+
+@keyframes bd-setting-recorder-shadowpulse {
+    0% {
+        box-shadow: 0 0 6px hsl(var(--red-400-hsl)/30%)
+    }
+
+    50% {
+        box-shadow: 0 0 10px hsl(var(--red-400-hsl)/60%)
+    }
+
+    100% {
+        box-shadow: 0 0 6px hsl(var(--red-400-hsl)/30%)
+    }
+}
+
+.bd-setting-recorder-button {
+    margin: 4px;
+}
+
+input.bd-setting-recorder-input {
+    font-size: 14px;
+    font-weight: var(--font-weight-semibold, 600);
+    user-select: none;
+    border: none;
+    padding-block: 10px;
+    padding-inline: 10px 0;
+    white-space: nowrap;
+    background-color: transparent;
+    color: var(--text-normal, #fff);
+    width: 100px;
+}`;
