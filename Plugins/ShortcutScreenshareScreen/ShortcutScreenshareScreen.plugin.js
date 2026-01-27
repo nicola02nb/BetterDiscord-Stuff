@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.3.0
+ * @version 1.3.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -420,7 +420,7 @@ function ReadKeybind({ id, value, onChange, disabled }) {
                             onClick: updateRecording, onMouseDown: e => e.preventDefault()
                         },
                             React.createElement(Text, { style: { color: "inherit" } },
-                                !recording ? value.length ? "Record Keybind" : "Edit Keybind" : "Stop Recording"
+                                !recording ? keys.length ? "Edit Keybind" : "Record Keybind" : "Stop Recording"
                             )
                         ),
                         React.createElement(Button, {
