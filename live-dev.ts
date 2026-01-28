@@ -21,8 +21,8 @@ for (const type of types) {
                         watchRecursively(fullPath);
                     }
                 });
-                console.log(`File ${filename} was ${eventType} in ${dir}`);
                 if (filename.endsWith(".js") || filename.endsWith(".css")) {
+                    console.log(`File ${filename} was ${eventType} in ${dir}`);
                     const destDir = path.join(process.env.APPDATA || "", "BetterDiscord", type + "s");
                     const destPath = path.join(destDir, filename);
                     fs.copyFile(fullPath, destPath, (err) => {
