@@ -248,7 +248,6 @@ module.exports = class ShortcutScreenshareScreen {
             "soundboard favorites section"
         ];
         SendSoundboardSoundModule[SendSoundboardSoundKey](sound, channelId, locations, 1);
-        console.log("Playing soundboard sound via shortcut:", sound);
         this.showToast(`Playing sound: ${sound.name} ${sound.emojiName}`, "info");
     }
 
@@ -264,7 +263,6 @@ module.exports = class ShortcutScreenshareScreen {
 
     registerShortcut(soundId, shortcut) {
         const toCall = () => {
-            console.log("Shortcut pressed for soundId:", soundId);
             this.playSound(soundId);
         };
         registerKeybind(shortcut.id, shortcut.keys, toCall);
