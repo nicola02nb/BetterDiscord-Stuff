@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.11
+ * @version 2.6.12
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -150,7 +150,7 @@ module.exports = class ShowPing {
         if (show) {
             DOM.removeStyle(this.meta.name + "-hidekrispStyle");
         } else {
-            DOM.addStyle(this.meta.name + "-hidekrispStyle", `.${voiceButtonsContainer} > button:first-child:has(+ span) {display: none;}`); // TODO: improve selector
+            DOM.addStyle(this.meta.name + "-hidekrispStyle", `.${voiceButtonsContainer} > button[aria-label$="Krisp"] {display: none;}`); // TODO: improve selector
         }
     }
 };
