@@ -201,7 +201,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     showToast(message, type) {
         if (this.settings.showToast) {
-            UI.showToast(message, { type: type, icon: false });
+            UI.showToast(message, { type: type, icon: true });
         }
     }
 
@@ -225,22 +225,28 @@ module.exports = class ShortcutScreenshareScreen {
 
     async fetchSoundboardSounds() {
         if (!SoundboardStore.hasFetchedAllSounds()) {
+            this.showToast("Fetching soundboard sounds...", "info");
             await FetchSoundboardSoundsModule[FetchSoundboardSoundsKey]();
-            console.log("Sounds not fetched yet, fetching sounds before playing.");
-            return;
         }
     }
 
     playSound(soundId) {
+        const sound = SoundboardStore.getSoundById(soundId);
+        const channelId = RTCConnectionStore.getChannelId();
+        if (!sound) {
+            this.showToast(`Sound with ID ${soundId} not found.`, "error");
+            return;
+        }
+        if (!channelId) {
+            this.showToast("You are not in a voice channel.", "error");
+            return;
+        }
         const currentTime = Date.now();
         if (currentTime - this.lastSendTime < this.settings.delayBetweenSounds) {
-            console.log("Delay between sounds not met, skipping sound play.");
+            this.showToast("Please wait before playing another sound.", "warning");
             return;
         }
         this.lastSendTime = currentTime;
-        const sound = SoundboardStore.getSoundById(soundId);
-        const channelId = RTCConnectionStore.getChannelId();
-        if (!sound || !channelId) return;
         const locations = [
             "rtc panel",
             "soundboard button",
@@ -248,7 +254,7 @@ module.exports = class ShortcutScreenshareScreen {
             "soundboard favorites section"
         ];
         SendSoundboardSoundModule[SendSoundboardSoundKey](sound, channelId, locations, 1);
-        this.showToast(`Playing sound: ${sound.name} ${sound.emojiName}`, "info");
+        this.showToast(`Playing sound: ${sound.name} ${sound.emojiName}`, "success");
     }
 
     registerShortcuts() {
