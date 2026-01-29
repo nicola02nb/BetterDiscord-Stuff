@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.8
+ * @version 1.5.9
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -58,7 +58,7 @@ const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
     ChannelStore, GuildChannelStore, RestApi, QuestApplyAction, QuestLocationMap,
     QuestIcon, { navigateToQuestHome }, CountBadge,
     windowArea, SettingsBarModule, trailingModule,
-    SettingsBarButton] = Webpack.getBulk(
+    SettingsBarButton, TopBarButtonModule] = Webpack.getBulk(
         { filter: Filters.byKeys("subscribe", "dispatch"), searchExports: true },
         { filter: Filters.byStoreName("ApplicationStreamingStore") },
         { filter: Filters.byStoreName("RunningGameStore") },
@@ -75,9 +75,14 @@ const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
         { filter: Filters.byStrings("handleToggleSelfMute"), searchExports: true },
         { filter: Filters.byKeys('bar', 'trailing') },
         { filter: Filters.byStrings("keyboardShortcut", "positionKey"), searchExports: true },
+        { filter: Filters.bySource("iconClassName:", "children:", "badgePosition:") }
     );
 
-const TopBarButton = [...Webpack.getWithKey(Filters.byStrings("badgePosition:"), { searchExports: true })];
+const TopBarButtonKey = Object.keys(TopBarButtonModule).find(key => {
+    if (!TopBarButtonModule[key]?.render) return false;
+    const funcStr = TopBarButtonModule[key].render.toString();
+    return funcStr.includes("iconClassName:") && funcStr.includes("children:") && funcStr.includes("badgePosition:");
+});
 const QuestButtonWithKey = [...Webpack.getWithKey(Filters.byStrings("focusProps:", "interactiveClassName:"))];
 const trailing = trailingModule.trailing;
 const { Tooltip, Flex } = Components;
@@ -128,7 +133,7 @@ module.exports = class BasePlugin {
             onChange: (category, id, value) => {
                 this.settings[id] = value;
                 switch (id) {
-                    case "showQuestsButtonTopBar":
+                    case "showQuestsButtonTitleBar":
                         if (value) {
                             this.patchTitleBar();
                         } else {
@@ -358,7 +363,7 @@ module.exports = class BasePlugin {
     }
 
     patchTitleBar() {
-        if (this.settings.showQuestsButtonTopBar) {
+        if (this.settings.showQuestsButtonTitleBar) {
             Patcher.after(this.meta.name + "-title-bar", windowArea, "cq", (_, [props], ret) => {
                 if (props.windowKey?.startsWith("DISCORD_")) return ret;
                 if (props.trailing?.props?.children) {
@@ -693,7 +698,7 @@ module.exports = class BasePlugin {
         const className = state.enrollable ? "quest-button-enrollable" : state.enrolled ? "quest-button-enrolled" : state.claimable ? "quest-button-claimable" : "";
         const tooltip = state.enrollable ? `${state.enrollable} Enrollable Quests` : state.enrolled ? `${state.enrolled} Enrolled Quests` : state.claimable ? `${state.claimable} Claimable Quests` : "Quests";
         if (type === "title-bar") {
-            return React.createElement(TopBarButton[0], {
+            return React.createElement(TopBarButtonModule[TopBarButtonKey], {
                 className: className,
                 iconClassName: undefined,
                 disabled: navigateToQuestHome === undefined,
@@ -714,7 +719,7 @@ module.exports = class BasePlugin {
                 onClick: navigateToQuestHome,
                 disabled: navigateToQuestHome === undefined,
                 className: "quest-button"
-            }, React.createElement(TopBarButton[0], {
+            }, React.createElement(TopBarButtonModule[TopBarButtonKey], {
                 className: className,
                 iconClassName: undefined,
                 disabled: navigateToQuestHome === undefined,
