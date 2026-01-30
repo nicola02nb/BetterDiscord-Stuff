@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.17.5
+ * @version 2.17.6
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -233,7 +233,7 @@ module.exports = class BetterTTS {
                 },
                 options: [{ label: "Select", value: "" }, ...options.map((option, index) => {
                     let obj = getFunction(option);
-                    let name = obj?.name ?? obj?.username;
+                    let name = obj?.name !== "" ? obj?.name : obj?.rawRecipients?.map(r => r?.username).join(", ") ?? option;
                     return { label: name, value: option };
                 })]
             },),
