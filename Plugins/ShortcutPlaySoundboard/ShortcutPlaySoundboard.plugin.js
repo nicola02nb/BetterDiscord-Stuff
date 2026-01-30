@@ -28,9 +28,10 @@ const { Webpack, UI, Data, React, Components, DOM, Patcher } = BdApi;
 const { Button, Flex, Text, Tooltip, SettingItem, DropdownInput } = Components;
 const { Filters } = Webpack;
 
-const [RTCConnectionStore, SoundboardStore] = Webpack.getBulk(
+const [RTCConnectionStore, SoundboardStore, MediaEngineStore] = Webpack.getBulk(
     { filter: Filters.byStoreName("RTCConnectionStore") },
-    { filter: Filters.byStoreName("SoundboardStore") }
+    { filter: Filters.byStoreName("SoundboardStore") },
+    { filter: Filters.byStoreName("MediaEngineStore") }
 );
 const SoundboardButtonModule = Webpack.getBySource("soundButtonProps:", "inspectedExpressionPosition");
 const SoundboardButtonKey = Object.keys(SoundboardButtonModule).find(key => {
@@ -201,7 +202,7 @@ module.exports = class ShortcutScreenshareScreen {
 
     showToast(message, type) {
         if (this.settings.showToast) {
-            UI.showToast(message, { type: type, icon: true });
+            UI.showToast(message, { type: type, icon: false });
         }
     }
 
@@ -238,7 +239,11 @@ module.exports = class ShortcutScreenshareScreen {
             return;
         }
         if (!channelId) {
-            this.showToast("You are not in a voice channel.", "error");
+            this.showToast("You are not in a voice channel.", "warning");
+            return;
+        }
+        if (MediaEngineStore.isSelfMute() || MediaEngineStore.isSelfDeaf()) {
+            this.showToast("You are muted or deafened.", "warning");
             return;
         }
         const currentTime = Date.now();
