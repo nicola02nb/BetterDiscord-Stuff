@@ -22,6 +22,13 @@ body:
         - "ShowPing"
     validations:
       required: true
+  - type: checkboxes
+    id: tried_delete_config
+    attributes:
+      label: Have you tried deleting the plugin's config file?
+      description: Deleting the config file can often resolve issues caused by corrupted settings. You can find the config file in the BetterDiscord plugins folder. After deleting the config file, restart Discord and see if the issue persists.
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
