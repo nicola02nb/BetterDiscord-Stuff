@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.17.4
+ * @version 2.17.5
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -571,113 +571,77 @@ module.exports = class BetterTTS {
         this.patchGuildContext = this.patchGuildContextMenu.bind(this);
 
         ContextMenu.patch("user-context", this.patchUserContext);
+        ContextMenu.patch("gdm-context", this.patchChannelContext);
         ContextMenu.patch("channel-context", this.patchChannelContext);
         ContextMenu.patch("guild-context", this.patchGuildContext);
     }
 
     unpatchContextMenus() {
         ContextMenu.unpatch("user-context", this.patchUserContext);
+        ContextMenu.unpatch("gdm-context", this.patchChannelContext);
         ContextMenu.unpatch("channel-context", this.patchChannelContext);
         ContextMenu.unpatch("guild-context", this.patchGuildContext);
     }
 
-    patchUserContextMenu(returnValue, props) {
-        if (!props.user) return;
-        let userId = props.user.id;
-        let channelId = props.channel.id;
-        const buttonFilterUser = button => (button?.props?.id === "mute" || button?.props?.id === "block");
-        const buttonFilterChats = button => (button?.props?.id === "mute-channel" || button?.props?.id === "unmute-channel");
-        let buttonParent1 = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilterUser));
-        let buttonParent2 = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilterChats));
-        let ttsToggleUser = ContextMenu.buildItem({
+    TTSSubscribeButton = ({ label, id, set, option }) => {
+        return ContextMenu.buildItem({
             type: "toggle",
-            label: "Mute TTS Messages",
-            checked: this.ttsMutedUsers.has(userId),
+            label: label,
+            checked: set.has(id),
             action: (newValue) => {
                 if (newValue.currentTarget.ariaChecked
                     !== "true") {
-                    this.ttsMutedUsers.add(userId);
+                    set.add(id);
                 } else {
-                    this.ttsMutedUsers.delete(userId);
+                    set.delete(id);
                 }
-                Data.save(this.meta.name, "ttsMutedUsers", this.ttsMutedUsers);
+                Data.save(this.meta.name, option, set);
             }
         });
-        let ttsTestAnnouceUser = ContextMenu.buildItem({
+    };
+
+    patchUserContextMenu(returnValue, props) {
+        if (!props.user) return;
+        const userId = props.user.id;
+        const channelId = props.channel.id;
+        const buttonFilter = button => (button?.props?.id === "mute" || button?.props?.id === "block");
+        const buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
+        const buttonAnnounceUser = ContextMenu.buildItem({
             type: "button",
             label: "Speak Announcement",
             icon: listenIcon,
             action: () => {
                 const guildId = SelectedGuildStore.getGuildId();
-                let username = this.getUserName(userId, guildId);
+                const username = this.getUserName(userId, guildId);
                 this.audioPlayer.enqueueTTSMessage(`${username} joined`, true);
             }
         });
-        let ttsToggleChat = ContextMenu.buildItem({
-            type: "toggle",
-            label: "TTS Subscribe Chat",
-            checked: this.ttsSubscribedChannels.has(channelId),
-            action: (newValue) => {
-                if (newValue.currentTarget.ariaChecked
-                    !== "true") {
-                    this.ttsSubscribedChannels.add(channelId);
-                } else {
-                    this.ttsSubscribedChannels.delete(channelId);
-                }
-                Data.save(this.meta.name, "ttsSubscribedChannels", this.ttsSubscribedChannels);
-            }
-        });
-        if (Array.isArray(buttonParent1)) {
-            buttonParent1.push(ttsToggleUser);
-            buttonParent1.push(ttsTestAnnouceUser);
+        const buttonMuteUser = this.TTSSubscribeButton({ label: "TTS Mute User", id: userId, set: this.ttsMutedUsers, option: "ttsMutedUsers" });
+        const buttonSubscribeChannel = this.TTSSubscribeButton({ label: "TTS Subscribe Channel", id: channelId, set: this.ttsSubscribedChannels, option: "ttsSubscribedChannels" });
+        if (Array.isArray(buttonParent)) {
+            buttonParent.push(buttonAnnounceUser);
+            buttonParent.push(buttonMuteUser);
+            buttonParent.push(buttonSubscribeChannel);
         }
-        if (Array.isArray(buttonParent2))
-            buttonParent2.push(ttsToggleChat);
     }
 
     patchChannelContextMenu(returnValue, props) {
-        let channelId = props.channel.id;
-        const buttonFilter = button => (button?.props?.id === "mute-channel" || button?.props?.id === "unmute-channel");
-        let buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
-        let ttsGroup = ContextMenu.buildItem({
-            type: "toggle",
-            label: "TTS Subscribe Channel",
-            checked: this.ttsSubscribedChannels.has(channelId),
-            action: (newValue) => {
-                if (newValue.currentTarget.ariaChecked
-                    !== "true") {
-                    this.ttsSubscribedChannels.add(channelId);
-                } else {
-                    this.ttsSubscribedChannels.delete(channelId);
-                }
-                Data.save(this.meta.name, "ttsSubscribedChannels", this.ttsSubscribedChannels);
-            }
-        });
+        const channelId = props.channel.id;
+        const buttonFilter = button => (button?.props?.id === "mute-channel" || button?.props?.id === "unmute-channel" || button?.props?.id === "edit-gdm");
+        const buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
+        const buttonSubscribeChannel = this.TTSSubscribeButton({ label: "TTS Subscribe Channel", id: channelId, set: this.ttsSubscribedChannels, option: "ttsSubscribedChannels" });
         if (Array.isArray(buttonParent))
-            buttonParent.push(ttsGroup);
+            buttonParent.push(buttonSubscribeChannel);
     }
 
     patchGuildContextMenu(returnValue, props) {
         if (!props.guild) return;
-        let guildId = props.guild.id;
+        const guildId = props.guild.id;
         const buttonFilter = button => button?.props?.id === "guild-notifications";
-        let buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
-        let ttsGroup = ContextMenu.buildItem({
-            type: "toggle",
-            label: "TTS Subscribe Server",
-            checked: this.ttsSubscribedGuilds.has(guildId),
-            action: (newValue) => {
-                if (newValue.currentTarget.ariaChecked
-                    !== "true") {
-                    this.ttsSubscribedGuilds.add(guildId);
-                } else {
-                    this.ttsSubscribedGuilds.delete(guildId);
-                }
-                Data.save(this.meta.name, "ttsSubscribedGuilds", this.ttsSubscribedGuilds);
-            }
-        });
+        const buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
+        const buttonSubscribeGuild = this.TTSSubscribeButton({ label: "TTS Subscribe Server", id: guildId, set: this.ttsSubscribedGuilds, option: "ttsSubscribedGuilds" });
         if (Array.isArray(buttonParent))
-            buttonParent.push(ttsGroup);
+            buttonParent.push(buttonSubscribeGuild);
     }
 
     isConnected() {
