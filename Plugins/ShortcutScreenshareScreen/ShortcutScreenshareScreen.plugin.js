@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 1.3.1
+ * @version 2.0.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,29 +9,39 @@
  */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["Improved keyboard shortcut recording and registration"] },
+        { title: "New Features", type: "added", items: ["More fine grained keybind settings"] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
-        //{ title: "Improvements", type: "improved", items: [""] },
+        { title: "Improvements", type: "improved", items: ["Reorganization of keybind settings", "Plugin logic improvements"] },
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
-        { type: "number", id: "displayNumber", name: "Default Display to Screenshare", note: "Set the default display number to screenshare.", value: 1, min: 1, max: 1, step: 1 },
         {
-            type: "category", id: "keybinds", name: "Keybinds", settings: [
-                { type: "custom", id: "toggleStreamShortcut", name: "Toggle Stream Shortcut", note: "Set the shortcut to toggle the stream.", children: [], value: [] },
-                { type: "custom", id: "startStreamShortcut", name: "Start Stream Shortcut", note: "Set the shortcut to start the stream.", children: [], value: [] },
-                { type: "custom", id: "stopStreamShortcut", name: "Stop Stream Shortcut", note: "Set the shortcut to stop the stream.", children: [], value: [] },
-                { type: "custom", id: "toggleGameOrScreenShortcut", name: "Toggle Game/Screen Shortcut", note: "Set the shortcut to toggle between sharing game or screen.", children: [], value: [] },
-                { type: "custom", id: "toggleAudioShortcut", name: "Toggle Audio Shortcut", note: "Set the shortcut to toggle audio sharing.", children: [], value: [] },
+            type: "category", id: "keybinds", name: "Keybinds", collapsible: true, shown: false, settings: [
+                { type: "custom", id: "streamScreenKeybind", name: "Toggle Stream Screen", note: "Toggles start/stop streaming the screen.", children: [], value: [] },
+                { type: "custom", id: "streamDeviceKeybind", name: "Toggle Stream Device", note: "Toggles start/stop streaming the device.", children: [], value: [] },
+                { type: "custom", id: "streamGameKeybind", name: "Toggle Stream Game", note: "Toggles start/stop streaming the game.", children: [], value: [] },
+                { type: "custom", id: "streamStopKeybind", name: "Stop Stream", note: "Stops the current stream.", children: [], value: [] },
+                { type: "custom", id: "toggleSwitchSourceKeybind", name: "Toggle Switch Source Keybind", note: "Set the shortcut to toggle switch between two sources.", children: [], value: [] },
+                { type: "custom", id: "toggleShareAudioKeybind", name: "Toggle Audio Keybind", note: "Set the shortcut to toggle audio sharing.", children: [], value: [] },
+                { type: "custom", id: "toggleSharePreviewKeybind", name: "Toggle Preview Keybind", note: "Set the shortcut to toggle preview.", children: [], value: [] },
             ]
         },
         {
-            type: "category", id: "streamOptions", name: "Stream Options", settings: [
-                { type: "switch", id: "disablePreview", name: "Disable Preview", note: "If enabled, the preview will be disabled.", value: false },
-                { type: "switch", id: "shareAudio", name: "Share Audio", note: "If enabled, the audio will be shared.", value: true },
-                { type: "switch", id: "shareAlwaysScreen", name: "Share Always Screen", note: "If enabled, when you start a stream, it will always screenshare the screen instead of a game.", value: false },
+            type: "category", id: "defaultSources", name: "Default Sources", collapsible: true, shown: false, value: "", settings: [
+                { type: "dropdown", id: "screenToStream", name: "Default Display", note: "Set the default display to stream.", options: [] },
+                { type: "dropdown", id: "deviceToStream", name: "Default Device", note: "Set the default device to stream.", options: [] }
             ]
         },
+        {
+            type: "category", id: "streamOptions", name: "Stream Options", collapsible: true, shown: false, value: "", settings: [
+                { type: "switch", id: "disablePreview", name: "Disable Preview", note: "If enabled, the stream preview will be disabled.", value: false },
+                { type: "switch", id: "shareAudio", name: "Share Audio", note: "If enabled, the stream audio will be shared.", value: true },
+            ]
+        },
+        { type: "dropdown", id: "behaviorWhileIfAlreadyStreaming", name: "Keybind Behavior If Already Streaming", note: "Determines what happens if a keybind is pressed while already streaming.", value: "stopStream", options: [
+            { label: "Stop Stream", value: "stopStream" },
+            { label: "Toggle Source", value: "toggleSource" },
+        ]},
         { type: "switch", id: "showToast", name: "Show Toasts", note: "If enabled, toasts will be shown when the stream is started or stopped.", value: true },
     ]
 };
@@ -44,7 +54,7 @@ const { Button, Flex, Text, Tooltip } = Components;
 const { Filters } = Webpack;
 
 const [ApplicationStreamingStore, StreamRTCConnectionStore, MediaEngineStore, RunningGameStore, RTCConnectionStore,
-    streamStart, streamStop] = Webpack.getBulk(
+    dispatchStreamStart, dispatchStreamStop] = Webpack.getBulk(
         { filter: Filters.byStoreName("ApplicationStreamingStore") },
         { filter: Filters.byStoreName("StreamRTCConnectionStore") },
         { filter: Filters.byStoreName("MediaEngineStore") },
@@ -53,8 +63,6 @@ const [ApplicationStreamingStore, StreamRTCConnectionStore, MediaEngineStore, Ru
         { filter: Filters.byStrings("STREAM_START", "GUILD", "CALL", "OVERLAY"), searchExports: true },
         { filter: Filters.byStrings("\"STREAM_STOP\""), searchExports: true }
     );
-
-const [TOGGLE_STREAM_KEYBIND, TOGGLE_GAME_OR_SCREEN_KEYBIND, TOGGLE_AUDIO_KEYBIND, START_STREAM_KEYBIND, STOP_STREAM_KEYBIND] = [30000, 30001, 30002, 30003, 30004];
 
 module.exports = class ShortcutScreenshareScreen {
     constructor(meta) {
@@ -71,16 +79,20 @@ module.exports = class ShortcutScreenshareScreen {
             }
         });
 
-        this.streamChannelId = null;
-        this.streamGuildId = null;
-        this.streamOptions = null;
+        this.mappedSourcesTypes = {
+            "screen": "game",
+            "device": "screen",
+            "game": "screen",
+        };
 
         this.shortcuts = {
-            toggleStreamShortcut: { id: TOGGLE_STREAM_KEYBIND, callback: this.toggleStream.bind(this) },
-            toggleGameOrScreenShortcut: { id: TOGGLE_GAME_OR_SCREEN_KEYBIND, callback: this.toggleGameOrScreen.bind(this) },
-            toggleAudioShortcut: { id: TOGGLE_AUDIO_KEYBIND, callback: this.toggleAudio.bind(this) },
-            startStreamShortcut: { id: START_STREAM_KEYBIND, callback: this.startStream.bind(this) },
-            stopStreamShortcut: { id: STOP_STREAM_KEYBIND, callback: this.stopStream.bind(this) }
+            streamScreenKeybind: { id: 30001, callback: this.streamScreen.bind(this) },
+            streamDeviceKeybind: { id: 30002, callback: this.streamDevice.bind(this) },
+            streamGameKeybind: { id: 30003, callback: this.streamGame.bind(this) },
+            streamStopKeybind: { id: 30004, callback: this.stopStream.bind(this) },
+            toggleSwitchSourceKeybind: { id: 30005, callback: this.toggleSwitchSource.bind(this) },
+            toggleShareAudioKeybind: { id: 30006, callback: this.toggleShareAudio.bind(this) },
+            toggleSharePreviewKeybind: { id: 30007, callback: this.toggleSharePreview.bind(this) },
         }
     }
 
@@ -94,32 +106,37 @@ module.exports = class ShortcutScreenshareScreen {
         });
     }
 
-    getSettingsPanel() {
+    async getSettingsPanel() {
         const onChange = (category, id, value) => {
             this.settings[id] = value;
             switch (id) {
-                case "toggleStreamShortcut":
-                case "toggleGameOrScreenShortcut":
-                case "toggleAudioShortcut":
-                case "startStreamShortcut":
-                case "stopStreamShortcut":
+                case "streamScreenKeybind":
+                case "streamDeviceKeybind":
+                case "streamGameKeybind":
+                case "streamStopKeybind":
+                case "toggleSwitchSourceKeybind":
+                case "toggleShareAudioKeybind":
+                case "toggleSharePreviewKeybind":
                     this.updateKeybind(id);
                     break;
                 case "disablePreview":
-                    this.updateStream({ previewDisabled: value });
-                    break;
                 case "shareAudio":
-                    this.updateStream({ sound: value });
+                    this.updateStream();
                     break;
             }
         };
 
-        config.settings[1].settings[0].children = [React.createElement(ReadKeybind, { id: "toggleStreamShortcut", value: this.settings.toggleStreamShortcut, onChange: onChange })];
-        config.settings[1].settings[1].children = [React.createElement(ReadKeybind, { id: "startStreamShortcut", value: this.settings.startStreamShortcut, onChange: onChange })];
-        config.settings[1].settings[2].children = [React.createElement(ReadKeybind, { id: "stopStreamShortcut", value: this.settings.stopStreamShortcut, onChange: onChange })];
-        config.settings[1].settings[3].children = [React.createElement(ReadKeybind, { id: "toggleGameOrScreenShortcut", value: this.settings.toggleGameOrScreenShortcut, onChange: onChange })];
-        config.settings[1].settings[4].children = [React.createElement(ReadKeybind, { id: "toggleAudioShortcut", value: this.settings.toggleAudioShortcut, onChange: onChange })];
-
+        config.settings[0].settings[0].children = [React.createElement(ReadKeybind, { id: "streamScreenKeybind", value: this.settings.streamScreenKeybind, onChange: onChange })];
+        config.settings[0].settings[1].children = [React.createElement(ReadKeybind, { id: "streamDeviceKeybind", value: this.settings.streamDeviceKeybind, onChange: onChange })];
+        config.settings[0].settings[2].children = [React.createElement(ReadKeybind, { id: "streamGameKeybind", value: this.settings.streamGameKeybind, onChange: onChange })];
+        config.settings[0].settings[3].children = [React.createElement(ReadKeybind, { id: "streamStopKeybind", value: this.settings.streamStopKeybind, onChange: onChange })];
+        config.settings[0].settings[4].children = [React.createElement(ReadKeybind, { id: "toggleSwitchSourceKeybind", value: this.settings.toggleSwitchSourceKeybind, onChange: onChange })];
+        config.settings[0].settings[5].children = [React.createElement(ReadKeybind, { id: "toggleShareAudioKeybind", value: this.settings.toggleShareAudioKeybind, onChange: onChange })];
+        config.settings[0].settings[6].children = [React.createElement(ReadKeybind, { id: "toggleSharePreviewKeybind", value: this.settings.toggleSharePreviewKeybind, onChange: onChange })];
+        
+        config.settings[1].settings[0].options = await this.getSources("screen").then(sources => [{ label: "Default", value: "" }, ...sources.map((source, index) => ({ label: `Display ${index + 1} - ${source.name}`, value: `${index + 1}`}))]);
+        config.settings[1].settings[1].options = await this.getSources("device").then(sources => [{ label: "Default", value: "" }, ...sources.map(source => ({ label: source.name, value: source.id }))]);
+        
         return UI.buildSettingsPanel({
             settings: config.settings,
             onChange: onChange,
@@ -159,147 +176,216 @@ module.exports = class ShortcutScreenshareScreen {
         }
     }
 
+    isStreaming() {
+        return ApplicationStreamingStore.getCurrentUserActiveStream() !== null;
+    }
+
+    /**
+     * @typedef {"screen" | "device" | "game"} StreamType
+     */
+
+    /**
+     * @returns {string | null}
+     */
     getActiveStreamKey() {
         const activeStream = ApplicationStreamingStore.getCurrentUserActiveStream();
         if (activeStream) {
-            const guildId = activeStream.guildId;
-            if (guildId) {
-                return activeStream.streamType + ":" + guildId + ":" + activeStream.channelId + ":" + activeStream.ownerId;
-            } else {
-                return activeStream.streamType + ":" + activeStream.channelId + ":" + activeStream.ownerId;
+            const { streamType, guildId, channelId, ownerId } = activeStream;
+            switch (streamType) {
+                case 'guild':
+                    return [streamType, guildId, channelId, ownerId].join(":");
+                case 'call':
+                    return [streamType, channelId, ownerId].join(":");
             }
         }
         return null;
     }
 
-    isStreamingWindow() {
-        const streamkey = this.getActiveStreamKey();
-        if (streamkey === null) return false;
-        const streamSource = StreamRTCConnectionStore.getStreamSourceId(streamkey);
-        if (streamSource) {
-            return streamSource.startsWith("window");
+    /**
+     * @returns {StreamType | null}
+     */
+    whatIsStreaming() {
+        if (!this.isStreaming()) {
+            return null;
         }
-        return false;
+        const streamSource = StreamRTCConnectionStore.getStreamSourceId(this.getActiveStreamKey());
+        if (streamSource === null) {
+            return null;
+        } else if (streamSource === undefined) {
+            return "game";
+        } else if (streamSource.startsWith("screen")) {
+            return "screen";
+        } else if (streamSource.startsWith("camera")) {
+            return "device";
+        }
     }
 
-    async getPreviews(functionName, width = 376, height = 212) {
+    /** 
+     * @param {StreamType} type 
+     * @returns {Promise<Array<{ exeName: string | null, id: string | null, name: string | null, pid: number | null }>>}
+     */
+    async getSources(type) {
         const mediaEngine = MediaEngineStore.getMediaEngine();
-        let previews = await mediaEngine[functionName](width, height);
-        if (functionName === "getScreenPreviews") {
-            config.settings[0].max = previews.length;
+        let sources = [];
+        if (type === "screen") {
+            sources = await mediaEngine.getScreenPreviews(376, 212); // name
+        } else if (type === "device") {
+            sources = await mediaEngine.getVideoInputDevices();
+            sources = sources.map(source => ({ ...source, id: "camera:"+source.id, audioSourceId: "default" })); 
+        } else if (type === "game") {
+            const runningGame = RunningGameStore.getVisibleGame();
+            sources = []; // exeName
+            if (runningGame) {
+                sources.push(runningGame);
+            }
         }
-        return previews;
+        sources = sources.map(source => ({ audioSourceId: source?.audioSourceId, exeName: source?.exeName, id: source?.id, name: source?.name, pid: source?.pid, sourceId: source?.sourceId }));
+        return sources;
     }
 
-    async startStream() {
-        this.streamChannelId = RTCConnectionStore.getChannelId();
-        this.streamGuildId = RTCConnectionStore.getGuildId(this.streamChannelId);
-        const activeStream = ApplicationStreamingStore.getCurrentUserActiveStream();
-        if (activeStream) {
-            this.showToast("You are already streaming!", "warning");
-        } else if (this.streamChannelId) {
-            await this.initializeStreamSetting();
-            streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
-            this.showToast("Screenshare started!", "success");
+    /** 
+     * @param {{ id?: string | null, name?: string | null, pid?: number | null }} source
+     */
+    getStreamOptions(source) {
+        return {
+            analyticsLocations: [
+                "rtc panel",
+                "go live modal v2"
+            ],
+            audioSourceId: "default",
+            goLiveModalDurationMs: 6361.5,
+            nativePickerStyleUsed: undefined,
+            pid: source?.pid ? source.pid : undefined,
+            previewDisabled: this.settings.disablePreview,
+            sourcePid: null,
+            sourceIcon: undefined,//base64 icon string
+            sound: this.settings.shareAudio,
+            sourceId: source?.id ? source.id : undefined,
+            sourceName: source?.name ? source.name : undefined,
+        };
+    }
+
+    /** 
+     * @param {StreamType} type 
+     * @returns {Promise<ReturnType<typeof this.getStreamOptions> | null>}
+     */
+    async getStreamOptionsFor(type) {
+        const sources = await this.getSources(type);
+        if (sources.length === 0) {
+            return null;
+        }
+        if (type === "screen") {
+            const displayIndex = (parseInt(this.settings.screenToStream) || 1) - 1;
+            const screenSource = sources[displayIndex] || sources[0];
+            return this.getStreamOptions(screenSource);
+        } else if (type === "device") {
+            const deviceId = this.settings.deviceToStream;
+            const deviceSource = sources.find(source => source.id === deviceId) || sources[0];
+            return this.getStreamOptions(deviceSource);
+        } else if (type === "game") {
+            const gameSource = sources[0];
+            return this.getStreamOptions(gameSource);
+        }
+    }
+
+    /** 
+     * @param {StreamType} type
+     */
+    async startStream(type) {
+        if (RTCConnectionStore.isConnected()) {
+            if (this.isStreaming()) {
+                switch (this.settings.behaviorWhileIfAlreadyStreaming) {
+                    case "stopStream":
+                        await this.stopStream();
+                        break;
+                    case "toggleSource":
+                        const currentType = this.whatIsStreaming();
+                        const newType = currentType === type ? this.mappedSourcesTypes[currentType] : type;
+                        const streamSettings = await this.getStreamOptionsFor(newType);
+                        if (!streamSettings) {
+                            this.showToast(`No available sources to switch to for type ${newType}!`, "error");
+                            return;
+                        }
+                        dispatchStreamStart(RTCConnectionStore.getGuildId(), RTCConnectionStore.getChannelId(), streamSettings);
+                        this.showToast(`Screenshare source switched to ${newType}!`, "info");
+                        break;
+                }
+            } else {
+                const streamSettings = await this.getStreamOptionsFor(type);
+                if (!streamSettings) {
+                    this.showToast(`No available sources to start stream with for type ${type}!`, "error");
+                    return;
+                }
+                dispatchStreamStart(RTCConnectionStore.getGuildId(), RTCConnectionStore.getChannelId(), streamSettings);
+                this.showToast("Screenshare started!", "success");
+            }
         } else {
             this.showToast("No active call to start screenshare!", "error");
         }
     }
 
     async stopStream() {
-        const streamkey = this.getActiveStreamKey();
-        if (streamkey) {
-            streamStop(streamkey);
-            this.streamChannelId = null;
-            this.streamGuildId = null;
-            this.streamOptions = null;
+        if (this.isStreaming()) {
+            const streamkey = this.getActiveStreamKey();
+            dispatchStreamStop(streamkey);
             this.showToast("Screenshare stopped!", "info");
         } else {
             this.showToast("No active screenshare to stop!", "warning");
         }
     }
 
-    async toggleGameOrScreen() {
-        await this.updateStreamSetting();
-        this.updateStream();
-        this.showToast(`Switched to ${!this.isStreamingWindow() ? "screen" : "game"} sharing!`, "info");
-    }
-
-    toggleStream() {
-        if (ApplicationStreamingStore.getCurrentUserActiveStream()) {
-            this.stopStream();
+    async updateStream() {
+        if (this.isStreaming()) {
+            const streamSettings = await this.getStreamOptionsFor(this.whatIsStreaming());
+            if (!streamSettings) {
+                this.showToast(`No available sources to update stream with!`, "error");
+                return;
+            }
+            dispatchStreamStart(RTCConnectionStore.getGuildId(), RTCConnectionStore.getChannelId(), streamSettings);
+            this.showToast("Screenshare updated!", "info");
         } else {
-            this.startStream();
+            this.showToast("No active screenshare to update!", "warning");
         }
     }
 
-    toggleAudio() {
-        if (!this.streamOptions) {
-            return;
+    async streamScreen() {
+        await this.startStream("screen");
+    }
+
+    async streamDevice() {
+        await this.startStream("device");
+    }
+
+    async streamGame() {
+        await this.startStream("game");
+    }
+
+    async toggleSwitchSource() {
+        const currentType = this.whatIsStreaming();
+        if (currentType) {
+            const newType = this.mappedSourcesTypes[currentType];
+            const streamSettings = await this.getStreamOptionsFor(newType);
+            if (!streamSettings) {
+                this.showToast(`No available sources to switch to for type ${newType}!`, "error");
+                return;
+            }
+            dispatchStreamStart(RTCConnectionStore.getGuildId(), RTCConnectionStore.getChannelId(), streamSettings);
+            this.showToast(`Screenshare source switched to ${newType}!`, "info");
+        } else {
+            this.showToast("No active screenshare to switch source on!", "warning");
         }
+    }
+
+    async toggleShareAudio() {
         this.settings.shareAudio = !this.settings.shareAudio;
-        this.streamOptions.sound = this.settings.shareAudio;
-        const updated = this.updateStream();
-        if (updated) {
-            this.showToast(`Audio sharing ${this.settings.shareAudio ? "enabled" : "disabled"}!`, "info");
-        } else {
-            this.showToast("No active screenshare to toggle audio!", "warning");
-        }
+        await this.updateStream();
+        this.showToast(`Stream Audio sharing ${this.settings.shareAudio ? "enabled" : "disabled"}!`, "info");
     }
 
-    getStreamOptions(source) {
-        return {
-            audioSourceId: null,
-            goLiveModalDurationMs: 0,
-            nativePickerStyleUsed: undefined,
-            pid: source?.pid ? source.pid : null,
-            previewDisabled: this.settings.disablePreview,
-            sound: this.settings.shareAudio,
-            sourceId: source?.id ? source.id : null,
-            sourceName: source?.name ? source.name : null,
-        };
-    }
-
-    async initializeStreamSetting() {
-        await this.updateStreamSetting(true);
-    }
-
-    async updateStreamSetting(firstInit = false) {
-        const game = RunningGameStore.getVisibleGame();
-        const streamingWindow = this.isStreamingWindow();
-        const streamGame = firstInit ? !this.settings.shareAlwaysScreen && game !== null : !streamingWindow && game !== null;
-        let displayIndex = this.settings.displayNumber - 1;
-        const screenPreviews = await this.getPreviews("getScreenPreviews");
-        const windowPreviews = await this.getPreviews("getWindowPreviews");
-
-        if (!streamGame && game && screenPreviews.length === 0) return;
-        if (displayIndex >= screenPreviews.length) {
-            this.settings.displayNumber = 1;
-            displayIndex = 1;
-        } else if (displayIndex < 0) {
-            this.settings.displayNumber = screenPreviews.length;
-            displayIndex = screenPreviews.length - 1;
-        }
-
-        const screenPreview = screenPreviews[displayIndex];
-        const windowPreview = windowPreviews.find(window => window.id.endsWith(game?.windowHandle));
-
-        this.streamOptions = this.getStreamOptions(windowPreview && streamGame ? windowPreview : screenPreview);
-    }
-
-    updateStream({ previewDisabled = null, sound = null } = {}) {
-        if (ApplicationStreamingStore.getCurrentUserActiveStream() && this.streamGuildId && this.streamChannelId && this.streamOptions) {
-            if (previewDisabled !== null) {
-                this.streamOptions.previewDisabled = previewDisabled;
-            }
-            if (sound !== null) {
-                this.streamOptions.sound = sound;
-            }
-            streamStart(this.streamGuildId, this.streamChannelId, this.streamOptions);
-            return true;
-        } else {
-            return false;
-        }
+    async toggleSharePreview() {
+        this.settings.disablePreview = !this.settings.disablePreview;
+        await this.updateStream();
+        this.showToast(`Stream Preview ${this.settings.disablePreview ? "disabled" : "enabled"}!`, "info");
     }
 
     updateKeybind(id) {
