@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.9
+ * @version 1.5.10
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -322,7 +322,7 @@ module.exports = class BasePlugin {
     isQuestEligibleForFarming(quest) {
         const questConfig = quest.config.taskConfig || quest.config.taskConfigV2;
         if (!Object.keys(questConfig.tasks).some(taskName => {
-            return (taskName === "WATCH_VIDEO" && this.settings.farmVideos
+            return ((taskName === "WATCH_VIDEO" || taskName === "WATCH_VIDEO_ON_MOBILE") && this.settings.farmVideos
                 || taskName === "PLAY_ON_DESKTOP" && this.settings.farmPlayOnDesktop
                 || taskName === "STREAM_ON_DESKTOP" && this.settings.farmStreamOnDesktop
                 || taskName === "PLAY_ACTIVITY" && this.settings.farmPlayActivity);
