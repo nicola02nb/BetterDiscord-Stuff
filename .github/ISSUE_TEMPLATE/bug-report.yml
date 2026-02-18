@@ -41,8 +41,8 @@ body:
   - type: textarea
     id: screenshots
     attributes:
-      label: Screenshots
-      description: If applicable, add screenshots to help explain your problem. You can provide error logs from DevTools Console (Ctrl+Shift+I) as well.
+      label: Logs and Screenshots
+      description: If applicable, add logs from DevTools Console (Ctrl+Shift+I) and screenshots to help explain your problem.
       placeholder: "Add screenshots"
     validations:
       required: false
