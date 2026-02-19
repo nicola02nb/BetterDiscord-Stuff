@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.10
+ * @version 1.5.11
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -426,6 +426,25 @@ module.exports = class BasePlugin {
 
             console.log(`Completing quest ${questName} (${quest.id}) - ${taskName} for ${secondsNeeded} seconds.`);
 
+            const postWithRetry = async (url, body) => {
+                let delay = 5;
+                const maxDelay = 300;
+                while (this.completingQuests.get(quest.id)) {
+                    try {
+                        return await RestApi.post({ url, body });
+                    } catch (err) {
+                        console.warn(`Failed to POST to ${url} for quest ${questName}:`, err);
+                        console.log("Retrying to POST for quest", questName, "in", delay, "seconds.");
+                        await new Promise(resolve => setTimeout(resolve, delay * 1000));
+                        if (delay < maxDelay) {
+                            delay = Math.min(delay * 2, maxDelay);
+                        } else {
+                            delay = maxDelay;
+                        }
+                    }
+                }
+            };
+
             switch (taskName) {
                 case "WATCH_VIDEO":
                 case "WATCH_VIDEO_ON_MOBILE":
@@ -445,7 +464,7 @@ module.exports = class BasePlugin {
                             }
 
                             if (diff >= speed) {
-                                const res = await RestApi.post({ url: `/quests/${quest.id}/video-progress`, body: { timestamp: Math.min(secondsNeeded, timestamp + Math.random()) } });
+                                const res = await postWithRetry(`/quests/${quest.id}/video-progress`, { timestamp: Math.min(secondsNeeded, timestamp + Math.random()) });
                                 completed = res.body.completed_at != null;
                                 secondsDone = Math.min(secondsNeeded, timestamp);
                             }
@@ -457,7 +476,7 @@ module.exports = class BasePlugin {
                             await new Promise(resolve => setTimeout(resolve, interval * 1000));
                         }
                         if (!completed) {
-                            await RestApi.post({ url: `/quests/${quest.id}/video-progress`, body: { timestamp: secondsNeeded } });
+                            await postWithRetry(`/quests/${quest.id}/video-progress`, { timestamp: secondsNeeded });
                         }
                         console.log("Quest completed!");
                     }
@@ -554,7 +573,7 @@ module.exports = class BasePlugin {
                         console.log("Completing quest", questName, "-", quest.config.messages.questName);
 
                         while (true) {
-                            const res = await RestApi.post({ url: `/quests/${quest.id}/heartbeat`, body: { stream_key: streamKey, terminal: false } });
+                            const res = await postWithRetry(`/quests/${quest.id}/heartbeat`, { stream_key: streamKey, terminal: false });
                             const progress = res.body.progress.PLAY_ACTIVITY.value;
                             console.log(`Quest progress ${questName}: ${progress}/${secondsNeeded}`);
 
@@ -564,7 +583,7 @@ module.exports = class BasePlugin {
                                 console.log("Stopping completing quest:", questName);
 
                                 if (progress >= secondsNeeded) {
-                                    await RestApi.post({ url: `/quests/${quest.id}/heartbeat`, body: { stream_key: streamKey, terminal: true } });
+                                    await postWithRetry(`/quests/${quest.id}/heartbeat`, { stream_key: streamKey, terminal: true });
                                     console.log("Quest completed!")
                                     this.completingQuests.set(quest.id, false);
                                 }
