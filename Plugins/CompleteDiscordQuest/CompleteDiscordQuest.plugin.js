@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.11
+ * @version 1.5.12
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -487,7 +487,7 @@ module.exports = class BasePlugin {
                 case "PLAY_ON_DESKTOP":
                     RestApi.get({ url: `/applications/public?application_ids=${applicationId}` }).then(res => {
                         const appData = res.body[0];
-                        const exeName = appData.executables.find(x => x.os === "win32").name.replace(">", "");
+                        const exeName = appData.executables?.find(x => x.os === "win32")?.name?.replace(">","") ?? appData.name.replace(/[\/\\:*?"<>|]/g, "");
 
                         const fakeGame = {
                             cmdLine: `C:\\Program Files\\${appData.name}\\${exeName}`,
