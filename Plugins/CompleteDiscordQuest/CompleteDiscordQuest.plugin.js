@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.15
+ * @version 1.5.16
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -309,7 +309,6 @@ module.exports = class BasePlugin {
         });
 
         QuestsStore.addChangeListener(this.handleUpdateQuests);
-        this.updateQuests();
     }
 
     stop() {
@@ -407,7 +406,7 @@ module.exports = class BasePlugin {
         console.log("Stopped completing all quests.");
     }
 
-    completeQuest(quest) {
+    async completeQuest(quest) {
         let isApp = typeof DiscordNative !== "undefined";
         if (!quest) {
             console.log("You don't have any uncompleted quests!");
@@ -419,8 +418,13 @@ module.exports = class BasePlugin {
             const questName = quest.config.messages.questName;
             const taskConfig = quest.config.taskConfig ?? quest.config.taskConfigV2;
             const taskName = ["WATCH_VIDEO", "PLAY_ON_DESKTOP", "STREAM_ON_DESKTOP", "PLAY_ACTIVITY", "WATCH_VIDEO_ON_MOBILE"].find(x => taskConfig.tasks[x] != null);
-            const secondsNeeded = taskConfig.tasks[taskName].target;
+            const secondsNeeded = taskConfig.tasks[taskName]?.target ?? undefined;
             let secondsDone = quest.userStatus?.progress?.[taskName]?.value ?? 0;
+
+            if (secondsNeeded === undefined) {
+                console.error("Unknown seconds needed for quest task. Cannot complete quest:", questName, "with task", taskName);
+                return;
+            }
 
             if (!isApp && taskName !== "WATCH_VIDEO" && taskName !== "WATCH_VIDEO_ON_MOBILE") {
                 console.log("This no longer works in browser for non-video quests. Use the discord desktop app to complete the", questName, "quest!");
