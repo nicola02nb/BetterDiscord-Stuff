@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.12
+ * @version 1.5.13
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -201,7 +201,7 @@ module.exports = class BasePlugin {
             }
         }
         catch (err) {
-            UI.showToast("[YABDP4Nitro] Failed to check for updates", { type: "error" });
+            UI.showToast("[CompleteDiscordQuest] Failed to check for updates", { type: "error" });
             Logger.error(this.meta.name, err);
         }
 
@@ -340,9 +340,11 @@ module.exports = class BasePlugin {
     }
 
     updateQuests() {
+        console.log("Updating quests to complete...");
         const availableQuests = [...QuestsStore.quests.values()];
         const acceptableQuests = availableQuests.filter(x => !x.userStatus?.enrolledAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
         const completableQuests = availableQuests.filter(x => x.userStatus?.enrolledAt && !x.userStatus?.completedAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
+        console.log("Quests available:", availableQuests.length, "Acceptable:", acceptableQuests.length, "Completable:", completableQuests.length);
         for (const quest of acceptableQuests) {
             if (this.isQuestEligibleForFarming(quest)) {
                 this.acceptQuest(quest);
