@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.5.16
+ * @version 1.6.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -44,6 +44,12 @@ const config = {
                 { type: "switch", id: "farmFractionalPremium", name: "Fractional Premium", note: "Whether to farm fractional premium automatically.", value: true },
             ]
         },
+        { type: "dropdown", id: "questMenuFilter", name: "Quest Menu Filter", note: "The filter to use in the quest menu.", value: "recently_enrolled", options: [
+            { label: "Suggested", value: "suggested" },
+            { label: "Most Recent", value: "most_recent" },
+            { label: "Expiring Soon", value: "expiring_soon" },
+            { label: "Started", value: "recently_enrolled" },
+        ]},
     ]
 };
 function getSetting(key) {
@@ -84,6 +90,7 @@ const TopBarButtonKey = Object.keys(TopBarButtonModule).find(key => {
     return funcStr.includes("iconClassName:") && funcStr.includes("children:") && funcStr.includes("badgePosition:");
 });
 const QuestButtonWithKey = [...Webpack.getWithKey(Filters.byStrings("focusProps:", "interactiveClassName:"))];
+const SortingFilterWithKey = [...Webpack.getWithKey(Filters.byStrings("selectedSortMethod", "onChange", "radioBarClassName"), { searchExports: true })]
 const trailing = trailingModule.trailing;
 const { Tooltip, Flex } = Components;
 
@@ -306,6 +313,25 @@ module.exports = class BasePlugin {
                 }
             }
             return returnValue;
+        });
+
+        let lastOnChange = null;
+        Patcher.instead(this.meta.name, SortingFilterWithKey[0], SortingFilterWithKey[1], (_, args, originalFunction) => {
+            if (args[0]?.onChange && args[0]?.selectedSortMethod) {
+                args[0].selectedSortMethod = this.settings.questMenuFilter;
+                const originalOnChange = args[0].onChange;
+                args[0].onChange = (value) => {
+                    this.settings.questMenuFilter = value;
+                    originalOnChange(value);
+                };
+                if (lastOnChange !== originalOnChange) {
+                    lastOnChange = originalOnChange;
+                    setTimeout(() => {
+                        originalOnChange(this.settings.questMenuFilter);
+                    }, 100);
+                }
+            }
+            return originalFunction(...args);
         });
 
         QuestsStore.addChangeListener(this.handleUpdateQuests);
