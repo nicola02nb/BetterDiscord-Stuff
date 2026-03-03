@@ -15,6 +15,3 @@ If you spam status changes you might be blocked temporarly(plugin already preven
 
 ![Example](https://github.com/user-attachments/assets/02d64be7-77ff-4344-b777-c73cff2d39f6)
 
-## Settings:
-
-![Settings](https://github.com/user-attachments/assets/a3d5f44e-560a-48eb-a482-0aa0145e068d)

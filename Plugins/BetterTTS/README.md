@@ -4,33 +4,38 @@ A BetterDiscord(BD) a plugin that allows you to play a custom TTS when a message
 
 ## Features:
 
+- Enable/Disable TTS entirely
 - Enable/Disable `/tts` command
-- Enable/Disable Announce Client join/left channel
-- Enable/Disable Read Messages from channels when recieved
+- Enable/Disable user announcement when joining/leaving a channel
+- Enable/Disable message reading from channels
 
-### Mesage Reading:
+### TTS Message Sources:
 
+- Select from which channels TTS should read messages:
+  - Never
+  - All Channels
+  - Focused Channel
+  - Connected Channel
+  - Focused Server Channels
+  - Connected Server Channels
+- Set when to ignore TTS while in a voice channel (None / Subscribed / Focused+Connected / All)
+- Subscribe/Unsubscribe from servers (guilds) and channels (checkbox on right-click)
+
+### Message Reading Settings:
+
+- Set which channels should prepend server/channel name (None / Subscribed / Focused+Connected / All)
 - Prepend/Not Prepend Server name before reading messages
 - Prepend/Not Prepend Channel name before reading messages
 - Prepend/Not Prepend Usernames before reading messages
-- Set which name should be read for users
-- Set how URLs should be read
-- Select from which channel TTS should read messages:
-  - Never read messages
-  - Read all messages from all Channels and Servers
-  - From Custom subscribed Channels or Servers
-  - From Connected Channel
-  - From Focused Channel
-  - From Connected Server
-  - From Focused Server
-- Subscribe/Unsubscribe form servers(guilds) and channels (There is a checkbox when you right click them)
+- Set which name should be read for users (Default / Username / Display Name / Friend Name / Server Name)
+- Set how URLs should be read (Remove / Domain Only / Substitute with "URL" / Keep)
+- Enable/Disable reading message spoilers
 
-## TTS Sources:
+### TTS Voice Source:
 
-You can select:
-
-- The TTS Audio Source:
-- The Voice Type and Languages
+- Choose the TTS source
+- Choose the voice for TTS
+- Set StreamElements API Key (required for StreamElements source)
 
 Sources Available:
 
@@ -38,16 +43,22 @@ Sources Available:
 - Streamelements API (About 206 Voices) https://api.streamelements.com/kappa/v2/speech
 - Some TikTok voices https://tiktok-tts.weilnet.workers.dev/api/generation
 
-### Block Filters:
+### TTS Audio Settings:
+
+- Set TTS Volume
+- Set TTS Speech Rate
+- Preview TTS with a test message
+
+### Message Block Filters:
 
 Block messages from:
 
 - Blocked users
 - Ignored users
-- Not firends users
+- Non-friend users
 - Muted channels
 - Muted servers
-- Muted users (There is a checkbox when you right click them)
+- Muted users (checkbox on right-click)
 
 ### Other
 
@@ -56,7 +67,3 @@ Block messages from:
 - Play an audio preview
 - Select Delay between Messages
 - Set a Keyboard Shortcut to Toggle TTS On/Off (With toast)
-
-## Settings
-
-![Settings](https://github.com/user-attachments/assets/a99f719d-790a-49a9-b112-ce10ddd910c8)

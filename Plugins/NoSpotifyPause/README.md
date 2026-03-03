@@ -4,7 +4,7 @@ A BetterDiscord(BD) plugin that prevents Discord from pausing your Spotify when 
 
 ## Features:
 
-- Removes Banner
+- Prevents Discord from automatically pausing Spotify when streaming or gaming
 
 ## Preview:
 
