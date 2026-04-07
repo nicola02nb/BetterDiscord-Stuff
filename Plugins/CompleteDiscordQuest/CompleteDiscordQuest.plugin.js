@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.6.0
+ * @version 1.6.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -387,9 +387,9 @@ module.exports = class BasePlugin {
             console.log("Starting to complete quest:", quest.config.messages.questName);
             this.completeQuest(quest);
         }
-        /* console.log("Available quests updated:", availableQuests);
+        console.log("Available quests updated:", availableQuests);
         console.log("Acceptable quests updated:", acceptableQuests);
-        console.log("Completable quests updated:", completableQuests); */
+        console.log("Completable quests updated:", completableQuests);
     }
 
     patchTitleBar() {
@@ -446,6 +446,11 @@ module.exports = class BasePlugin {
             const taskName = ["WATCH_VIDEO", "PLAY_ON_DESKTOP", "STREAM_ON_DESKTOP", "PLAY_ACTIVITY", "WATCH_VIDEO_ON_MOBILE"].find(x => taskConfig.tasks[x] != null);
             const secondsNeeded = taskConfig.tasks[taskName]?.target ?? undefined;
             let secondsDone = quest.userStatus?.progress?.[taskName]?.value ?? 0;
+
+            if (taskName === undefined) {
+                console.error("Unknown task name for quest. Cannot complete quest:", questName);
+                return;
+            }
 
             if (secondsNeeded === undefined) {
                 console.error("Unknown seconds needed for quest task. Cannot complete quest:", questName, "with task", taskName);
