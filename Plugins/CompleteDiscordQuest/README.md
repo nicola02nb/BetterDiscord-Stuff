@@ -1,3 +1,12 @@
+> [!CAUTION]
+> As of April 7th 2026, Discord has expressed their intent to crack down on automating quest completion.
+> 
+> Some users have received the following system message:
+> 
+> <img width="836" height="272" alt="574947159-6b439f4b-4381-4524-8540-b6a4777a80d0" src="https://github.com/user-attachments/assets/db4c7641-dd57-412e-a625-f39a363f2138" />
+> 
+> There isn't much I can do to make the script undetected, so use it at your own risk, as you most likely WILL get flagged by doing so.
+
 # CompleteDiscordQuest for BetterDiscord
 
 A BetterDiscord(BD) plugin that completes you multiple discord quests in background simultaneously.
