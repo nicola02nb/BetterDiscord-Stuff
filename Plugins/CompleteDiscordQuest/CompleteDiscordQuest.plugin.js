@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.6.1
+ * @version 1.7.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -20,6 +20,7 @@ const config = {
     ],
     settings: [
         { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: true },
+        { type: "switch", id: "hasAcceptedToUsePlugin", name: "Issue Consent", note: "Set by the warning popup. If disabled, quest completion will not run.", value: false },
         {
             type: "category", id: "uiElements", name: "UI Elements", collapsible: true, shown: false, settings: [
                 { type: "switch", id: "showQuestsButtonTitleBar", name: "Show Quests Title Bar", note: "Whether to show the quests button in the title bar.", value: true },
@@ -140,6 +141,13 @@ module.exports = class BasePlugin {
             onChange: (category, id, value) => {
                 this.settings[id] = value;
                 switch (id) {
+                    case "hasAcceptedToUsePlugin":
+                        if (!value) {
+                            this.stopAllFarming();
+                            UI.showToast("[CompleteDiscordQuest] Consent is required to use this plugin. Disabling plugin.", { type: "warning" });
+                            setTimeout(() => Plugins.disable(this.meta.name), 0);
+                        }
+                        break;
                     case "showQuestsButtonTitleBar":
                         if (value) {
                             this.patchTitleBar();
@@ -247,11 +255,85 @@ module.exports = class BasePlugin {
         }
     }
 
+    async ensureHasAcceptedToUsePlugin() {
+        if (this.settings.hasAcceptedToUsePlugin === true) {
+            return true;
+        }
+
+        const warningImage = "https://private-user-images.githubusercontent.com/61830443/576115740-db4c7641-dd57-412e-a625-f39a363f2138.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NzU3NTU2ODIsIm5iZiI6MTc3NTc1NTM4MiwicGF0aCI6Ii82MTgzMDQ0My81NzYxMTU3NDAtZGI0Yzc2NDEtZGQ1Ny00MTJlLWE2MjUtZjM5YTM2M2YyMTM4LnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjA0MDklMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwNDA5VDE3MjMwMlomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTA1Y2U4OGQwMmU0ZDQ5NDI3MGIxYmE2NzJmYWM0ZDQ2YzQwY2MzMDliODcwMWU4ZGEwYzE0MGY1MDQ4OTRiMjAmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.K_KZqZVWVIxsm6ttD_iBCp1Yrz34A35xw5vdqlurNsc";
+
+        return await new Promise(resolve => {
+            UI.showConfirmationModal(
+                "Important Notice",
+                React.createElement("div", {
+                    style: {
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "12px",
+                        textAlign: "center",
+                        width: "100%"
+                    }
+                },
+                React.createElement("img", {
+                    src: warningImage,
+                    alt: "Warning",
+                    style: {
+                        width: "100%",
+                        maxWidth: "420px",
+                        height: "auto",
+                        objectFit: "contain",
+                        borderRadius: "8px"
+                    }
+                }),
+                React.createElement("div", null,
+                    "As of April 7th 2026, Discord has expressed their intent to crack down on automating quest completion.",
+                    React.createElement("br"),
+                    React.createElement("br"),
+                    "Some users have received the following system message:",
+                    React.createElement("br"),
+                    React.createElement("br"),
+                    "There isn't much I can do to make the script undetected, so use it at your own risk, as you most likely WILL get flagged by doing so."
+                )),
+                {
+                    confirmText: "Yes, keep using plugin",
+                    cancelText: "No, disable plugin",
+                    danger: true,
+                    onConfirm: () => {
+                        this.settings.hasAcceptedToUsePlugin = true;
+                        resolve(true);
+                    },
+                    onCancel: () => {
+                        this.settings.hasAcceptedToUsePlugin = false;
+                        resolve(false);
+                    }
+                }
+            );
+        });
+    }
+
     start() {
         this.initSettings();
         this.showChangelog();
         this.checkForUpdate();
 
+        this.ensureHasAcceptedToUsePlugin().then(hasConsent => {
+            if (!hasConsent) {
+                this.stopAllFarming();
+                UI.showToast("[CompleteDiscordQuest] Consent not accepted. Plugin disabled.", { type: "warning", forceShow: true });
+                setTimeout(() => Plugins.disable(this.meta.name), 0);
+                return;
+            }
+            this.startAfterConsent();
+        }).catch(err => {
+            this.stopAllFarming();
+            Logger.error(this.meta.name, "Failed to resolve consent modal", err);
+            UI.showToast("[CompleteDiscordQuest] Failed to show consent popup. Plugin disabled.", { type: "error", forceShow: true });
+            setTimeout(() => Plugins.disable(this.meta.name), 0);
+        });
+    }
+
+    startAfterConsent() {
         DOM.addStyle(this.meta.name, `.quest-button-enrollable > span[class*="iconBadge"] { background-color: var(--status-danger);}
             .quest-button-enrolled > span[class*="iconBadge"] { background-color: var(--status-warning); }
             .quest-button-claimable > span[class*="iconBadge"] { background-color: var(--status-positive); }
@@ -339,10 +421,25 @@ module.exports = class BasePlugin {
 
     stop() {
         QuestsStore.removeChangeListener(this.handleUpdateQuests);
-        this.stopCompletingAll();
+        this.stopAllFarming();
         Patcher.unpatchAll(this.meta.name);
         this.unpatchTitleBar();
         DOM.removeStyle(this.meta.name);
+    }
+
+    stopAllFarming() {
+        this.stopCompletingAll();
+
+        if (this.fakeGames.size > 0) {
+            const removedGames = Array.from(this.fakeGames.values());
+            this.fakeGames.clear();
+            const games = RunningGameStore.getRunningGames();
+            DiscordModules.dispatch({ type: "RUNNING_GAMES_CHANGE", removed: removedGames, added: games, games });
+        }
+
+        if (this.fakeApplications.size > 0) {
+            this.fakeApplications.clear();
+        }
     }
 
     isQuestEligibleForFarming(quest) {
@@ -366,6 +463,12 @@ module.exports = class BasePlugin {
     }
 
     updateQuests() {
+        if (!this.settings.hasAcceptedToUsePlugin) {
+            this.stopAllFarming();
+            console.warn("Consent not accepted. Skipping quest update/completion.");
+            return;
+        }
+
         console.log("Updating quests to complete...");
         const availableQuests = [...QuestsStore.quests.values()];
         const acceptableQuests = availableQuests.filter(x => !x.userStatus?.enrolledAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
@@ -433,6 +536,12 @@ module.exports = class BasePlugin {
     }
 
     async completeQuest(quest) {
+        if (!this.settings.hasAcceptedToUsePlugin) {
+            this.stopAllFarming();
+            console.warn("Consent not accepted. Cannot complete quests.");
+            return;
+        }
+
         let isApp = typeof DiscordNative !== "undefined";
         if (!quest) {
             console.log("You don't have any uncompleted quests!");
