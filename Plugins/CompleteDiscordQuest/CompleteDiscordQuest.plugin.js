@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.0
+ * @version 1.7.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -597,13 +597,11 @@ module.exports = class BasePlugin {
             switch (taskName) {
                 case "WATCH_VIDEO":
                 case "WATCH_VIDEO_ON_MOBILE":
-                    const maxFuture = 10, speed = 7, interval = 1;
-                    const enrolledAt = new Date(quest.userStatus.enrolledAt).getTime();
+                    const speed = 7
                     let completed = false;
                     let watchVideo = async () => {
                         while (true) {
-                            const maxAllowed = Math.floor((Date.now() - enrolledAt) / 1000) + maxFuture;
-                            const diff = maxAllowed - secondsDone;
+                            const remaining = Math.min(speed, secondsNeeded - secondsDone);
                             const timestamp = secondsDone + speed;
 
                             if (!this.completingQuests.get(quest.id)) {
@@ -612,17 +610,15 @@ module.exports = class BasePlugin {
                                 break;
                             }
 
-                            if (diff >= speed) {
-                                const res = await postWithRetry(`/quests/${quest.id}/video-progress`, { timestamp: Math.min(secondsNeeded, timestamp + Math.random()) });
-                                completed = res.body.completed_at != null;
-                                secondsDone = Math.min(secondsNeeded, timestamp);
-                            }
+                            await new Promise(resolve => setTimeout(resolve, remaining * 1000));
+                            const res = await postWithRetry(`/quests/${quest.id}/video-progress`, {timestamp: Math.min(secondsNeeded, timestamp + Math.random())});
+                            completed = res.body.completed_at != null;
+                            secondsDone = Math.min(secondsNeeded, timestamp);
 
                             if (timestamp >= secondsNeeded) {
                                 this.completingQuests.set(quest.id, false);
                                 break;
                             }
-                            await new Promise(resolve => setTimeout(resolve, interval * 1000));
                         }
                         if (!completed) {
                             await postWithRetry(`/quests/${quest.id}/video-progress`, { timestamp: secondsNeeded });
