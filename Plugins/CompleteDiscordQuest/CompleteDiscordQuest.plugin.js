@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.1
+ * @version 1.7.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -388,12 +388,25 @@ module.exports = class BasePlugin {
         });
 
         Patcher.after(this.meta.name, QuestButtonWithKey[0], QuestButtonWithKey[1], (_, args, returnValue) => {
-            if (this.settings.showQuestsButtonBadges) {
-                const component = Utils.findInTree(returnValue?.props?.children, m => Array.isArray(m?.props?.children) && m.props?.to?.pathname === "/quest-home");
-                if (component && Array.isArray(component.props.children)) {
-                    component.props.children.push(React.createElement(this.QuestsCount));
+                if (this.settings.showQuestsButtonBadges) {
+                    try {
+                        const component = Utils.findInTree(
+                            returnValue?.props?.children,
+                            m => Array.isArray(m?.props?.children) && m.props?.to?.pathname === "/quest-home",
+                            {
+                                walkable: ["props", "children"],
+                                ignore: ["_owner", "stateNode", "return", "alternate"]
+                            }
+                        );
+
+                        if (component && Array.isArray(component.props.children)) {
+                            component.props.children.push(React.createElement(this.QuestsCount));
+                        }
+                    } catch (err) {
+                        Logger.warn(this.meta.name, "Might have failed to inject quests button badges", err);
+                    }
                 }
-            }
+            
             return returnValue;
         });
 
@@ -490,9 +503,9 @@ module.exports = class BasePlugin {
             console.log("Starting to complete quest:", quest.config.messages.questName);
             this.completeQuest(quest);
         }
-        console.log("Available quests updated:", availableQuests);
+        /* console.log("Available quests updated:", availableQuests);
         console.log("Acceptable quests updated:", acceptableQuests);
-        console.log("Completable quests updated:", completableQuests);
+        console.log("Completable quests updated:", completableQuests); */
     }
 
     patchTitleBar() {
