@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.2
+ * @version 1.7.3
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -19,7 +19,7 @@ const config = {
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
-        { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: true },
+        { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: false },
         { type: "switch", id: "hasAcceptedToUsePlugin", name: "Issue Consent", note: "Set by the warning popup. If disabled, quest completion will not run.", value: false },
         {
             type: "category", id: "uiElements", name: "UI Elements", collapsible: true, shown: false, settings: [
