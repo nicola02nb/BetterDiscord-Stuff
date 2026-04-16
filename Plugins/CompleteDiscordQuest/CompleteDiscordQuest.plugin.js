@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.3
+ * @version 1.7.4
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -489,7 +489,6 @@ module.exports = class BasePlugin {
         console.log("Quests available:", availableQuests.length, "Acceptable:", acceptableQuests.length, "Completable:", completableQuests.length);
         for (const quest of acceptableQuests) {
             if (this.isQuestEligibleForFarming(quest)) {
-                console.log("Accepting quest:", quest.config.messages.questName);
                 this.acceptQuest(quest);
             }
         }
@@ -527,6 +526,7 @@ module.exports = class BasePlugin {
 
     acceptQuest(quest) {
         if (!this.settings.acceptQuestsAutomatically) return;
+        console.log("Accepting quest:", quest.config.messages.questName);
         const action = {
             questContent: QuestLocationMap.QUEST_HOME_DESKTOP,
             questContentCTA: "ACCEPT_QUEST",
