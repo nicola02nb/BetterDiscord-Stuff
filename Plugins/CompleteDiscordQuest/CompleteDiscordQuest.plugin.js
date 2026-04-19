@@ -21,7 +21,7 @@ const config = {
     settings: [
         { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: false },
         { type: "switch", id: "hasAcceptedToUsePlugin", name: "Issue Consent", note: "Set by the warning popup. If disabled, quest completion will not run.", value: false },
-        { type: "switch", id: "completeQuestsSequentially", name: "Complete Quests Sequentially", note: "Whether to complete quests one at a time.", value: true },
+        { type: "switch", id: "completeQuestsSequentially", name: "Complete Quests Sequentially", note: "Whether to complete quests one at a time.", value: true, disabled: true },
         {
             type: "category", id: "uiElements", name: "UI Elements", collapsible: true, shown: false, settings: [
                 { type: "switch", id: "showQuestsButtonTitleBar", name: "Show Quests Title Bar", note: "Whether to show the quests button in the title bar.", value: true },
