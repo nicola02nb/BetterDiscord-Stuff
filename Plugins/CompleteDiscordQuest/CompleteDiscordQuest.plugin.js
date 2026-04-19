@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.5
+ * @version 1.7.6
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -21,7 +21,6 @@ const config = {
     settings: [
         { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: false },
         { type: "switch", id: "hasAcceptedToUsePlugin", name: "Issue Consent", note: "Set by the warning popup. If disabled, quest completion will not run.", value: false },
-        { type: "switch", id: "completeQuestsSequentially", name: "Complete Quests Sequentially", note: "Whether to complete quests one at a time.", value: true },
         {
             type: "category", id: "uiElements", name: "UI Elements", collapsible: true, shown: false, settings: [
                 { type: "switch", id: "showQuestsButtonTitleBar", name: "Show Quests Title Bar", note: "Whether to show the quests button in the title bar.", value: true },
@@ -483,11 +482,17 @@ module.exports = class BasePlugin {
             return;
         }
 
-        console.log("Updating quests to complete...");
         const availableQuests = [...QuestsStore.quests.values()];
         const acceptableQuests = availableQuests.filter(x => !x.userStatus?.enrolledAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
         const completableQuests = availableQuests.filter(x => x.userStatus?.enrolledAt && !x.userStatus?.completedAt && new Date(x.config.expiresAt).getTime() > Date.now()) || [];
-        console.log("Quests available:", availableQuests.length, "Acceptable:", acceptableQuests.length, "Completable:", completableQuests.length);
+        
+        const logString = `Quests available: ${availableQuests.length} Acceptable: ${acceptableQuests.length} Completable: ${completableQuests.length}`;
+        if (this.lastLogString !== logString) {
+            console.log("Updating quests to complete...");
+            console.log(logString);
+            this.lastLogString = logString;
+        }
+
         for (const quest of acceptableQuests) {
             if (this.isQuestEligibleForFarming(quest)) {
                 this.acceptQuest(quest);
@@ -541,12 +546,16 @@ module.exports = class BasePlugin {
     }
 
     stopCompletingAll() {
+        let stoppedAny = false;
         for (const questId of this.completingQuests.keys()) {
-            if (this.completingQuests.has(questId)) {
+            if (this.completingQuests.get(questId) === true) {
                 this.completingQuests.set(questId, false);
+                stoppedAny = true;
             }
         }
-        console.log("Stopped completing all quests.");
+        if (stoppedAny) {
+            console.log("Stopped completing all quests.");
+        }
     }
 
     async completeQuest(quest) {
