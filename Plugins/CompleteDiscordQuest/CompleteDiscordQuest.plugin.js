@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.4
+ * @version 1.7.5
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -21,6 +21,7 @@ const config = {
     settings: [
         { type: "switch", id: "acceptQuestsAutomatically", name: "Accept Quests Automatically", note: "Whether to accept available quests automatically.", value: false },
         { type: "switch", id: "hasAcceptedToUsePlugin", name: "Issue Consent", note: "Set by the warning popup. If disabled, quest completion will not run.", value: false },
+        { type: "switch", id: "completeQuestsSequentially", name: "Complete Quests Sequentially", note: "Whether to complete quests one at a time.", value: true },
         {
             type: "category", id: "uiElements", name: "UI Elements", collapsible: true, shown: false, settings: [
                 { type: "switch", id: "showQuestsButtonTitleBar", name: "Show Quests Title Bar", note: "Whether to show the quests button in the title bar.", value: true },
@@ -617,8 +618,8 @@ module.exports = class BasePlugin {
                             const remaining = Math.min(speed, secondsNeeded - secondsDone);
                             const timestamp = secondsDone + speed;
 
-                            if (!this.completingQuests.get(quest.id)) {
-                                console.log("Stopping completing quest:", questName);
+                            if (!this.settings.hasAcceptedToUsePlugin || !this.settings.farmVideos || !this.completingQuests.get(quest.id)) {
+                                console.log(`Stopping completing quest: ${questName}`);
                                 this.completingQuests.set(quest.id, false);
                                 break;
                             }
@@ -635,8 +636,9 @@ module.exports = class BasePlugin {
                         }
                         if (!completed) {
                             await postWithRetry(`/quests/${quest.id}/video-progress`, { timestamp: secondsNeeded });
-                        }
-                        console.log("Quest completed!");
+                        } else {
+                            console.log(`Quest ${questName} completed!`);
+                        }                        
                     }
                     watchVideo();
                     console.log(`Spoofing video for ${questName}.`);
@@ -670,19 +672,24 @@ module.exports = class BasePlugin {
                             let progress = quest.config.configVersion === 1 ? event.userStatus.streamProgressSeconds : Math.floor(event.userStatus.progress.PLAY_ON_DESKTOP.value);
                             console.log(`Quest progress ${questName}: ${progress}/${secondsNeeded}`);
 
-                            if (!this.completingQuests.get(quest.id) || progress >= secondsNeeded) {
+                            if (!this.settings.hasAcceptedToUsePlugin || !this.settings.farmPlayOnDesktop || !this.completingQuests.get(quest.id)) {
                                 console.log("Stopping completing quest:", questName);
-
                                 this.fakeGames.delete(quest.id);
                                 const games = RunningGameStore.getRunningGames();
                                 const added = this.fakeGames.size == 0 ? games : [];
                                 DiscordModules.dispatch({ type: "RUNNING_GAMES_CHANGE", removed: [fakeGame], added: added, games: games });
                                 DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", playOnDesktop);
+                                this.completingQuests.set(quest.id, false);                                
+                            }
 
-                                if (progress >= secondsNeeded) {
-                                    console.log("Quest completed!");
-                                    this.completingQuests.set(quest.id, false);
-                                }
+                            if (progress >= secondsNeeded) {
+                                console.log(`Quest ${questName} completed!`);
+                                this.fakeGames.delete(quest.id);
+                                const games = RunningGameStore.getRunningGames();
+                                const added = this.fakeGames.size == 0 ? games : [];
+                                DiscordModules.dispatch({ type: "RUNNING_GAMES_CHANGE", removed: [fakeGame], added: added, games: games });
+                                DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", playOnDesktop);
+                                this.completingQuests.set(quest.id, false);
                             }
                         }
                         DiscordModules.subscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", playOnDesktop);
@@ -705,16 +712,18 @@ module.exports = class BasePlugin {
                         let progress = quest.config.configVersion === 1 ? event.userStatus.streamProgressSeconds : Math.floor(event.userStatus.progress.STREAM_ON_DESKTOP.value);
                         console.log(`Quest progress ${questName}: ${progress}/${secondsNeeded}`);
 
-                        if (!this.completingQuests.get(quest.id) || progress >= secondsNeeded) {
+                        if (!this.settings.hasAcceptedToUsePlugin || !this.settings.farmStreamOnDesktop || !this.completingQuests.get(quest.id)) {
                             console.log("Stopping completing quest:", questName);
-
                             this.fakeApplications.delete(quest.id);
                             DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", streamOnDesktop);
+                            this.completingQuests.set(quest.id, false);
+                        }
 
-                            if (progress >= secondsNeeded) {
-                                console.log("Quest completed!");
-                                this.completingQuests.set(quest.id, false);
-                            }
+                        if (progress >= secondsNeeded) {
+                            console.log(`Quest ${questName} completed!`);
+                            this.fakeApplications.delete(quest.id);
+                            DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", streamOnDesktop);
+                            this.completingQuests.set(quest.id, false);
                         }
                     }
                     DiscordModules.subscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", streamOnDesktop)
@@ -737,14 +746,16 @@ module.exports = class BasePlugin {
 
                             await new Promise(resolve => setTimeout(resolve, 20 * 1000));
 
-                            if (!this.completingQuests.get(quest.id) || progress >= secondsNeeded) {
+                            if (!this.settings.hasAcceptedToUsePlugin || !this.settings.farmPlayActivity || !this.completingQuests.get(quest.id)) {
                                 console.log("Stopping completing quest:", questName);
+                                this.completingQuests.set(quest.id, false);
+                                break;
+                            }
 
-                                if (progress >= secondsNeeded) {
-                                    await postWithRetry(`/quests/${quest.id}/heartbeat`, { stream_key: streamKey, terminal: true });
-                                    console.log("Quest completed!")
-                                    this.completingQuests.set(quest.id, false);
-                                }
+                            if (progress >= secondsNeeded) {
+                                await postWithRetry(`/quests/${quest.id}/heartbeat`, { stream_key: streamKey, terminal: true });
+                                console.log(`Quest ${questName} completed!`);
+                                this.completingQuests.set(quest.id, false);
                                 break;
                             }
                         }
