@@ -100,7 +100,10 @@ function reRender(selector, patchId) {
     const target = document.querySelector(selector)?.parentElement;
     if (!target) return;
     const instance = ReactUtils.getOwnerInstance(target);
-    const unpatch = Patcher.instead(patchId, instance, "render", () => unpatch());
+    const unpatch = Patcher.instead(patchId, instance, "render", () => {
+        try { return unpatch(); }
+        catch (e) { console.error(`[${patchId}] Error in unpatch render`, e); }
+    });
     instance.forceUpdate(() => instance.forceUpdate());
 }
 
@@ -340,95 +343,144 @@ module.exports = class BasePlugin {
             .quest-button-claimable > span[class*="iconBadge"] { background-color: var(--status-positive); }
             .quest-button svg:has(> [mask^="url(#svg-mask-panel-button)"]) { display: none; }`);
 
-        Patcher.instead(this.meta.name, RunningGameStore, "getRunningGames", (_, _args, originalFunction) => {
-            if (this.fakeGames.size > 0) {
-                return Array.from(this.fakeGames.values());
-            }
-            return originalFunction();
-        });
-        Patcher.instead(this.meta.name, RunningGameStore, "getGameForPID", (_, [pid], originalFunction) => {
-            if (this.fakeGames.size > 0) {
-                return Array.from(this.fakeGames.values()).find(game => game.pid === pid);
-            }
-            return originalFunction(pid);
-        });
-        Patcher.instead(this.meta.name, ApplicationStreamingStore, "getStreamerActiveStreamMetadata", (_, _args, originalFunction) => {
-            if (this.fakeApplications.size > 0) {
-                return Array.from(this.fakeApplications.values()).at(0);
-            }
-            return originalFunction();
-        });
+        try {
+            Patcher.instead(this.meta.name, RunningGameStore, "getRunningGames", (_, _args, originalFunction) => {
+                try {
+                    if (this.fakeGames.size > 0) {
+                        return Array.from(this.fakeGames.values());
+                    }
+                    return originalFunction();
+                } catch (e) {
+                    console.error(`[${this.meta.name}] Error in getRunningGames patch`, e);
+                    return originalFunction();
+                }
+            });
+            Patcher.instead(this.meta.name, RunningGameStore, "getGameForPID", (_, [pid], originalFunction) => {
+                try {
+                    if (this.fakeGames.size > 0) {
+                        return Array.from(this.fakeGames.values()).find(game => game.pid === pid);
+                    }
+                    return originalFunction(pid);
+                } catch (e) {
+                    console.error(`[${this.meta.name}] Error in getGameForPID patch`, e);
+                    return originalFunction(pid);
+                }
+            });
+            Patcher.instead(this.meta.name, ApplicationStreamingStore, "getStreamerActiveStreamMetadata", (_, _args, originalFunction) => {
+                try {
+                    if (this.fakeApplications.size > 0) {
+                        return Array.from(this.fakeApplications.values()).at(0);
+                    }
+                    return originalFunction();
+                } catch (e) {
+                    console.error(`[${this.meta.name}] Error in getStreamerActiveStreamMetadata patch`, e);
+                    return originalFunction();
+                }
+            });
+        } catch (err) {
+            console.error(`[${this.meta.name}] Failed to patch activity stores:`, err);
+        }
 
         this.patchTitleBar();
 
         const settingsBarMap = new WeakMap();
-        Patcher.after(this.meta.name, SettingsBarModule?.prototype, "render", (_, _args, returnValue) => {
-            if (this.settings.showQuestsButtonSettingsBar && Array.isArray(returnValue?.props?.children) && typeof returnValue.props.children[0]?.props?.children === "function") {
-                const f1 = returnValue.props.children[0]?.props?.children;
-                returnValue.props.children[0].props.children = (e) => {
-                    const c1 = f1(e);
-                    if (Array.isArray(c1?.props?.children) && typeof c1.props.children[2]?.type === "function") {
-                        const originalType = c1.props.children[2].type;
-                        if (!settingsBarMap.has(originalType)) {
-                            const wrapper = (props) => {
-                                const c2 = originalType(props);
-                                if (Array.isArray(c2?.props?.children)) {
-                                    c2.props.children.unshift(React.createElement(this.QuestButton, { type: "settings-bar" }));
+        try {
+            Patcher.after(this.meta.name, SettingsBarModule?.prototype, "render", (_, _args, returnValue) => {
+                try {
+                    if (this.settings.showQuestsButtonSettingsBar && Array.isArray(returnValue?.props?.children) && typeof returnValue.props.children[0]?.props?.children === "function") {
+                        const f1 = returnValue.props.children[0]?.props?.children;
+                        returnValue.props.children[0].props.children = (e) => {
+                            try {
+                                const c1 = f1(e);
+                                if (Array.isArray(c1?.props?.children) && typeof c1.props.children[2]?.type === "function") {
+                                    const originalType = c1.props.children[2].type;
+                                    if (!settingsBarMap.has(originalType)) {
+                                        const wrapper = (props) => {
+                                            try {
+                                                const c2 = originalType(props);
+                                                if (Array.isArray(c2?.props?.children)) {
+                                                    c2.props.children.unshift(React.createElement(this.QuestButton, { type: "settings-bar" }));
+                                                }
+                                                return c2;
+                                            } catch (we) {
+                                                console.error(`[${this.meta.name}] Error in SettingsBarModule wrapper`, we);
+                                                return originalType(props);
+                                            }
+                                        };
+                                        settingsBarMap.set(originalType, wrapper);
+                                    }
+                                    c1.props.children[2].type = settingsBarMap.get(originalType);
                                 }
-                                return c2;
-                            };
-                            settingsBarMap.set(originalType, wrapper);
-                        }
-                        c1.props.children[2].type = settingsBarMap.get(originalType);
-                    }
-                    return c1;
-                }
-            } else {
-                return returnValue;
-            }
-        });
-
-        Patcher.after(this.meta.name, QuestButtonWithKey[0], QuestButtonWithKey[1], (_, args, returnValue) => {
-                if (this.settings.showQuestsButtonBadges) {
-                    try {
-                        const component = Utils.findInTree(
-                            returnValue?.props?.children,
-                            m => Array.isArray(m?.props?.children) && m.props?.to?.pathname === "/quest-home",
-                            {
-                                walkable: ["props", "children"],
-                                ignore: ["_owner", "stateNode", "return", "alternate"]
+                                return c1;
+                            } catch (fe) {
+                                console.error(`[${this.meta.name}] Error in SettingsBarModule f1 wrapper`, fe);
+                                return f1(e);
                             }
-                        );
-
-                        if (component && Array.isArray(component.props.children)) {
-                            component.props.children.push(React.createElement(this.QuestsCount));
                         }
-                    } catch (err) {
-                        Logger.warn(this.meta.name, "Might have failed to inject quests button badges", err);
                     }
+                } catch (e) {
+                    console.error(`[${this.meta.name}] Error in SettingsBarModule patch`, e);
                 }
-            
-            return returnValue;
-        });
+                return returnValue;
+            });
+        } catch (err) {
+            console.error(`[${this.meta.name}] Error patching SettingsBarModule:`, err);
+        }
+
+        try {
+            Patcher.after(this.meta.name, QuestButtonWithKey[0], QuestButtonWithKey[1], (_, args, returnValue) => {
+                    if (this.settings.showQuestsButtonBadges) {
+                        try {
+                            const component = Utils.findInTree(
+                                returnValue?.props?.children,
+                                m => Array.isArray(m?.props?.children) && m.props?.to?.pathname === "/quest-home",
+                                {
+                                    walkable: ["props", "children"],
+                                    ignore: ["_owner", "stateNode", "return", "alternate"]
+                                }
+                            );
+
+                            if (component && Array.isArray(component.props.children)) {
+                                component.props.children.push(React.createElement(this.QuestsCount));
+                            }
+                        } catch (err) {
+                            console.warn(`[${this.meta.name}] Might have failed to inject quests button badges:`, err);
+                        }
+                    }
+                
+                return returnValue;
+            });
+        } catch (err) {
+            console.error(`[${this.meta.name}] Failed to patch QuestButtonWithKey:`, err);
+        }
 
         let lastOnChange = null;
-        Patcher.instead(this.meta.name, SortingFilterWithKey[0], SortingFilterWithKey[1], (_, args, originalFunction) => {
-            if (args[0]?.onChange && args[0]?.selectedSortMethod) {
-                args[0].selectedSortMethod = this.settings.questMenuFilter;
-                const originalOnChange = args[0].onChange;
-                args[0].onChange = (value) => {
-                    this.settings.questMenuFilter = value;
-                    originalOnChange(value);
-                };
-                if (lastOnChange !== originalOnChange) {
-                    lastOnChange = originalOnChange;
-                    setTimeout(() => {
-                        originalOnChange(this.settings.questMenuFilter);
-                    }, 100);
+        try {
+            Patcher.instead(this.meta.name, SortingFilterWithKey[0], SortingFilterWithKey[1], (_, args, originalFunction) => {
+                try {
+                    if (args[0]?.onChange && args[0]?.selectedSortMethod) {
+                        args[0].selectedSortMethod = this.settings.questMenuFilter;
+                        const originalOnChange = args[0].onChange;
+                        args[0].onChange = (value) => {
+                            this.settings.questMenuFilter = value;
+                            originalOnChange(value);
+                        };
+                        if (lastOnChange !== originalOnChange) {
+                            lastOnChange = originalOnChange;
+                            setTimeout(() => {
+                                originalOnChange(this.settings.questMenuFilter);
+                            }, 100);
+                        }
+                    }
+                    return originalFunction(...args);
+                } catch (e) {
+                    console.error(`[${this.meta.name}] Error in SortingFilterWithKey patch`, e);
+                    return originalFunction(...args);
                 }
-            }
-            return originalFunction(...args);
-        });
+            });
+        } catch (err) {
+            console.error(`[${this.meta.name}] Failed to patch SortingFilterWithKey:`, err);
+        }
 
         QuestsStore.addChangeListener(this.handleUpdateQuests);
     }
@@ -518,13 +570,21 @@ module.exports = class BasePlugin {
 
     patchTitleBar() {
         if (this.settings.showQuestsButtonTitleBar) {
-            Patcher.after(this.meta.name + "-title-bar", windowArea, "cq", (_, [props], ret) => {
-                if (props.windowKey?.startsWith("DISCORD_")) return ret;
-                if (props.trailing?.props?.children) {
-                    props.trailing.props.children.unshift(React.createElement(this.QuestButton, { type: "title-bar" }));
-                }
-            });
-            reRender("." + trailing, this.meta.name + "-title-bar");
+            try {
+                Patcher.after(this.meta.name + "-title-bar", windowArea, "cq", (_, [props], ret) => {
+                    try {
+                        if (props.windowKey?.startsWith("DISCORD_")) return ret;
+                        if (props.trailing?.props?.children) {
+                            props.trailing.props.children.unshift(React.createElement(this.QuestButton, { type: "title-bar" }));
+                        }
+                    } catch (e) {
+                        console.error(`[${this.meta.name}] Error in patchTitleBar patch`, e);
+                    }
+                });
+                reRender("." + trailing, this.meta.name + "-title-bar");
+            } catch (err) {
+                console.error(`[${this.meta.name}] Failed to patchTitleBar:`, err);
+            }
         }
     }
 
