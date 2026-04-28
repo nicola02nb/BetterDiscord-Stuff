@@ -1,7 +1,7 @@
 /**
  * @name ShowPing
  * @description Displays your live ping
- * @version 2.6.12
+ * @version 2.6.13
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -28,7 +28,7 @@ function getSetting(key) {
     return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
 }
 
-const { Webpack, React, Data, DOM, Patcher, UI } = BdApi;
+const { Webpack, React, Data, DOM, Patcher, UI, Utils } = BdApi;
 const { Filters } = Webpack;
 const [DiscordModules, RTCConnectionStore, { labelWrapper, rtcConnectionStatusConnected }, { voiceButtonsContainer }, labelClasses, textMdMedium, ConnectionStatus] =
     Webpack.getBulk(
@@ -111,10 +111,33 @@ module.exports = class ShowPing {
             .pingDisplay {min-width: min-content;}`);
 
         Patcher.after(this.meta.name, ConnectionStatus, "A", (_, args, ret) => {
-            const container = ret;
-            container.props.children = [container.props.children];
-            if (Array.isArray(container?.props?.children)) {
-                container?.props?.children?.push(React.createElement(this.PingElement));
+            try {
+                const parentLabel = Utils.findInTree(ret, m => m?.type?.displayName?.indexOf("rtcConnectionStatus__") !== -1, { walkable: ["props", "children"] });
+                const renderFunc = parentLabel?.props?.children?.[0]?.props?.children?.props?.children;
+                
+                if (typeof renderFunc === "function") {
+                    parentLabel.props.children[0].props.children.props.children = (e) => {
+                        try {
+                            const element = renderFunc(e);
+                            const children = element?.props?.children?.[1]?.props?.children?.[0]?.props?.children;
+                            
+                            if (Array.isArray(element?.props?.children) && typeof children?.type === "function") {
+                                const originalType = children.type;
+                                children.type = (props) => {
+                                    const rendered = originalType(props);
+                                    rendered.props.children = [rendered.props.children, React.createElement(this.PingElement)];
+                                    return rendered;
+                                };
+                            }
+                            return element;
+                        } catch (err) {
+                            console.error(`[${this.meta.name}] Error in inner patch`, err);
+                            return renderFunc(e);
+                        }
+                    };
+                }
+            } catch (err) {
+                console.error(`[${this.meta.name}] Error in patch ConnectionStatus`, err);
             }
             return ret;
         });
