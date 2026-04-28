@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.17.6
+ * @version 2.17.7
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -503,12 +503,24 @@ module.exports = class BetterTTS {
 
     // Event handelers
     patchOriginalTTS() {
-        Patcher.instead(this.meta.name, speakMessage[0], speakMessage[1], (thisObject, args, originalFunction) => {
-            setTTSType[0][setTTSType[1]]("NEVER"); // Disables the original TTS
-        });
-        Patcher.instead(this.meta.name, cancelSpeak[0], cancelSpeak[1], (thisObject, args, originalFunction) => {
-            return;
-        });
+        try {
+            Patcher.instead(this.meta.name, speakMessage[0], speakMessage[1], (thisObject, args, originalFunction) => {
+                try {
+                    setTTSType[0][setTTSType[1]]("NEVER"); // Disables the original TTS
+                } catch (e) {
+                    console.error(`[${this.meta.name}] Error in speakMessage patch:`, e);
+                }
+            });
+            Patcher.instead(this.meta.name, cancelSpeak[0], cancelSpeak[1], (thisObject, args, originalFunction) => {
+                try {
+                    return;
+                } catch (e) {
+                    console.error(`[${this.meta.name}] Error in cancelSpeak patch:`, e);
+                }
+            });
+        } catch (err) {
+            console.error(`[${this.meta.name}] Error setting up original TTS patches:`, err);
+        }
     }
 
     messageRecieved(event) {
@@ -570,10 +582,10 @@ module.exports = class BetterTTS {
         this.patchChannelContext = this.patchChannelContextMenu.bind(this);
         this.patchGuildContext = this.patchGuildContextMenu.bind(this);
 
-        ContextMenu.patch("user-context", this.patchUserContext);
-        ContextMenu.patch("gdm-context", this.patchChannelContext);
-        ContextMenu.patch("channel-context", this.patchChannelContext);
-        ContextMenu.patch("guild-context", this.patchGuildContext);
+            ContextMenu.patch("user-context", this.patchUserContext);
+            ContextMenu.patch("gdm-context", this.patchChannelContext);
+            ContextMenu.patch("channel-context", this.patchChannelContext);
+            ContextMenu.patch("guild-context", this.patchGuildContext);
     }
 
     unpatchContextMenus() {

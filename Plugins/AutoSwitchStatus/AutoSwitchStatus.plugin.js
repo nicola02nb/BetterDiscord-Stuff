@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status when you are muted, connected to a server or when disconnected from a server.
- * @version 1.9.4
+ * @version 1.9.5
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -131,14 +131,23 @@ module.exports = class AutoSwitchStatus {
         DiscordModules.subscribe("AUDIO_TOGGLE_SELF_DEAF", this.handleUpdateUserStatus);
         DiscordModules.subscribe("AUDIO_TOGGLE_SELF_MUTE", this.handleUpdateUserStatus);
 
-        Patcher.instead(this.meta.name, UserSettingsProtoUtils, "updateAsync", async (thisObject, args, originalFunction) => {
-            if (this.justSettedDND && args[0] === "userContent" && args[2] === 0) {
-                args[2] = SECONDS_TO_PREVENT_RATE_LIMITING;
-                this.justSettedDND = false;
-            }
+        try {
+            Patcher.instead(this.meta.name, UserSettingsProtoUtils, "updateAsync", async (thisObject, args, originalFunction) => {
+                try {
+                    if (this.justSettedDND && args[0] === "userContent" && args[2] === 0) {
+                        args[2] = SECONDS_TO_PREVENT_RATE_LIMITING;
+                        this.justSettedDND = false;
+                    }
 
-            return await originalFunction(...args);
-        });
+                    return await originalFunction(...args);
+                } catch (patchErr) {
+                    console.error(`[${this.meta.name}] Error in updateAsync patch:`, patchErr);
+                    return await originalFunction(...args);
+                }
+            });
+        } catch (err) {
+            console.error(`[${this.meta.name}] Failed to patch updateAsync`, err);
+        }
     }
 
     stop() {

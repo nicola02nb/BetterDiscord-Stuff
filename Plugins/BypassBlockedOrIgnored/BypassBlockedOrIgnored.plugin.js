@@ -1,7 +1,7 @@
 /**
  * @name BypassBlockedOrIgnored
  * @description Bypass the blocked or ignored user modal if is present in voice channels
- * @version 1.0.11
+ * @version 1.0.12
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -88,24 +88,37 @@ module.exports = class BypassBlockedOrIgnored {
         this.initSettings();
         this.showChangelog();
 
-        Patcher.before(this.meta.name, handleVoice, "handleVoiceConnect", (thisObject, args) => {
-            if (!this.settings.bypassWhenJoining) return;
+        try {
+            Patcher.before(this.meta.name, handleVoice, "handleVoiceConnect", (thisObject, args) => {
+                try {
+                    if (!this.settings.bypassWhenJoining) return;
 
-            const channlId = args[0].channel.id;
-            args[0].bypassBlockedWarningModal = this.shouldBypass(channlId);
-        });
+                    const channlId = args[0].channel.id;
+                    args[0].bypassBlockedWarningModal = this.shouldBypass(channlId);
+                } catch (e) {
+                    console.error(`[${this.meta.name}] Error in handleVoiceConnect patch:`, e);
+                }
+            });
 
-        Patcher.instead(this.meta.name, handleBoIJoined, "handleBlockedOrIgnoredUserVoiceChannelJoin", (thisObject, args, originalFunction) => {
-            if (!this.settings.bypassWhenUserJoins) return;
+            Patcher.instead(this.meta.name, handleBoIJoined, "handleBlockedOrIgnoredUserVoiceChannelJoin", (thisObject, args, originalFunction) => {
+                try {
+                    if (!this.settings.bypassWhenUserJoins) return;
 
-            const userId = args[1];
+                    const userId = args[1];
 
-            if (this.settings.bypassIgnoredUsersModal && RelationshipStore.isIgnored(userId) 
-                || this.settings.bypassBlockedUsersModal && RelationshipStore.isBlocked(userId)) {
-                return;
-            }
-            originalFunction(args[0], args[1]);
-        });
+                    if (this.settings.bypassIgnoredUsersModal && RelationshipStore.isIgnored(userId) 
+                        || this.settings.bypassBlockedUsersModal && RelationshipStore.isBlocked(userId)) {
+                        return;
+                    }
+                    originalFunction(args[0], args[1]);
+                } catch (e) {
+                    console.error(`[${this.meta.name}] Error in handleBlockedOrIgnoredUserVoiceChannelJoin patch:`, e);
+                    originalFunction(args[0], args[1]);
+                }
+            });
+        } catch (err) {
+            console.error(`[${this.meta.name}] Failed to initialize patches:`, err);
+        }
     }
 
     stop() {

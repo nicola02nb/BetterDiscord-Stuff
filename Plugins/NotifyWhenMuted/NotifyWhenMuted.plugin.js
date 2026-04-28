@@ -1,7 +1,7 @@
 /**
  * @name NotifyWhenMuted
  * @description Plays a sound when user tries to speak while muted
- * @version 1.4.18
+ * @version 1.4.19
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -148,30 +148,39 @@ module.exports = class NotifyWhenMuted {
     }
 
     async handleSpeaking(_, args, ret) {
-        if (!this.settings.enabled
-            || !this.settings.notifyServerMuted && !MediaEngineStore.isSelfMute() && MediaEngineStore.isMute()
-            || MediaEngineStore.isSelfDeaf() && !this.settings.notifyWhenDeafen) return;
-        if (ret && !this.isPlaying) {
-            this.isPlaying = true;
-            this.audio = new Audio(this.settings.audioUrl);
-            this.audio.volume = this.settings.audioVolume / 100;
-            this.audio.addEventListener('ended', async () => {
-                await delay(this.settings.delayBetweenNotifications);
-                this.isPlaying = false;
-            });
-            this.audio.play();
+        try {
+            if (!this.settings.enabled
+                || !this.settings.notifyServerMuted && !MediaEngineStore.isSelfMute() && MediaEngineStore.isMute()
+                || MediaEngineStore.isSelfDeaf() && !this.settings.notifyWhenDeafen) return;
+            if (ret && !this.isPlaying) {
+                this.isPlaying = true;
+                this.audio = new Audio(this.settings.audioUrl);
+                this.audio.volume = this.settings.audioVolume / 100;
+                this.audio.addEventListener('ended', async () => {
+                    await delay(this.settings.delayBetweenNotifications);
+                    this.isPlaying = false;
+                });
+                this.audio.play();
+            }
+        } catch (err) {
+            console.error(`[${this.meta.name}] Error in handleSpeaking patch:`, err);
         }
     }
 
     handleAddButton(_, args, ret) {
-        if (!this.settings.showToggleButton) return ret;
-        
-        if (args[0]?.className?.includes("voiceButtonsContainer_")) {
-            const button = React.createElement(this.ToggleButton);
-            //button.type = ToggleButton;
-            ret.props?.children?.unshift(button);
+        try {
+            if (!this.settings.showToggleButton) return ret;
+            
+            if (args[0]?.className?.includes("voiceButtonsContainer_")) {
+                const button = React.createElement(this.ToggleButton);
+                //button.type = ToggleButton;
+                ret.props?.children?.unshift(button);
+            }
+            return ret;
+        } catch (err) {
+            console.error(`[${this.meta.name}] Error in handleAddButton patch:`, err);
+            return ret;
         }
-        return ret;
     }
 
     ToggleButton = () => {

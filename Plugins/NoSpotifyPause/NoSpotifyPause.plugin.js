@@ -1,7 +1,7 @@
 /**
  * @name NoSpotifyPause
  * @description Prevents Discord from pausing your Spotify when streaming or gaming.
- * @version 1.0.1
+ * @version 1.0.2
  * @author nicola02nb bep
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -9,7 +9,7 @@
 */
 const config = {
 	changelog: [
-		{ title: "New Features", type: "added", items: ["Added changelog"] },
+		//{ title: "New Features", type: "added", items: ["Added changelog"] },
 		//{ title: "Bug Fix", type: "fixed", items: [""] },
 		//{ title: "Improvements", type: "improved", items: [""] },
 		//{ title: "On-going", type: "progress", items: [""] }
@@ -41,10 +41,14 @@ module.exports = class NoSpotifyPause {
 
 	start() {
 		this.showChangelog();
-		Patcher.instead(this.meta.name, SpotifyModule, PauseFunction, (originalFunc, args) => { });
-		Patcher.instead(this.meta.name, SpotifyStore, "wasAutoPaused", (originalFunc, args) => {
-			return false;
-		});
+		try {
+			Patcher.instead(this.meta.name, SpotifyModule, PauseFunction, (originalFunc, args) => { });
+			Patcher.instead(this.meta.name, SpotifyStore, "wasAutoPaused", (originalFunc, args) => {
+				return false;
+			});
+		} catch (err) {
+			console.error(`[${this.meta.name}] Error setting up patches`, err);
+		}
 	}
 
 	stop() {
