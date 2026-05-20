@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.9
+ * @version 1.7.10
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -158,6 +158,12 @@ module.exports = class BasePlugin {
                         } else {
                             this.unpatchTitleBar();
                         }
+                        break;
+                    case "completeQuestsSequentially":
+                        if (value) {
+                            this.stopCompletingAll();
+                        }
+                        this.updateQuests();
                         break;
                 }
             }
@@ -546,11 +552,21 @@ module.exports = class BasePlugin {
             this.lastLogString = logString;
         }
 
+        let isAnyQuestCompleting = Array.from(this.completingQuests.values()).includes(true);
+        let hasCompletableEligible = completableQuests.some(q => this.isQuestEligibleForFarming(q));
+
         for (const quest of acceptableQuests) {
+            if (this.settings.completeQuestsSequentially && (isAnyQuestCompleting || hasCompletableEligible)) {
+                break;
+            }
             if (this.isQuestEligibleForFarming(quest)) {
                 this.acceptQuest(quest);
+                if (this.settings.completeQuestsSequentially) {
+                    hasCompletableEligible = true;
+                }
             }
         }
+
         for (const quest of completableQuests) {
             if (this.completingQuests.get(quest.id) === true) {
                 continue; // already completing
@@ -558,9 +574,15 @@ module.exports = class BasePlugin {
             if (this.completingQuests.has(quest.id)) {
                 this.completingQuests.delete(quest.id);
             }
-            console.log("Starting to complete quest:", quest.config.messages.questName);
+            
+            if (this.settings.completeQuestsSequentially && isAnyQuestCompleting) {
+                continue;
+            }
+
             if (this.isQuestEligibleForFarming(quest)) {
+                console.log("Starting to complete quest:", quest.config.messages.questName);
                 this.completeQuest(quest);
+                isAnyQuestCompleting = true;
             }
         }
         /* console.log("Available quests updated:", availableQuests);
