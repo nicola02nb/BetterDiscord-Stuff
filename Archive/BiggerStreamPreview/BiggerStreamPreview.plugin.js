@@ -29,7 +29,7 @@ const [ ApplicationStreamingStore, ApplicationStreamPreviewStore, useStateFromSt
 );
 
 const RenderLinkComponent = Webpack.getModule(m => m.type?.toString?.().includes("MASKED_LINK"), { searchExports: false });
-const ImageModal = Webpack.getModule(m => m.type?.toString?.().includes("ZOOM_OUT_IMAGE_PRESSED"), { searchExports: true }); // Webpack.getAllByStrings("onZoom", "shouldLink", "zoomThumbnailPlaceholder")
+const ImageModal = Webpack.getModule(m => { try { return typeof m === "function" && m.toString().includes("zoomThumbnailPlaceholder"); } catch(e) { return false; } }, { searchExports: true }); // Fix: "ZOOM_OUT_IMAGE_PRESSED" no longer exists, search by "zoomThumbnailPlaceholder" instead
 
 
 module.exports = class BiggerStreamPreview {
@@ -117,7 +117,7 @@ module.exports = class BiggerStreamPreview {
 	async openImageModal(url) {
 		const imageInfo = await this.fetchImageInfo(url);
 		const imgProps = {
-			//src: url,
+			src: url, // Fix: ImageModal now expects flat props instead of a media object
 			alt: "Stream Preview",
 			width: imageInfo.width,
 			height: imageInfo.height,
@@ -130,18 +130,16 @@ module.exports = class BiggerStreamPreview {
 			zoomThumbnailPlaceholder: url,
 			animated: false,
 			srcIsAnimated: false,
+			shouldLink: false,
 		}
 
 		const OpenLink = React.createElement('div', { className: "imageModalOptions", }, React.createElement(RenderLinkComponent, {
 			className: "downloadLink",
 			href: url,
 		}, "Open in Browser"));
-		const StreamImage = React.createElement('div', { className: "imageModalwrapper", }, React.createElement(ImageModal, {
-			media: {
-				...imageModalProps,
-				...imgProps,
-			},
-			obscured: false,
+		const StreamImage = React.createElement('div', { className: "imageModalwrapper", }, React.createElement(ImageModal.type ?? ImageModal, { // Fix: unwrap memo wrapper if present
+			...imageModalProps,
+			...imgProps,
 		}), OpenLink);
 
 		openModal(props => (
