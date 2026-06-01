@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.10
+ * @version 1.7.11
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -512,9 +512,15 @@ module.exports = class BasePlugin {
         if (this.fakeApplications.size > 0) {
             this.fakeApplications.clear();
         }
+
+        if (this.ignoredQuests) {
+            this.ignoredQuests.clear();
+        }
     }
 
     isQuestEligibleForFarming(quest) {
+        if (this.ignoredQuests && this.ignoredQuests.has(quest.id)) return false;
+
         const questConfig = quest.config.taskConfig || quest.config.taskConfigV2;
         if (!Object.keys(questConfig.tasks).some(taskName => {
             return ((taskName === "WATCH_VIDEO" || taskName === "WATCH_VIDEO_ON_MOBILE") && this.settings.farmVideos
@@ -550,6 +556,13 @@ module.exports = class BasePlugin {
             console.log("Updating quests to complete...");
             console.log(logString);
             this.lastLogString = logString;
+        }
+
+        for (const [id, isCompleting] of this.completingQuests.entries()) {
+            if (isCompleting && !completableQuests.some(q => q.id === id)) {
+                this.completingQuests.set(id, false); // Tell background task to stop if abandoned
+                this.completingQuests.delete(id);
+            }
         }
 
         let isAnyQuestCompleting = Array.from(this.completingQuests.values()).includes(true);
@@ -724,7 +737,6 @@ module.exports = class BasePlugin {
                             secondsDone = Math.min(secondsNeeded, timestamp);
 
                             if (timestamp >= secondsNeeded) {
-                                this.completingQuests.set(quest.id, false);
                                 break;
                             }
                         }
@@ -732,7 +744,11 @@ module.exports = class BasePlugin {
                             await postWithRetry(`/quests/${quest.id}/video-progress`, { timestamp: secondsNeeded });
                         } else {
                             console.log(`Quest ${questName} completed!`);
-                        }                        
+                        }
+                        this.completingQuests.set(quest.id, false);
+                        if (!this.ignoredQuests) this.ignoredQuests = new Set();
+                        this.ignoredQuests.add(quest.id);
+                        setTimeout(() => this.updateQuests(), 1000);
                     }
                     watchVideo();
                     console.log(`Spoofing video for ${questName}.`);
@@ -761,32 +777,58 @@ module.exports = class BasePlugin {
                         const fakeGames = Array.from(this.fakeGames.values());
                         DiscordModules.dispatch({ type: "RUNNING_GAMES_CHANGE", removed: realGames, added: [fakeGame], games: fakeGames });
 
+                        let lastUpdate = Date.now();
                         let playOnDesktop = (event) => {
                             if (event.questId !== quest.id) return;
+                            lastUpdate = Date.now();
                             let progress = quest.config.configVersion === 1 ? event.userStatus.streamProgressSeconds : Math.floor(event.userStatus.progress.PLAY_ON_DESKTOP.value);
                             console.log(`Quest progress ${questName}: ${progress}/${secondsNeeded}`);
 
                             if (!this.settings.hasAcceptedToUsePlugin || !this.settings.farmPlayOnDesktop || !this.completingQuests.get(quest.id)) {
                                 console.log("Stopping completing quest:", questName);
-                                this.fakeGames.delete(quest.id);
-                                const games = RunningGameStore.getRunningGames();
-                                const added = this.fakeGames.size == 0 ? games : [];
-                                DiscordModules.dispatch({ type: "RUNNING_GAMES_CHANGE", removed: [fakeGame], added: added, games: games });
-                                DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", playOnDesktop);
-                                this.completingQuests.set(quest.id, false);                                
-                            }
-
-                            if (progress >= secondsNeeded) {
-                                console.log(`Quest ${questName} completed!`);
+                                clearInterval(checkInterval);
                                 this.fakeGames.delete(quest.id);
                                 const games = RunningGameStore.getRunningGames();
                                 const added = this.fakeGames.size == 0 ? games : [];
                                 DiscordModules.dispatch({ type: "RUNNING_GAMES_CHANGE", removed: [fakeGame], added: added, games: games });
                                 DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", playOnDesktop);
                                 this.completingQuests.set(quest.id, false);
+                                setTimeout(() => this.updateQuests(), 1000);
+                            } else if (progress >= secondsNeeded) {
+                                console.log(`Quest ${questName} completed!`);
+                                clearInterval(checkInterval);
+                                this.fakeGames.delete(quest.id);
+                                const games = RunningGameStore.getRunningGames();
+                                const added = this.fakeGames.size == 0 ? games : [];
+                                DiscordModules.dispatch({ type: "RUNNING_GAMES_CHANGE", removed: [fakeGame], added: added, games: games });
+                                DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", playOnDesktop);
+                                this.completingQuests.set(quest.id, false);
+                                if (!this.ignoredQuests) this.ignoredQuests = new Set();
+                                this.ignoredQuests.add(quest.id);
+                                setTimeout(() => this.updateQuests(), 1000);
                             }
                         }
                         DiscordModules.subscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", playOnDesktop);
+
+                        const checkInterval = setInterval(() => {
+                            if (!this.completingQuests.get(quest.id)) {
+                                clearInterval(checkInterval);
+                                return;
+                            }
+                            if (Date.now() - lastUpdate > 120000) { 
+                                console.log(`No PLAY_ON_DESKTOP progress for ${questName}. Ignoring this quest for now...`);
+                                clearInterval(checkInterval);
+                                this.fakeGames.delete(quest.id);
+                                const games = RunningGameStore.getRunningGames();
+                                const added = this.fakeGames.size == 0 ? games : [];
+                                DiscordModules.dispatch({ type: "RUNNING_GAMES_CHANGE", removed: [fakeGame], added: added, games: games });
+                                DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", playOnDesktop);
+                                this.completingQuests.set(quest.id, false);
+                                if (!this.ignoredQuests) this.ignoredQuests = new Set();
+                                this.ignoredQuests.add(quest.id);
+                                setTimeout(() => this.updateQuests(), 1000);
+                            }
+                        }, 60000);
 
                         console.log(`Spoofed your game to ${applicationName}. Wait for ${Math.ceil((secondsNeeded - secondsDone) / 60)} more minutes.`);
                     })
@@ -801,26 +843,49 @@ module.exports = class BasePlugin {
                     };
                     this.fakeApplications.set(quest.id, fakeApp);
 
+                    let lastStreamUpdate = Date.now();
                     let streamOnDesktop = (event) => {
                         if (event.questId !== quest.id) return;
+                        lastStreamUpdate = Date.now();
                         let progress = quest.config.configVersion === 1 ? event.userStatus.streamProgressSeconds : Math.floor(event.userStatus.progress.STREAM_ON_DESKTOP.value);
                         console.log(`Quest progress ${questName}: ${progress}/${secondsNeeded}`);
 
                         if (!this.settings.hasAcceptedToUsePlugin || !this.settings.farmStreamOnDesktop || !this.completingQuests.get(quest.id)) {
                             console.log("Stopping completing quest:", questName);
+                            clearInterval(streamCheckInterval);
                             this.fakeApplications.delete(quest.id);
                             DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", streamOnDesktop);
                             this.completingQuests.set(quest.id, false);
-                        }
-
-                        if (progress >= secondsNeeded) {
+                            setTimeout(() => this.updateQuests(), 1000);
+                        } else if (progress >= secondsNeeded) {
                             console.log(`Quest ${questName} completed!`);
+                            clearInterval(streamCheckInterval);
                             this.fakeApplications.delete(quest.id);
                             DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", streamOnDesktop);
                             this.completingQuests.set(quest.id, false);
+                            if (!this.ignoredQuests) this.ignoredQuests = new Set();
+                            this.ignoredQuests.add(quest.id);
+                            setTimeout(() => this.updateQuests(), 1000);
                         }
                     }
-                    DiscordModules.subscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", streamOnDesktop)
+                    DiscordModules.subscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", streamOnDesktop);
+
+                    const streamCheckInterval = setInterval(() => {
+                        if (!this.completingQuests.get(quest.id)) {
+                            clearInterval(streamCheckInterval);
+                            return;
+                        }
+                        if (Date.now() - lastStreamUpdate > 120000) { 
+                            console.log(`No STREAM_ON_DESKTOP progress for ${questName}. Ignoring this quest for now...`);
+                            clearInterval(streamCheckInterval);
+                            this.fakeApplications.delete(quest.id);
+                            DiscordModules.unsubscribe("QUESTS_SEND_HEARTBEAT_SUCCESS", streamOnDesktop);
+                            this.completingQuests.set(quest.id, false);
+                            if (!this.ignoredQuests) this.ignoredQuests = new Set();
+                            this.ignoredQuests.add(quest.id);
+                            setTimeout(() => this.updateQuests(), 1000);
+                        }
+                    }, 60000);
 
                     console.log(`Spoofed your stream to ${applicationName}. Stream any window in vc for ${Math.ceil((secondsNeeded - secondsDone) / 60)} more minutes.`);
                     console.log("Remember that you need at least 1 other person to be in the vc!");
@@ -843,6 +908,7 @@ module.exports = class BasePlugin {
                             if (!this.settings.hasAcceptedToUsePlugin || !this.settings.farmPlayActivity || !this.completingQuests.get(quest.id)) {
                                 console.log("Stopping completing quest:", questName);
                                 this.completingQuests.set(quest.id, false);
+                                setTimeout(() => this.updateQuests(), 1000);
                                 break;
                             }
 
@@ -850,6 +916,9 @@ module.exports = class BasePlugin {
                                 await postWithRetry(`/quests/${quest.id}/heartbeat`, { stream_key: streamKey, terminal: true });
                                 console.log(`Quest ${questName} completed!`);
                                 this.completingQuests.set(quest.id, false);
+                                if (!this.ignoredQuests) this.ignoredQuests = new Set();
+                                this.ignoredQuests.add(quest.id);
+                                setTimeout(() => this.updateQuests(), 1000);
                                 break;
                             }
                         }
