@@ -582,10 +582,10 @@ module.exports = class BetterTTS {
         this.patchChannelContext = this.patchChannelContextMenu.bind(this);
         this.patchGuildContext = this.patchGuildContextMenu.bind(this);
 
-            ContextMenu.patch("user-context", this.patchUserContext);
-            ContextMenu.patch("gdm-context", this.patchChannelContext);
-            ContextMenu.patch("channel-context", this.patchChannelContext);
-            ContextMenu.patch("guild-context", this.patchGuildContext);
+        ContextMenu.patch("user-context", this.patchUserContext);
+        ContextMenu.patch("gdm-context", this.patchChannelContext);
+        ContextMenu.patch("channel-context", this.patchChannelContext);
+        ContextMenu.patch("guild-context", this.patchGuildContext);
     }
 
     unpatchContextMenus() {

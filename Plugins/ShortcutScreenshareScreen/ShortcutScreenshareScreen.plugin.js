@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 2.0.0
+ * @version 2.0.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -228,7 +228,7 @@ module.exports = class ShortcutScreenshareScreen {
         const mediaEngine = MediaEngineStore.getMediaEngine();
         let sources = [];
         if (type === "screen") {
-            sources = await mediaEngine.getScreenPreviews(376, 212); // name
+            sources = await mediaEngine.getScreenPreviews(376, 212, true); // name
         } else if (type === "device") {
             sources = await mediaEngine.getVideoInputDevices();
             sources = sources.map(source => ({ ...source, id: "camera:"+source.id, audioSourceId: "default" })); 
