@@ -1,7 +1,7 @@
 /**
  * @name ShortcutPlaySoundboard
  * @description Play soundboards sounds from keyboard shortcuts.
- * @version 1.0.0
+ * @version 1.0.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -24,20 +24,16 @@ function getSetting(key) {
     return config.settings.reduce((found, setting) => found ? found : (setting.id === key ? setting : setting.settings?.find(s => s.id === key)), undefined)
 }
 
-const { Webpack, UI, Data, React, Components, DOM, Patcher } = BdApi;
+const { ContextMenu, Webpack, UI, Data, React, Components, DOM, Patcher, Utils } = BdApi;
 const { Button, Flex, Text, Tooltip, SettingItem, DropdownInput } = Components;
 const { Filters } = Webpack;
 
-const [RTCConnectionStore, SoundboardStore, MediaEngineStore] = Webpack.getBulk(
+const [RTCConnectionStore, SoundboardStore, MediaEngineStore, KeyboardIcon] = Webpack.getBulk(
     { filter: Filters.byStoreName("RTCConnectionStore") },
     { filter: Filters.byStoreName("SoundboardStore") },
-    { filter: Filters.byStoreName("MediaEngineStore") }
+    { filter: Filters.byStoreName("MediaEngineStore") },
+    { filter: Filters.byStrings("evenodd", "M4 4a3 3 0 0 0-3"), searchExports: true }
 );
-const SoundboardButtonModule = Webpack.getBySource("soundButtonProps:", "inspectedExpressionPosition");
-const SoundboardButtonKey = Object.keys(SoundboardButtonModule).find(key => {
-    const funcStr = SoundboardButtonModule[key].toString();
-    return funcStr.includes("soundButtonProps:") && funcStr.includes("inspectedExpressionPosition");
-});
 const SendSoundboardSoundModule = Webpack.getBySource(".SOUNDBOARD),", "__OVERLAY__,")
 const SendSoundboardSoundKey = Object.keys(SendSoundboardSoundModule).find(key => {
     const funcStr = SendSoundboardSoundModule[key].toString();
@@ -47,10 +43,6 @@ const FetchSoundboardSoundsModule = Webpack.getBySource("OVERLAY_SOUNDBOARD_SOUN
 const FetchSoundboardSoundsKey = Object.keys(FetchSoundboardSoundsModule).find(key => {
     const funcStr = FetchSoundboardSoundsModule[key].toString();
     return funcStr.includes("OVERLAY_SOUNDBOARD_SOUNDS_FETCH_REQUEST") && funcStr.includes("EXPRESSION_PICKER_SOUNDBOARD_SOUNDS_LOADED");
-});
-const SoundboardBodyModule = Webpack.getAllBySource("onActiveCategoryIndexChange", "isScrolling:", "renderUpsell:");
-const SoundboardBodyKey = Object.keys(SoundboardBodyModule).find(key => {
-    return SoundboardBodyModule[key].render;
 });
 
 
@@ -153,49 +145,15 @@ module.exports = class ShortcutScreenshareScreen {
         this.initSettings();
         this.showChangelog();
 
-        this.registerShortcuts();
         DOM.addStyle(this.meta.name, style);
-
-        Patcher.after(this.meta.name, SoundboardButtonModule, SoundboardButtonKey, (_, [props], ret) => {
-            ret.props.onMouseDown = (e) => {
-                if (e.shiftKey) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const sound = props.descriptor.item.sound;
-                    UI.alert(`Shortcut for: ${sound.name} ${sound.emojiName}`, React.createElement("div", null,
-                        React.createElement(SettingItem, {
-                            id: `shortcut-soundboard-${sound.soundId}`,
-                            name: "Set Shortcut",
-                            note: "Set the keyboard shortcut to play this soundboard sound.",
-                            inline: true
-                        },
-                            React.createElement(ReadKeybind, {
-                                id: `shortcut-soundboard-${sound.soundId}`,
-                                value: this.soundsMap.get(sound.soundId)?.keys || [],
-                                onChange: (category, id, keys) => {
-                                    this.updateKeybind(sound.soundId, keys);
-                                }
-                            })),
-                    ));
-
-                }
-            };
-
-            return ret;
-        });
-
-        Patcher.after(this.meta.name, SoundboardBodyModule[SoundboardBodyKey], "render", (_, args, ret) => {
-            ret.props.children.unshift(React.createElement(Text,
-                { style: { margin: "10px", fontWeight: "600", fontSize: "16px" } },
-                "To set shortcuts, ", React.createElement("code", null, "Shift+Click"), " a sound button."));
-            return ret;
-        });
+        this.registerShortcuts();
+        this.patchContextMenu();
 
         this.fetchSoundboardSounds();
     }
 
     stop() {
-        Patcher.unpatchAll(this.meta.name);
+        this.unpatchContextMenus();
         this.unregisterShortcuts();
         DOM.removeStyle(this.meta.name);
     }
@@ -290,13 +248,55 @@ module.exports = class ShortcutScreenshareScreen {
             this.soundsMap.delete(soundId);
         }
     }
+
+    patchContextMenu() {
+        ContextMenu.patch("sound-button-context", this.patchSoundContextMenu);
+    }
+
+    unpatchContextMenus() {
+        ContextMenu.unpatch("sound-button-context", this.patchSoundContextMenu);
+    }
+
+    patchSoundContextMenu = (returnValue, props) => {
+        const buttonFilter = button => (button?.props?.id === "download-soundboard-sound");
+        const buttonParent = Utils.findInTree(returnValue, e => Array.isArray(e) && e.some(buttonFilter));
+        const buttonSetShortcut = ContextMenu.buildItem({
+            type: "button",
+            label: "Set Shortcut",
+            icon: KeyboardIcon,
+            action: () => {
+                const sound = props.sound;
+                if (sound) {
+                    UI.alert(`Shortcut for: ${sound.name} ${sound.emojiName}`, React.createElement("div", null,
+                        React.createElement(SettingItem, {
+                            id: `shortcut-soundboard-${sound.soundId}`,
+                            name: "Set Shortcut",
+                            note: "Set the keyboard shortcut to play this soundboard sound.",
+                            inline: true
+                        },
+                            React.createElement(ReadKeybind, {
+                                id: `shortcut-soundboard-${sound.soundId}`,
+                                value: this.soundsMap.get(sound.soundId)?.keys || [],
+                                onChange: (category, id, keys) => {
+                                    this.updateKeybind(sound.soundId, keys);
+                                }
+                            })),
+                    ));
+                }
+            }
+        });
+        if (Array.isArray(buttonParent)) {
+            buttonParent.push(buttonSetShortcut);
+        }
+    }
+    
 }
 
 const DiscordUtils = DiscordNative.nativeModules.requireModule("discord_utils");
 const keycodesToStringModule = Webpack.getBySource(".map(", ".KEYBOARD_KEY", ".KEYBOARD_MODIFIER_KEY", ".MOUSE_BUTTON", ".GAMEPAD_BUTTON");
 const keycodesToStringKey = Object.keys(keycodesToStringModule).find(key => {
     const funcStr = keycodesToStringModule[key].toString();
-    return funcStr.includes(".KEYBOARD_KEY") && funcStr.includes(".KEYBOARD_MODIFIER_KEY") && funcStr.includes(".MOUSE_BUTTON") && funcStr.includes(".GAMEPAD_BUTTON");
+    return funcStr.includes(".join(\"+\")");
 });
 const keycodesToString = keycodesToStringModule[keycodesToStringKey];
 const BinIconModule = Webpack.getBySource("M14.25 1c.41 0");
