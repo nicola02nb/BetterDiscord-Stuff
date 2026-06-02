@@ -1,7 +1,7 @@
 /**
  * @name ShortcutScreenshareScreen
  * @description Screenshare screen from keyboard shortcut when no game is running
- * @version 2.0.1
+ * @version 2.0.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -415,7 +415,7 @@ const DiscordUtils = DiscordNative.nativeModules.requireModule("discord_utils");
 const keycodesToStringModule = Webpack.getBySource(".map(", ".KEYBOARD_KEY", ".KEYBOARD_MODIFIER_KEY", ".MOUSE_BUTTON", ".GAMEPAD_BUTTON");
 const keycodesToStringKey = Object.keys(keycodesToStringModule).find(key => {
     const funcStr = keycodesToStringModule[key].toString();
-    return funcStr.includes(".KEYBOARD_KEY") && funcStr.includes(".KEYBOARD_MODIFIER_KEY") && funcStr.includes(".MOUSE_BUTTON") && funcStr.includes(".GAMEPAD_BUTTON");
+    return funcStr.includes(".join(\"+\")");
 });
 const keycodesToString = keycodesToStringModule[keycodesToStringKey];
 const BinIconModule = Webpack.getBySource("M14.25 1c.41 0");
