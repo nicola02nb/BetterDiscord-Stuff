@@ -9,9 +9,9 @@
  */
 const config = {
     changelog: [
-        { title: "New Features", type: "added", items: ["More fine grained keybind settings"] },
+        //{ title: "", type: "added", items: [""] },
         //{ title: "Bug Fix", type: "fixed", items: [""] },
-        { title: "Improvements", type: "improved", items: ["Reorganization of keybind settings", "Plugin logic improvements"] },
+        //{ title: "Improvements", type: "improved", items: [""] },
         //{ title: "On-going", type: "progress", items: [""] }
     ],
     settings: [
