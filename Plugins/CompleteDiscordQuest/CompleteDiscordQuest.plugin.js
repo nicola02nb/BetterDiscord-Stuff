@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.11
+ * @version 1.7.12
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -64,7 +64,7 @@ const { Webpack, Data, UI, Patcher, DOM, React, ReactUtils, Components, Utils, P
 const { Filters } = Webpack;
 const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
     ChannelStore, GuildChannelStore, RestApi, QuestApplyAction, QuestLocationMap,
-    QuestIcon, { navigateToQuestHome }, CountBadge,
+    QuestIcon, navigateToQuestHomeObj, CountBadge,
     windowArea, SettingsBarModule, trailingModule,
     SettingsBarButton, TopBarButtonModule] = Webpack.getBulk(
         { filter: Filters.byKeys("subscribe", "dispatch"), searchExports: true },
@@ -1052,12 +1052,12 @@ module.exports = class BasePlugin {
             return React.createElement(TopBarButtonModule[TopBarButtonKey], {
                 className: className,
                 iconClassName: undefined,
-                disabled: navigateToQuestHome === undefined,
+                disabled: navigateToQuestHomeObj === undefined,
                 showBadge: state.enrollable > 0 || state.enrolled > 0 || state.claimable > 0,
                 badgePosition: "bottom",
                 icon: questIcon,
                 iconSize: 20,
-                onClick: navigateToQuestHome,
+                onClick: navigateToQuestHomeObj?.navigateToQuestHome,
                 onContextMenu: undefined,
                 tooltip: tooltip,
                 tooltipPosition: "bottom",
@@ -1067,18 +1067,18 @@ module.exports = class BasePlugin {
             return React.createElement(SettingsBarButton, {
                 tooltipText: tooltip,
                 onContextMenu: undefined,
-                onClick: navigateToQuestHome,
-                disabled: navigateToQuestHome === undefined,
+                onClick: navigateToQuestHomeObj?.navigateToQuestHome,
+                disabled: navigateToQuestHomeObj === undefined,
                 className: "quest-button"
             }, React.createElement(TopBarButtonModule[TopBarButtonKey], {
                 className: className,
                 iconClassName: undefined,
-                disabled: navigateToQuestHome === undefined,
+                disabled: navigateToQuestHomeObj === undefined,
                 showBadge: state.enrollable > 0 || state.enrolled > 0 || state.claimable > 0,
                 badgePosition: "bottom",
                 icon: questIcon,
                 iconSize: 20,
-                onClick: navigateToQuestHome,
+                onClick: navigateToQuestHomeObj?.navigateToQuestHome,
                 onContextMenu: undefined,
                 hideOnClick: false
             }));
