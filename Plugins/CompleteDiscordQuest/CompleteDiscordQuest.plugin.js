@@ -77,7 +77,7 @@ const [DiscordModules, ApplicationStreamingStore, RunningGameStore, QuestsStore,
         { filter: Filters.byStrings("type:\"QUESTS_ENROLL_BEGIN\""), searchExports: true },
         { filter: Filters.byKeys("QUEST_HOME_DESKTOP", "11"), searchExports: true },
         { filter: Filters.bySource("\"M7.5 21.7a8.95") },
-        { filter: Filters.byKeys("navigateToQuestHome") },
+        { filter: Filters.byKeys("navigateToQuestHome") },// TODO fix not working
         { filter: Filters.byStrings("renderBadgeCount", "disableColor"), searchExports: true },
         { filter: Filters.bySource("windowKey:", "showDivider:") },
         { filter: Filters.byStrings("handleToggleSelfMute"), searchExports: true },
@@ -171,7 +171,6 @@ module.exports = class BasePlugin {
     }
 
     parseMeta(fileContent) {
-        //zlibrary code
         const splitRegex = /[^\S\r\n]*?\r?(?:\r\n|\n)[^\S\r\n]*?\*[^\S\r\n]?/;
         const escapedAtRegex = /^\\@/;
         const block = fileContent.split("/**", 2)[1].split("*/", 1)[0];
@@ -460,7 +459,7 @@ module.exports = class BasePlugin {
             console.error(`[${this.meta.name}] Failed to patch QuestButtonWithKey:`, err);
         }
 
-        let lastOnChange = null;
+        let lastOnChange = null;// TODO fix patch not working
         try {
             Patcher.instead(this.meta.name, SortingFilterWithKey[0], SortingFilterWithKey[1], (_, args, originalFunction) => {
                 try {
