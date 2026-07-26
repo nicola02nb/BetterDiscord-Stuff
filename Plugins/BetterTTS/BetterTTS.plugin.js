@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.18.0
+ * @version 2.18.1
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -532,7 +532,7 @@ module.exports = class BetterTTS {
     messageRecieved(event) {
         if (!this.settings.enableTTS) return;
         let message = event.message;
-        if ((event.guildId || !message.member) && this.shouldPlayMessage(event.message)) {
+        if ((event.guildId || !message.member) && this.shouldPlayMessage(event.message) && !event.sendMessageOptions) {
             let text = this.getPatchedContent(message, message.guild_id);
             this.audioPlayer.enqueueTTSMessage(text);
         }
