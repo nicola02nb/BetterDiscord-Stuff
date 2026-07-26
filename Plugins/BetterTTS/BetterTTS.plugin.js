@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.17.7
+ * @version 2.18.0
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -19,6 +19,12 @@ const config = {
         { type: "switch", id: "enableTTSCommand", name: "Enable /tts Command", note: "Allow playback and usage of /tts command.", value: true },
         { type: "switch", id: "enableUserAnnouncement", name: "Enable User Announcement", note: "Enables/Disables the User Announcement when join/leaves the channel.", value: true },
         { type: "switch", id: "enableMessageReading", name: "Enable Message Reading", note: "Enables/Disables the message reading from channels.", value: true },
+        { type: "dropdown", id: "enableOwnUserMessagesAndAnnouncements", name: "Own Messages/Announcements", note: "Choose when TTS should read your own messages and join/leave announcements.", value: "none", options: [
+            { label: "None", value: "none" },
+            { label: "Messages", value: "messages" },
+            { label: "Announcements", value: "announcements" },
+            { label: "Both", value: "both" },
+        ] },
         {
             type: "category", id: "ttsMessageSources", name: "TTS Message Sources", collapsible: true, shown: false, settings: [
                 {
@@ -366,14 +372,14 @@ module.exports = class BetterTTS {
     }
 
     getSettingsPanel() {
-        config.settings[4].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
-        config.settings[4].settings[3].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
-        config.settings[6].settings[0].children = [React.createElement(this.DropdownSources, { selected: this.settings.ttsSource })];
-        config.settings[6].settings[1].children = [React.createElement(this.DropdownVoices, { source: this.settings.ttsSource, selected: this.settings.ttsVoice })];
-        config.settings[7].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
-        config.settings[8].settings[2].children = [React.createElement(this.PreviewTTS)];
-        config.settings[9].settings[0].children = [React.createElement(this.TextReplaceDropdown, {})];
-        config.settings[9].settings[1].children = [React.createElement(this.TextReplaceAdd)];
+        config.settings[5].settings[2].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Channel", setName: "ttsSubscribedChannels", getFunction: ChannelStore.getChannel })];
+        config.settings[5].settings[3].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unsubscribe Server", setName: "ttsSubscribedGuilds", getFunction: GuildStore.getGuild })];
+        config.settings[7].settings[0].children = [React.createElement(this.DropdownSources, { selected: this.settings.ttsSource })];
+        config.settings[7].settings[1].children = [React.createElement(this.DropdownVoices, { source: this.settings.ttsSource, selected: this.settings.ttsVoice })];
+        config.settings[8].settings[0].children = [React.createElement(this.DropdownButtonGroup, { labeltext: "Unmute User", setName: "ttsMutedUsers", getFunction: UserStore.getUser })];
+        config.settings[9].settings[2].children = [React.createElement(this.PreviewTTS)];
+        config.settings[10].settings[0].children = [React.createElement(this.TextReplaceDropdown, {})];
+        config.settings[10].settings[1].children = [React.createElement(this.TextReplaceAdd)];
         return UI.buildSettingsPanel({
             settings: config.settings,
             onChange: (category, id, value) => {
@@ -536,13 +542,15 @@ module.exports = class BetterTTS {
         if (!this.settings.enableTTS) return;
         let connectedChannelId = RTCConnectionStore.getChannelId();
         let userId = UserStore.getCurrentUser().id;
+        const allowOwnAnnouncements = this.settings.enableOwnUserMessagesAndAnnouncements === "announcements"
+            || this.settings.enableOwnUserMessagesAndAnnouncements === "both";
         for (const userStatus of event.voiceStates) {
-            if (connectedChannelId && userStatus.userId !== userId) {
+            if (userStatus.userId !== userId || allowOwnAnnouncements) {
                 if (userStatus.channelId !== userStatus.oldChannelId) {
                     let username = this.getUserName(userStatus.userId, userStatus.guildId);
                     if (userStatus.channelId === connectedChannelId) {
                         this.audioPlayer.enqueueTTSMessage(`${username} joined`, true);
-                    } else if (userStatus.oldChannelId === connectedChannelId) {
+                    } else if (userStatus.oldChannelId === connectedChannelId || userStatus.channelId === null && allowOwnAnnouncements) {
                         this.audioPlayer.enqueueTTSMessage(`${username} left`, true);
                     }
                 }
@@ -709,7 +717,9 @@ module.exports = class BetterTTS {
             message.prependGuildChannel = false;
             return true;
         }
-        if (messageAuthorId === userId) {
+        const allowOwnMessages = this.settings.enableOwnUserMessagesAndAnnouncements === "messages"
+            || this.settings.enableOwnUserMessagesAndAnnouncements === "both";
+        if (messageAuthorId === userId && !allowOwnMessages) {
             return false;
         }
 
