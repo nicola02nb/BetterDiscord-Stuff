@@ -1,7 +1,7 @@
 /**
  * @name BetterTTS
  * @description A plugin that allows you to play a custom TTS when a message is received.
- * @version 2.18.1
+ * @version 2.18.2
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -545,14 +545,12 @@ module.exports = class BetterTTS {
         const allowOwnAnnouncements = this.settings.enableOwnUserMessagesAndAnnouncements === "announcements"
             || this.settings.enableOwnUserMessagesAndAnnouncements === "both";
         for (const userStatus of event.voiceStates) {
-            if (userStatus.userId !== userId || allowOwnAnnouncements) {
-                if (userStatus.channelId !== userStatus.oldChannelId) {
-                    let username = this.getUserName(userStatus.userId, userStatus.guildId);
-                    if (userStatus.channelId === connectedChannelId) {
-                        this.audioPlayer.enqueueTTSMessage(`${username} joined`, true);
-                    } else if (userStatus.oldChannelId === connectedChannelId || userStatus.channelId === null && allowOwnAnnouncements) {
-                        this.audioPlayer.enqueueTTSMessage(`${username} left`, true);
-                    }
+            if (userStatus.channelId !== userStatus.oldChannelId) {
+                let username = this.getUserName(userStatus.userId, userStatus.guildId);
+                if (userStatus.channelId === connectedChannelId) {
+                    this.audioPlayer.enqueueTTSMessage(`${username} joined`, true);
+                } else if (userStatus.oldChannelId === connectedChannelId || allowOwnAnnouncements && userStatus.channelId === null && userStatus.userId === userId) {
+                    this.audioPlayer.enqueueTTSMessage(`${username} left`, true);
                 }
             }
         }
