@@ -1,7 +1,7 @@
 /**
  * @name CompleteDiscordQuest
  * @description A plugin that completes you multiple discord quests in background simultaneously.
- * @version 1.7.12
+ * @version 1.7.13
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -95,6 +95,19 @@ const QuestButtonWithKey = [...Webpack.getWithKey(Filters.byStrings("focusProps:
 const SortingFilterWithKey = [...Webpack.getWithKey(Filters.byStrings("selectedSortMethod", "onChange", "radioBarClassName"), { searchExports: true })]
 const trailing = trailingModule.trailing;
 const { Tooltip, Flex } = Components;
+
+function findFunctionKey(module, matcher) {
+    if (!module || typeof module !== "object") return undefined;
+
+    return Object.keys(module).find(key => {
+        if (typeof module[key] !== "function") return false;
+        try {
+            return matcher(module[key], key);
+        } catch {
+            return false;
+        }
+    });
+}
 
 function reRender(selector, patchId) {
     const target = document.querySelector(selector)?.parentElement;
@@ -461,28 +474,35 @@ module.exports = class BasePlugin {
 
         let lastOnChange = null;// TODO fix patch not working
         try {
-            Patcher.instead(this.meta.name, SortingFilterWithKey[0], SortingFilterWithKey[1], (_, args, originalFunction) => {
-                try {
-                    if (args[0]?.onChange && args[0]?.selectedSortMethod) {
-                        args[0].selectedSortMethod = this.settings.questMenuFilter;
-                        const originalOnChange = args[0].onChange;
-                        args[0].onChange = (value) => {
-                            this.settings.questMenuFilter = value;
-                            originalOnChange(value);
-                        };
-                        if (lastOnChange !== originalOnChange) {
-                            lastOnChange = originalOnChange;
-                            setTimeout(() => {
-                                originalOnChange(this.settings.questMenuFilter);
-                            }, 100);
+            const sortingFilterModule = SortingFilterWithKey[0];
+            const sortingFilterFunctionName = typeof SortingFilterWithKey[1] === "string" ? SortingFilterWithKey[1] : findFunctionKey(sortingFilterModule, func => func.toString().includes("selectedSortMethod") && func.toString().includes("radioBarClassName"));
+
+            if (sortingFilterModule && sortingFilterFunctionName) {
+                Patcher.instead(this.meta.name, sortingFilterModule, sortingFilterFunctionName, (_, args, originalFunction) => {
+                    try {
+                        if (args[0]?.onChange && args[0]?.selectedSortMethod) {
+                            args[0].selectedSortMethod = this.settings.questMenuFilter;
+                            const originalOnChange = args[0].onChange;
+                            args[0].onChange = (value) => {
+                                this.settings.questMenuFilter = value;
+                                originalOnChange(value);
+                            };
+                            if (lastOnChange !== originalOnChange) {
+                                lastOnChange = originalOnChange;
+                                setTimeout(() => {
+                                    originalOnChange(this.settings.questMenuFilter);
+                                }, 100);
+                            }
                         }
+                        return originalFunction(...args);
+                    } catch (e) {
+                        console.error(`[${this.meta.name}] Error in SortingFilterWithKey patch`, e);
+                        return originalFunction(...args);
                     }
-                    return originalFunction(...args);
-                } catch (e) {
-                    console.error(`[${this.meta.name}] Error in SortingFilterWithKey patch`, e);
-                    return originalFunction(...args);
-                }
-            });
+                });
+            } else {
+                console.warn(`[${this.meta.name}] Skipping SortingFilterWithKey patch because the target function could not be resolved.`);
+            }
         } catch (err) {
             console.error(`[${this.meta.name}] Failed to patch SortingFilterWithKey:`, err);
         }
@@ -668,12 +688,12 @@ module.exports = class BasePlugin {
         } else {
             const pid = Math.floor(Math.random() * 30000) + 1000;
 
-            const applicationId = quest.config.application.id;
-            const applicationName = quest.config.application.name;
             const questName = quest.config.messages.questName;
             const taskConfig = quest.config.taskConfig ?? quest.config.taskConfigV2;
             const taskName = ["WATCH_VIDEO", "PLAY_ON_DESKTOP", "STREAM_ON_DESKTOP", "PLAY_ACTIVITY", "WATCH_VIDEO_ON_MOBILE"].find(x => taskConfig.tasks[x] != null);
-            const secondsNeeded = taskConfig.tasks[taskName]?.target ?? undefined;
+            const taskData = taskConfig.tasks[taskName];
+            const applicationId = quest.config.application?.id ?? taskData.applications?.[0]?.id;
+            const secondsNeeded = taskData.target;
             let secondsDone = quest.userStatus?.progress?.[taskName]?.value ?? 0;
 
             if (taskName === undefined) {
@@ -829,14 +849,14 @@ module.exports = class BasePlugin {
                             }
                         }, 60000);
 
-                        console.log(`Spoofed your game to ${applicationName}. Wait for ${Math.ceil((secondsNeeded - secondsDone) / 60)} more minutes.`);
+                        console.log(`Spoofed your game to ${appData.name}. Wait for ${Math.ceil((secondsNeeded - secondsDone) / 60)} more minutes.`);
                     })
                     break;
 
                 case "STREAM_ON_DESKTOP":
                     const fakeApp = {
                         id: applicationId,
-                        name: `FakeApp ${applicationName} (CompleteDiscordQuest)`,
+                        /*name: `FakeApp ${applicationId} (CompleteDiscordQuest)`,*/
                         pid: pid,
                         sourceName: null,
                     };
@@ -886,7 +906,7 @@ module.exports = class BasePlugin {
                         }
                     }, 60000);
 
-                    console.log(`Spoofed your stream to ${applicationName}. Stream any window in vc for ${Math.ceil((secondsNeeded - secondsDone) / 60)} more minutes.`);
+                    console.log(`Spoofed your stream to the target game. Stream any window in vc for ${Math.ceil((secondsNeeded - secondsDone) / 60)} more minutes.`);
                     console.log("Remember that you need at least 1 other person to be in the vc!");
                     break;
 
