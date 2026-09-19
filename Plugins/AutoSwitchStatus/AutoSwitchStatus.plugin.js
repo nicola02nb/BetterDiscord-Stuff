@@ -1,7 +1,7 @@
 /**
  * @name AutoSwitchStatus
  * @description Automatically switches your discord status when you are muted, connected to a server or when disconnected from a server.
- * @version 1.9.5
+ * @version 1.9.6
  * @author nicola02nb
  * @invite hFuY8DfDGK
  * @authorLink https://github.com/nicola02nb
@@ -133,16 +133,17 @@ module.exports = class AutoSwitchStatus {
 
         try {
             Patcher.instead(this.meta.name, UserSettingsProtoUtils, "updateAsync", async (thisObject, args, originalFunction) => {
+                let argsCopy = [...args];
                 try {
-                    if (this.justSettedDND && args[0] === "userContent" && args[2] === 0) {
+                    if (this.justSettedDND && args[0] === "status" && args[2] === 0) {
                         args[2] = SECONDS_TO_PREVENT_RATE_LIMITING;
                         this.justSettedDND = false;
                     }
 
-                    return await originalFunction(...args);
+                    return await originalFunction.apply(thisObject, args);
                 } catch (patchErr) {
                     console.error(`[${this.meta.name}] Error in updateAsync patch:`, patchErr);
-                    return await originalFunction(...args);
+                    return await originalFunction.apply(thisObject, argsCopy);
                 }
             });
         } catch (err) {
